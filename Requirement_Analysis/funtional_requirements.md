@@ -34,3 +34,6 @@ Identified by: User surveys and interviews
 
 ### FR-11 - Recurring expense automation
 Identified by: User interviews
+
+----------------------------------------------------------------------------------------------------------------------------------
+### We have Further explained the Reasoning and Explaination of all the Functional Requirements at the "User Stories" and "Elicitation Techniques" Page 
