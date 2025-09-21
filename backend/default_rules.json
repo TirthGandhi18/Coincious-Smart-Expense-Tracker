@@ -1,0 +1,25 @@
+{
+  "Food & Dining": [
+    "zomato",
+    "swiggy",
+    "restaurant",
+    "pizza",
+    "burger",
+    "grocery",
+    "cafe"
+  ],
+  "Transportation": [
+    "uber",
+    "ola",
+    "cab",
+    "taxi",
+    "metro"
+  ],
+  "Shopping": [
+    "amazon",
+    "flipkart",
+    "myntra",
+    "mall",
+    "clothes"
+  ]
+}

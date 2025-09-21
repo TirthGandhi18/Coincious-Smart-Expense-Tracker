@@ -1,180 +1,131 @@
 import os
 import json
-import time
-from datetime import datetime
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from dotenv import load_dotenv
 import google.generativeai as genai
 
-# --- SETUP ---
+from flask import Flask, request, jsonify
+from dotenv import load_dotenv
+
 load_dotenv()
+
 app = Flask(__name__)
-CORS(app)
 
 class ExpenseCategorizer:
-    def __init__(self, rules_filepath='category_rules.json'):
-        self.rules_filepath = rules_filepath
-        self.categorization_rules = self._load_rules()
-        self.categories = list(self.categorization_rules.keys()) + ["Other"]
+    def __init__(self):
+        self.default_rules_path = 'default_rules.json'
+        self.learned_rules_path = 'learned_rules.json'
         
-        # *** GEMINI CHANGE: Configure the Gemini client ***
-        self.api_key = os.getenv('GEMINI_API_KEY')
-        if self.api_key:
-            genai.configure(api_key=self.api_key)
-            # Set up the model configuration
-            generation_config = {"temperature": 0.2, "top_p": 1, "top_k": 1}
-            # Create the reusable model instance
-            self.model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash",
-                generation_config=generation_config
-            )
-        else:
-            self.model = None
-        # *************************************************
+        self.default_rules = self._load_rules_from_file(self.default_rules_path)
+        self.learned_rules = self._load_rules_from_file(self.learned_rules_path)
 
-    def _load_rules(self):
-        """Loads the categorization rules from the JSON file."""
+        self.combined_rules = self._merge_rules()
+        
+        self.model = None
+        KEY = os.getenv('GEMINI_API_KEY')
+        
+        if KEY:
+            genai.configure(api_key=KEY) 
+            self.model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+
+    def _load_rules_from_file(self, path):
         try:
-            with open(self.rules_filepath, 'r') as f:
+            with open(path, 'r') as f:
                 return json.load(f)
-        except FileNotFoundError:
+        except (FileNotFoundError, json.JSONDecodeError):
             return {}
+        
+    def _save_learned_rules(self):
+        with open(self.learned_rules_path, 'w') as f:
+            json.dump(self.learned_rules, f, indent=2)
 
-    def _save_rules(self):
-        """Saves the updated rules back to the JSON file."""
-        with open(self.rules_filepath, 'w') as f:
-            json.dump(self.categorization_rules, f, indent=2)
+    def _merge_rules(self):
+        all_rules = self.default_rules.copy()
+        for category, new_keywords in self.learned_rules.items():
+            if category in all_rules:
+                existing_keywords = set(all_rules[category])
+                all_rules[category] = list(existing_keywords.union(new_keywords))
+            else:
+                all_rules[category] = new_keywords
+                
+        return all_rules
+
+    def learn_new_rule(self, description, category):
+        print(f"Learning rule: '{description}' -> '{category}'")
+        
+        keyword = description.lower()
+        if category not in self.learned_rules:
+            self.learned_rules[category] = []
+        
+        if keyword not in self.learned_rules[category]:
+            self.learned_rules[category].append(keyword)
+            self._save_learned_rules()
+            self.combined_rules = self._merge_rules()
+
+    def find_category(self, description):
+        lower_desc = description.lower()
+
+        for category, keywords in self.combined_rules.items():
+            if any(key in lower_desc for key in keywords):
+                return {"category": category, "source": "dictionary"}
+
+        if not self.model:
+            return {"category": "Other", "source": "no_ai_fallback"}
             
-    def learn_and_update(self, description, manual_category):
-        """Learns from a user's manual input and updates the rules."""
-        print(f"Learning from manual entry: '{description}' -> '{manual_category}'")
-        keyword = description.lower().split()[0]
-
-        if manual_category not in self.categorization_rules:
-            self.categorization_rules[manual_category] = {'merchants': [], 'keywords': []}
-            print(f"Created new category: '{manual_category}'")
-        
-        if keyword not in self.categorization_rules[manual_category]['merchants']:
-            self.categorization_rules[manual_category]['merchants'].append(keyword)
-            print(f"Added new keyword '{keyword}' to category '{manual_category}'")
-            self._save_rules()
-            self.categories = list(self.categorization_rules.keys()) + ["Other"]
-
-    def categorize_expense(self, merchant, amount, description=""):
-        """Categorize with GenAI first, then fallback to local rules."""
-        start_time = time.time()
-        
-        # *** GEMINI CHANGE: Check for self.model instead of self.api_key ***
-        if self.model:
-            try:
-                # *** GEMINI CHANGE: Call the new Gemini function ***
-                result = self._categorize_with_gemini(merchant, amount, description, start_time)
-                
-                if result.get("category") != "Other" and merchant:
-                    self.learn_and_update(merchant, result.get("category"))
-                
-                return result
-            except Exception as e:
-                print(f"Gemini AI failed, using fallback: {e}")
-        
-        return self._fallback_categorization(merchant, amount, description, start_time)
-
-    # *** GEMINI CHANGE: Replaced the Grok function with a Gemini function ***
-    def _categorize_with_gemini(self, merchant, amount, description, start_time):
-        """Use Google Gemini AI for categorization."""
-        prompt = self._build_categorization_prompt(merchant, amount, description)
+        print(f"'{description}' not in local rules. Asking AI...")
+        prompt = self._build_ai_prompt(description)
         
         try:
             response = self.model.generate_content(prompt)
-            processing_time = round(time.time() - start_time, 1)
+            raw_text = response.text
+            trimmed_text = raw_text.strip()
+            clean_text = trimmed_text.replace("```json", "").replace("```", "")
+            json_text = clean_text.strip()
+            ai_result = json.loads(json_text)
             
-            # Gemini response often includes markdown formatting, so we clean it.
-            content = response.text
-            clean_content = content.strip().replace("```json", "").replace("```", "").strip()
-            
-            categorization = json.loads(clean_content)
-            categorization.update({'processingTime': f"{processing_time}s", 'aiModel': "Gemini", 'timestamp': datetime.now().isoformat()})
-            return categorization
+            ai_category = ai_result.get("category")
+
+            if ai_category and ai_category != "Other":
+                self.learn_new_rule(description, ai_category)
+                return {"category": ai_category, "source": "ai"}
 
         except Exception as e:
-            print(f"Gemini API Error or JSON parsing failed: {e}")
-            # If Gemini fails, we go to the reliable fallback
-            return self._fallback_categorization(merchant, amount, description, start_time)
+            print(f"AI call failed: {e}. Defaulting to 'Other'.")
 
-    def _build_categorization_prompt(self, merchant, amount, description):
-        """Builds an optimized prompt, now with a dynamic category list."""
-        available_categories = ", ".join(self.categories)
+        return {"category": "Other", "source": "default"}
+
+    def _build_ai_prompt(self, description):
+
+        known_categories = ", ".join(self.combined_rules.keys())
+        
         return f"""
-Analyze and categorize this expense:
+        Analyze the expense description: "{description}"
 
-EXPENSE DETAILS:
-• Merchant: {merchant}
-• Amount: {amount:.2f}
-• Description: {description or 'None provided'}
+        My current categories are: {known_categories}.
 
-AVAILABLE CATEGORIES (choose exactly one):
-{available_categories}
+        If one of those is a perfect fit, use it. 
+        Otherwise, feel free to create a new, more specific category.
 
-RESPOND ONLY IN THIS JSON FORMAT:
-{{
-    "category": "exact_category_name_from_list",
-    "subcategory": "more_specific_type",
-    "confidence": confidence_score_0_to_100,
-    "reasoning": "brief_explanation_why_this_category"
-}}
-"""
+        IMPORTANT: Respond ONLY with a JSON object in the format: {{"category": "CATEGORY_NAME"}}
+        """
 
-    def _fallback_categorization(self, merchant, amount, description, start_time):
-        # This function and _get_subcategory remain exactly the same.
-        text = (merchant + ' ' + description).lower()
-        processing_time = round(time.time() - start_time, 1)
-        for category, rules in self.categorization_rules.items():
-            merchant_matches = sum(1 for m in rules.get('merchants', []) if m in text)
-            keyword_matches = sum(1 for k in rules.get('keywords', []) if k in text)
-            if merchant_matches > 0 or keyword_matches > 1:
-                confidence = min(90, 60 + (merchant_matches * 20) + (keyword_matches * 10))
-                return {"category": category, "subcategory": self._get_subcategory(category, text, amount), "confidence": confidence, "reasoning": f"Rule-based: matched {merchant_matches} merchants, {keyword_matches} keywords", "processingTime": f"{processing_time}s", "aiModel": "Rule-based", "timestamp": datetime.now().isoformat()}
-        return {"category": "Other", "subcategory": "Miscellaneous", "confidence": 40, "reasoning": "Could not determine category", "processingTime": f"{processing_time}s", "aiModel": "Fallback", "timestamp": datetime.now().isoformat()}
-
-    def _get_subcategory(self, category, text, amount):
-        subcategories = {'Shopping': 'Major Purchase' if amount > 100 else 'Retail', 'Bills & Utilities': 'Subscription' if 'subscription' in text else 'Monthly Bill', 'Food & Dining': 'Restaurant' if amount > 30 else 'Fast Food', 'Transportation': 'Fuel' if 'fuel' in text else 'Rideshare', 'Health & Wellness': 'Fitness' if 'gym' in text else 'Healthcare'}
-        return subcategories.get(category, 'General')
-
-# --- API ENDPOINTS (No changes needed here) ---
+# --- API Endpoints ---
 categorizer = ExpenseCategorizer()
 
 @app.route('/api/categorize', methods=['POST'])
-def handle_categorize():
-    data = request.form
-    description = data.get('description', '').strip()
-    amount_str = data.get('amount', '0')
-    category = data.get('category', '').strip()
-    
+def api_categorize():
+    form_data = request.form
+    description = form_data.get('description', '').strip()
+
     if not description:
-        return jsonify({'error': 'Description is required'}), 400
-    try:
-        amount = float(amount_str)
-        if amount <= 0:
-            return jsonify({'error': 'Amount must be greater than 0'}), 400
-    except ValueError:
-        return jsonify({'error': 'Invalid amount format. Amount must be a number.'}), 400
-
-    if category:
-        categorizer.learn_and_update(description, category)
-        return jsonify({'status': 'learning_successful', 'learned_category': category})
-    else:
-        # We pass description as the merchant if the merchant field is empty
-        result = categorizer.categorize_expense(description, amount, description) 
-        return jsonify(result)
-
-@app.route('/')
-def home():
-    """A simple home route to confirm the API is online."""
-    return jsonify({
-        "status": "online",
-        "message": "Welcome to the Smart Expense Manager API!"
-    })
+        return jsonify({'error': 'Description cannot be empty.'}), 400
+    
+    manual_category = form_data.get('category', '').strip()
+    
+    if manual_category:
+        categorizer.learn_new_rule(description, manual_category)
+        return jsonify({'status': 'learning_successful', 'learned': {description: manual_category}})
+    
+    result = categorizer.find_category(description)
+    return jsonify(result)
     
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=8000)
