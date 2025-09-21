@@ -225,3 +225,173 @@ As a user, I want to export my expenses for a specific time period to a CSV file
 - The CSV file must contain a header row with clear column titles
 - Only the expenses that fall within the selected date range are included in the export.
 - If there are no expenses in the selected period, the system displays a friendly message instead of generating an empty file.
+
+---
+
+## Group Expenses
+
+### Front of card:
+As a user, I want to create groups and invite members so that we can manage shared expenses.
+
+### Back of card:
+- Must allow group creation with name and description.
+- Members can be invited via email, phone, or link.
+- Users can accept or decline invitations.
+- Must support joining via link or code.
+- Group admin can remove members.
+
+##
+
+### Front of card:
+As a group member, I want to add shared expenses so that everyone’s contributions are visible.
+
+### Back of card:
+- Must allow entry of amount, payer, participants, and category.
+- By default, it is split equally among all members.
+- Appears instantly in the group transaction list.
+- Invalid entries must be blocked.
+- Must allow attaching notes or receipts.
+
+##
+
+### Front of card:
+As a group member, I want to split costs unequally so that amounts reflect real spending.
+
+### Back of card:
+- Must allow manual split by percentages or fixed amounts or even by parts.
+- The system must validate totals.
+- Supports mixed contributions.
+- Displays how much each member owes.
+
+##
+
+### Front of card:
+As a group member, I want to view balances so that we can settle easily.
+
+### Back of card:
+- The system must auto-calculate balances.
+- Balances are shown in simple terms.
+- Allows marking balances as settled.
+- Supports partial settlements.
+- Updates balance dynamically.
+
+##
+
+### Front of card:
+As a group member, I want to receive notifications when expenses are updated so that I always stay informed.
+
+### Back of card:
+- Must notify when a new expense is added.
+- Notify when expense is edited or deleted.
+- Send reminders for settlements.
+- Allow toggling notifications per group.
+
+---
+
+## Parental Mode
+
+### Front of card:
+As a parent, I want to monitor my child’s account so that I can guide their spending.
+
+### Back of card:
+- Must allow linking child accounts with email or ID.
+- Parents can view all child transactions.
+- The system generates alerts for limits set by parents.
+- Parents can see categorised reports of the child's expenses.
+- Parents are notified of unusual transactions.
+- Linking requires consent from both parent and child.
+
+##
+
+### Front of card:
+As a parent, I want to set spending limits so that I can teach responsible usage.
+
+### Back of card:
+- Must allow setting weekly or monthly caps.
+- Parents can apply category restrictions.
+- The system alerts the parent and child at 75, 90, and 100 per cent.
+- Transactions over limits are blocked or flagged.
+- Attempts to bypass are logged and notified.
+- Parents can edit or remove restrictions anytime.
+
+---
+
+## AI Features
+
+### Front of card:
+As a user, I want to chat with an AI assistant so that I can quickly get answers about my expenses.
+
+### Back of card:
+- An AI chatbot is integrated into the app for expense-related queries
+- Respond to questions like “How much did I spend on food last week?”
+- Displays text answers and shows fallback suggestions if it cannot answer.
+
+##
+
+### Front of card:
+As a user, I want AI-based insights so that I can understand and improve my spending habits.
+
+### Back of card:
+- AI generates personalised suggestions based on expense history
+- Provides graphical insights alongside text explanations
+- Highlights overspending trends in specific categories
+
+##
+
+### Front of card:
+As a user, I want to set goals with AI assistance so that I can stick to my budget.
+
+### Back of card:
+- AI recommends realistic budget goals based on spending patterns
+- Tracks progress and sends timely reminders
+- Notifies me if I exceed the budget and congratulates me on achieving goals
+
+##
+
+### Front of card:
+As a user adding an expense, I want the AI to intelligently suggest a category based on my description so that I can save time and keep my records consistent.
+
+### Back of card:
+- The AI must analyse the transaction description in real-time to suggest the most likely expense category.
+- The user must always have the final choice to accept the AI's suggestion or manually select a different category.
+
+##
+
+### Front of card:
+As a user, I want the AI to handle my queries in natural language so that I don’t need to click through menus.
+
+### Back of card:
+- Supports NLP for free-form expense questions
+- Provides context-aware responses for accurate results
+- Handles queries like expense breakdowns or category comparisons
+
+  ---
+
+## Non-Functional Stories
+
+### Front of card:
+As a user, I want the app to open quickly and feel responsive so that I don’t get frustrated waiting.
+
+### Back of card:
+- The system must launch and display the main dashboard within a few seconds.
+- Navigating between main screens (e.g., Dashboard, Transactions, Reports) must be smooth.
+- Scrolling through long lists, such as transaction history, must remain fluid and responsive.
+
+##
+
+### Front of card:
+As a user, I want my account to stay private so that nobody else can see my money details.
+
+### Back of Card:
+- All user passwords and data must be stored securely.
+- All transfers must be encrypted in order to prevent any sensitive information from being exposed.
+- The system must offer optional two-factor authentication (2FA) for users who want an extra layer of security
+
+##
+
+### Front of card:
+As a user, I want the app to always work when I open it so that I can rely on it anytime.
+
+### Back of card:
+- The system must handle network or server issues by displaying a friendly error message with a retry option, rather than crashing.
+- Unsaved progress in forms, such as a partially entered expense, must be stored temporarily to prevent data loss from an interruption.
