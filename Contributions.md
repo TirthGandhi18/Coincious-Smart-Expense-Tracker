@@ -1,6 +1,6 @@
 # Project Contribution Breakdown
 
-As the Tasks were all Collaborative Hence please refere to below 
+As the Tasks were all Collaborative Hence please refer below for detailed breakdown and Contributions. 
 
 ---
 
