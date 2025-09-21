@@ -66,22 +66,14 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 - If `GEMINI_API_KEY` is not set, the app will still run and fall back to a default category when rules don’t match.
 
-### 5) Seed default rules (optional but recommended)
-The app looks for `default_rules.json` and `learned_rules.json` in the working directory. This repo includes `category_rules.json` and `categories.json` as examples. To start with a pre-populated rule set, copy:
-```bash
-cp category_rules.json default_rules.json
-```
-
-`learned_rules.json` is created and updated automatically as the app learns from manual inputs.
-
-### 6) Run the server
+### 5) Run the server
 ```bash
 python app.py
 ```
 
-The Flask server starts on: http://localhost:5001
+The Flask server starts on: http://localhost:8000
 
-### 7) Test the API
+### 6) Test the API
 Endpoint: `POST /api/categorize`
 
 Form fields accepted:
