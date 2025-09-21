@@ -1,0 +1,42 @@
+
+{
+  "name": "smart-expense-splitter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@radix-ui/react-checkbox": "^1.1.4",
+    "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-slot": "^1.1.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.487.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.1",
+    "sonner": "^2.0.3",
+    "tailwind-merge": "^2.5.4",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react-swc": "^3.10.2",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.5",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vite": "^6.3.5"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules/.vite",
+    "start": "vite --host",
+    "build:prod": "NODE_ENV=production vite build"
+  }
+}
