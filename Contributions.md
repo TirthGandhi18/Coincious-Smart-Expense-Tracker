@@ -17,7 +17,7 @@ As the Tasks were all Collaborative Hence please refer below for detailed breakd
 | **Member**       | Darshit Ramani       | `202301404`        | [ramani3311](https://github.com/ramani3311)                                                             |
 | **Member**       | Karthik              | `202301407`        | [karthikraman30](https://github.com/karthikraman30) / [karthik300106](https://github.com/karthik300106) |
 | **Member**       | Pratik               | `202301435`        | [Pratik1435](https://github.com/Pratik1435)                                                             |
-| **Member**       | Rujal                | `202301277` | [Link to GitHub]()                                                                                     |
+| **Member**       | Rujal                | `202301277` | [Rujal-Jiyani-78](https://github.com/Rujal-Jiyani-78)                                                                                     |
 
 ---
 
@@ -43,6 +43,7 @@ As the Tasks were all Collaborative Hence please refer below for detailed breakd
 ### 🎨 Design & Prototyping
 
 - **Concept Poster & Hands-On Chart Paper**: **Ashka**
+- **Documentation of Initial File pf Submission**: **Rujal**, **Karthik**
 - **Basic Frontend Website Prototype Including Designing**: **Aum**, **Darshit**, **Ashka**, **Rujal**, **Kirtan**
 
 ### 💻 Development & Implementation
