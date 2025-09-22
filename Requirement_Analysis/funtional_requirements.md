@@ -35,5 +35,8 @@ Identified by: User surveys and interviews
 ### FR-11 - Recurring expense automation
 Identified by: User interviews
 
+### FR-12 – Expense Data Export (CSV)
+Identified by: User stories, user interviews, and stakeholder feedback.
+
 ----------------------------------------------------------------------------------------------------------------------------------
 ### We have Further explained the Reasoning and Explaination of all the Functional Requirements at the "User Stories" and "Elicitation Techniques" Page 
