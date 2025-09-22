@@ -44,7 +44,7 @@ As the Tasks were all Collaborative Hence please refer below for detailed breakd
 
 - **Concept Poster & Hands-On Chart Paper**: **Ashka**
 - **Documentation of Initial File pf Submission**: **Rujal**, **Karthik**
-- **Basic Frontend Website Prototype Including Designing**: **Aum**, **Darshit**, **Ashka**, **Rujal**, **Kirtan**
+- **Basic Frontend Website Prototype Including Designing**: **Aum**, **Darshit**, **Ashka**
 
 ### 💻 Development & Implementation
 
