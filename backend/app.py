@@ -1,90 +1,89 @@
 import os
 import json
-import google.generativeai as genai
-
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+import google.generativeai as genai
+from supabase import create_client, Client
 
+# --- SETUP ---
 load_dotenv()
-
 app = Flask(__name__)
 
 class ExpenseCategorizer:
     def __init__(self):
-        self.default_rules_path = 'default_rules.json'
-        self.learned_rules_path = 'learned_rules.json'
-        
-        self.default_rules = self._load_rules_from_file(self.default_rules_path)
-        self.learned_rules = self._load_rules_from_file(self.learned_rules_path)
-
-        self.combined_rules = self._merge_rules()
-        
+        self.supabase_url = os.getenv("SUPABASE_URL")
+        self.supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
+        if not self.supabase_url or not self.supabase_key:
+            raise ValueError("Supabase URL and Key must be set in .env file")
+        self.supabase: Client = create_client(self.supabase_url, self.supabase_key)
         self.model = None
         KEY = os.getenv('GEMINI_API_KEY')
-        
         if KEY:
             genai.configure(api_key=KEY) 
             self.model = genai.GenerativeModel(model_name="gemini-1.5-flash")
 
-    def _load_rules_from_file(self, path):
+    def _get_user_rules(self, user_id):
+        """Fetches all learned rules for a specific user from the Supabase database."""
         try:
-            with open(path, 'r') as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
+            response = self.supabase.table('user_categories').select('category_name', 'keywords').eq('user_id', user_id).execute()
+            
+            user_rules = {}
+            for item in response.data:
+                user_rules[item['category_name']] = item['keywords']
+            return user_rules
+        except Exception as e:
+            print(f"Error fetching user rules: {e}")
             return {}
-        
-    def _save_learned_rules(self):
-        with open(self.learned_rules_path, 'w') as f:
-            json.dump(self.learned_rules, f, indent=2)
 
-    def _merge_rules(self):
-        all_rules = self.default_rules.copy()
-        for category, new_keywords in self.learned_rules.items():
-            if category in all_rules:
-                existing_keywords = set(all_rules[category])
-                all_rules[category] = list(existing_keywords.union(new_keywords))
-            else:
-                all_rules[category] = new_keywords
-                
-        return all_rules
-
-    def learn_new_rule(self, description, category):
-        print(f"Learning rule: '{description}' -> '{category}'")
-        
+    def learn_new_rule(self, user_id, description, category):
+        """Saves a new learned keyword for a specific user to the Supabase database."""
+        print(f"Learning rule for user {user_id}: '{description}' -> '{category}'")
         keyword = description.lower()
-        if category not in self.learned_rules:
-            self.learned_rules[category] = []
         
-        if keyword not in self.learned_rules[category]:
-            self.learned_rules[category].append(keyword)
-            self._save_learned_rules()
-            self.combined_rules = self._merge_rules()
+        try:
+            response = self.supabase.table('user_categories').select('keywords').eq('user_id', user_id).eq('category_name', category).execute()
+            
+            if response.data:
+                existing_keywords = response.data[0]['keywords']
+                if keyword not in existing_keywords:
+                    new_keywords = existing_keywords + [keyword]
+                    self.supabase.table('user_categories').update({'keywords': new_keywords}).eq('user_id', user_id).eq('category_name', category).execute()
+                    print(f"Updated keywords for category '{category}'")
+            else:
+                self.supabase.table('user_categories').insert({
+                    'user_id': user_id,
+                    'category_name': category,
+                    'keywords': [keyword]
+                }).execute()
+                print(f"Created new category rule for '{category}'")
 
-    def find_category(self, description):
+        except Exception as e:
+            print(f"Error saving new rule to Supabase: {e}")
+
+    def find_category(self, user_id, description):
+        """Main categorization logic: User's DB -> GenAI Fallback -> Learn."""
         lower_desc = description.lower()
-
-        for category, keywords in self.combined_rules.items():
+        
+        user_rules = self._get_user_rules(user_id)
+        for category, keywords in user_rules.items():
             if any(key in lower_desc for key in keywords):
-                return {"category": category, "source": "dictionary"}
+                return {"category": category, "source": "user_dictionary"}
 
         if not self.model:
             return {"category": "Other", "source": "no_ai_fallback"}
             
-        print(f"'{description}' not in local rules. Asking AI...")
-        prompt = self._build_ai_prompt(description)
+        print(f"'{description}' not in user rules. Asking AI...")
+        prompt = self._build_ai_prompt(description, list(user_rules.keys()))
         
         try:
             response = self.model.generate_content(prompt)
-            raw_text = response.text
-            trimmed_text = raw_text.strip()
-            clean_text = trimmed_text.replace("```json", "").replace("```", "")
-            json_text = clean_text.strip()
-            ai_result = json.loads(json_text)
+            raw_text = response.text.strip().replace("```json", "").replace("```", "").strip()
+            ai_result = json.loads(raw_text)
             
             ai_category = ai_result.get("category")
 
             if ai_category and ai_category != "Other":
-                self.learn_new_rule(description, ai_category)
+                self.learn_new_rule(user_id, description, ai_category)
                 return {"category": ai_category, "source": "ai"}
 
         except Exception as e:
@@ -92,26 +91,40 @@ class ExpenseCategorizer:
 
         return {"category": "Other", "source": "default"}
 
-    def _build_ai_prompt(self, description):
-
-        known_categories = ", ".join(self.combined_rules.keys())
-        
+    def _build_ai_prompt(self, description, known_categories):
+        """Builds the prompt for the Gemini AI."""
+        base_categories = ["Food & Dining", "Transportation", "Shopping", "Bills & Utilities", "Entertainment", "Health & Wellness"]
+        all_categories = list(set(known_categories + base_categories)) 
         return f"""
         Analyze the expense description: "{description}"
 
-        My current categories are: {known_categories}.
+        My current categories are: {", ".join(all_categories)}.
 
         If one of those is a perfect fit, use it. 
-        Otherwise, feel free to create a new, more specific category.
+        However, if you think a better, more specific category is needed (like 'Education' for 'college fees'), you are encouraged to create one.
 
         IMPORTANT: Respond ONLY with a JSON object in the format: {{"category": "CATEGORY_NAME"}}
         """
 
-# --- API Endpoints ---
 categorizer = ExpenseCategorizer()
 
 @app.route('/api/categorize', methods=['POST'])
 def api_categorize():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Missing or invalid authorization token'}), 401
+    
+    jwt = auth_header.split(' ')[1]
+    
+    try:
+        user_response = categorizer.supabase.auth.get_user(jwt)
+        user = user_response.user
+        if not user:
+            raise Exception("Invalid user token")
+    except Exception as e:
+        return jsonify({'error': f'Authentication error: {str(e)}'}), 401
+    
+    # 2. Get data from the form
     form_data = request.form
     description = form_data.get('description', '').strip()
 
@@ -120,12 +133,13 @@ def api_categorize():
     
     manual_category = form_data.get('category', '').strip()
     
+    # 3. Perform the correct action based on the input
     if manual_category:
-        categorizer.learn_new_rule(description, manual_category)
+        categorizer.learn_new_rule(user.id, description, manual_category)
         return jsonify({'status': 'learning_successful', 'learned': {description: manual_category}})
-    
-    result = categorizer.find_category(description)
-    return jsonify(result)
-    
+    else:
+        result = categorizer.find_category(user.id, description)
+        return jsonify(result)
+
 if __name__ == '__main__':
     app.run(debug=True, port=8000)

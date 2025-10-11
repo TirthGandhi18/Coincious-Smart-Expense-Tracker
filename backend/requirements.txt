@@ -3,3 +3,4 @@ Flask-CORS
 python-dotenv
 requests
 google-generativeai
+supabase-client
