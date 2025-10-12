@@ -13,7 +13,6 @@ import {
   Sun,
   Moon,
   LogOut,
-  User,
   Baby,
   Settings
 } from 'lucide-react';
@@ -24,13 +23,15 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+type NavItem = { href: string; label: string; icon: React.ComponentType<any>; badge?: number };
+
 export function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const mainNavItems = [
+  const mainNavItems: NavItem[] = [
     { href: '/dashboard', label: 'Dashboard', icon: Home },
     { href: '/groups', label: 'Groups', icon: Users },
     { href: '/chatbot', label: 'AI Assistant', icon: MessageCircle },
@@ -41,7 +42,7 @@ export function Layout({ children }: LayoutProps) {
     mainNavItems.splice(2, 0, { href: '/parental', label: 'Parental', icon: Baby });
   }
 
-  const supportNavItem = { href: '/support', label: 'Support', icon: HelpCircle };
+  const supportNavItem: NavItem = { href: '/support', label: 'Support', icon: HelpCircle };
 
   // For mobile bottom nav, we use the main nav items
   const navItems = [...mainNavItems, supportNavItem];

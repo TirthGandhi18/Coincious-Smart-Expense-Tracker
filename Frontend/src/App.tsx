@@ -6,7 +6,10 @@ import { Toaster } from './components/ui/sonner';
 import { Landing } from './components/pages/Landing';
 import { Login } from './components/pages/Login';
 import { Register } from './components/pages/Register';
-import { SimpleDashboard } from './components/pages/SimpleDashboard';
+import { Dashboard } from './components/pages/Dashboard';
+import { Settings } from './components/pages/Settings';
+
+import { Layout } from './components/Layout';
 
 // Simple Public Route Component (redirects to dashboard if logged in)
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -82,7 +85,19 @@ function AppRoutes() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <SimpleDashboard />
+              <>
+              <Layout>
+              <Dashboard />
+              </Layout>
+              </>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           }
         />
@@ -104,6 +119,7 @@ interface User {
   name: string;
   email: string;
   avatar: string;
+  isParent?: boolean;
 }
 
 interface AuthContextType {

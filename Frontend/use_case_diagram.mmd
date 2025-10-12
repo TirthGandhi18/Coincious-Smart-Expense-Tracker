@@ -1,0 +1,22 @@
+classDiagram
+    class Employee {
+        +string name
+        +string id
+        +float calculate_salary()
+    }
+    class FullTimeEmployee {
+        +float salary
+        +float calculate_salary()
+    }
+    class PartTimeEmployee {
+        +float hourly_rate
+        +int hours_worked
+        +float calculate_salary()
+    }
+    class Contractor {
+        +float payment_per_project
+        +float calculate_salary()
+    }
+    Employee <|-- FullTimeEmployee
+    Employee <|-- PartTimeEmployee
+    Employee <|-- Contractor
