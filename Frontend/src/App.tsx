@@ -1,6 +1,8 @@
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
+import { supabase } from "./lib/supabaseClient";
+import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 
 // Page components we're keeping
 import { Landing } from './components/pages/Landing';
@@ -128,6 +130,7 @@ interface AuthContextType {
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  signInWithProvider: (provider: string) => Promise<void>;
 }
 
 interface ThemeContextType {
@@ -141,67 +144,105 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Theme Context
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// Hardcoded credentials
-const HARDCODED_EMAIL = "admin@gmail.com";
-const HARDCODED_PASSWORD = "password";
-
 // Auth Provider
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const userState = useState<User | null>(null);
-  const loadingState = useState(false);
-  
-  const user = userState[0];
-  const setUser = userState[1];
-  const isLoading = loadingState[0];
-  const setIsLoading = loadingState[1];
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Start loading as true to check session
 
+  // *** NEW: Check for an active session when the app loads ***
+  useEffect(() => {
+    setIsLoading(true);
+    // This function gets the current session
+  supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
+      // If a session exists, set the user state
+      if (session) {
+        setUser({
+          id: session.user.id,
+          name: session.user.user_metadata.full_name,
+          email: session.user.email || "",
+          avatar: session.user.user_metadata.avatar_url,
+        });
+      }
+      setIsLoading(false);
+    });
+
+    // This listens for auth changes (login, logout) and updates the state
+    const {
+      data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+      if (session) {
+        setUser({
+          id: session.user.id,
+          name: session.user.user_metadata.full_name,
+          email: session.user.email || "",
+          avatar: session.user.user_metadata.avatar_url,
+        });
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    // Cleanup the subscription when the component unmounts
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // *** UPDATED: The login function now calls Supabase ***
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    
-    // Simulate a brief loading time
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    if (email === HARDCODED_EMAIL && password === HARDCODED_PASSWORD) {
-      setUser({
-        id: '1',
-        name: 'Admin User',
-        email: HARDCODED_EMAIL,
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format'
-      });
-    } else {
-      throw new Error('Invalid credentials');
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) {
+      setIsLoading(false);
+      throw error;
     }
-    
-    setIsLoading(false);
+    // The user state will be set automatically by onAuthStateChange
   };
 
+  // *** UPDATED: The register function now calls Supabase ***
   const register = async (email: string, password: string, name: string) => {
     setIsLoading(true);
-    
-    // Simulate a brief loading time
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // For this simple version, we only accept registration with our hardcoded credentials
-    if (email === HARDCODED_EMAIL && password === HARDCODED_PASSWORD) {
-      setUser({
-        id: '1',
-        name: name || 'Admin User',
-        email: HARDCODED_EMAIL,
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format'
-      });
-    } else {
-      throw new Error('Registration failed');
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      // This sends the full_name to your trigger
+      options: {
+        data: {
+          full_name: name,
+        },
+      },
+    });
+    if (error) {
+      setIsLoading(false);
+      throw error;
     }
-    
-    setIsLoading(false);
+    // The user state will be set automatically by onAuthStateChange
   };
 
-  const logout = () => {
+  // *** UPDATED: The logout function now calls Supabase ***
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
   };
 
+  // Sign in with an OAuth provider (google, github, etc.)
+  const signInWithProvider = async (provider: string) => {
+    setIsLoading(true);
+    // Determine redirect URL: prefer VITE var, fall back to current origin
+    const redirectTo = (import.meta.env.VITE_SUPABASE_REDIRECT_URL as string) || window.location.origin;
+    // supabase-js v2 method to redirect to provider's OAuth flow
+    const { error } = await supabase.auth.signInWithOAuth({ provider: provider as any, options: { redirectTo } });
+    if (error) {
+      setIsLoading(false);
+      throw error;
+    }
+    // Note: flow will redirect to provider; on return, onAuthStateChange will update user
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading, signInWithProvider }}>
       {children}
     </AuthContext.Provider>
   );
