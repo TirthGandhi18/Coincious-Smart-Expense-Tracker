@@ -53,7 +53,6 @@ export function Login() {
     }
 
     try {
-      // Attempt login with hardcoded credentials
       await login(email, password);
       toast.success("Correct password! Welcome back!");
       navigate("/dashboard");

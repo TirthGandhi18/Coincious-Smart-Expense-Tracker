@@ -1,7 +1,7 @@
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
-import { supabase } from "./lib/supabaseClient";
+import { supabase } from "./utils/supabase/client";
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 
 // Page components we're keeping
@@ -9,7 +9,6 @@ import { Landing } from './components/pages/Landing';
 import { Login } from './components/pages/Login';
 import { Register } from './components/pages/Register';
 import { Dashboard } from './components/pages/Dashboard';
-import { Settings } from './components/pages/Settings';
 
 import { Layout } from './components/Layout';
 
@@ -92,14 +91,6 @@ function AppRoutes() {
               <Dashboard />
               </Layout>
               </>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <Settings />
             </ProtectedRoute>
           }
         />
