@@ -68,6 +68,7 @@ export function Login() {
       // Inform the user and start the OAuth flow
       toast('Redirecting to Google...');
       await signInWithProvider('google');
+      navigate('/dashboard');
       // If the flow doesn't redirect, reset loading
       setGoogleLoading(false);
     } catch (err: any) {
