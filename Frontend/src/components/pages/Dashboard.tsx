@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
 import { supabase } from '../../utils/supabase/client';
-import { projectId } from '../../utils/supabase/info';
+import { projectId } from '../../lib/info';
 import { useAuth } from '../../App';
 import { Layout } from "../Layout";
 import {
