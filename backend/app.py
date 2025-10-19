@@ -1,13 +1,47 @@
+import requests  # Add this with other imports at the top
 import os
 import json
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import google.generativeai as genai
 from supabase import create_client, Client
+from flask_cors import CORS
 
 # --- SETUP ---
 load_dotenv()
 app = Flask(__name__)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Authorization", "Content-Type"],
+        "supports_credentials": True
+    }
+})
+
+# Add this route after the CORS configuration
+@app.route('/api/supabase/proxy/<path:subpath>', methods=['GET', 'POST'])
+def supabase_proxy(subpath):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        return jsonify({'error': 'Missing authorization'}), 401
+
+    url = f"https://xmuallpfxwgapaxawrwk.supabase.co/functions/v1/make-server-7f88878c/{subpath}"
+    
+    headers = {
+        'Authorization': auth_header,
+        'Content-Type': 'application/json'
+    }
+    
+    try:
+        if request.method == 'GET':
+            response = requests.get(url, headers=headers)
+        else:
+            response = requests.post(url, headers=headers, json=request.get_json())
+        
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 class ExpenseCategorizer:
     def __init__(self):
@@ -20,7 +54,7 @@ class ExpenseCategorizer:
         KEY = os.getenv('GEMINI_API_KEY')
         if KEY:
             genai.configure(api_key=KEY) 
-            self.model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+            self.model = genai.GenerativeModel(model_name="gemini-2.5-flash")
 
     def _get_user_rules(self, user_id):
         """Fetches all learned rules for a specific user from the Supabase database."""
@@ -143,3 +177,5 @@ def api_categorize():
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
+
+
