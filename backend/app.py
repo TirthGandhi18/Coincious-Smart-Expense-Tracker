@@ -1,6 +1,7 @@
 import requests  # Add this with other imports at the top
 import os
 import json
+import base64
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import google.generativeai as genai
@@ -94,6 +95,50 @@ class ExpenseCategorizer:
         except Exception as e:
             print(f"Error saving new rule to Supabase: {e}")
 
+    def parse_bill_image(self, image_bytes, mime_type):
+        if not self.model:
+            raise RuntimeError("Gemini model not configured")
+
+        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+
+        system_prompt = (
+            "You are a precise receipt/bill parser. Extract fields and return STRICT JSON only. "
+            "Fields: vendor_name, issue_date, due_date, subtotal, tax, tip, total, currency, "
+            "line_items (name, quantity, unit_price, line_total), payment_method, address, "
+            "category_guess, notes. Use null for unknowns. Dates ISO-8601. Numbers as floats. "
+            "currency as 3-letter code if visible, else null."
+        )
+
+        content = [
+            system_prompt,
+            {
+                "mime_type": mime_type,
+                "data": base64_image
+            },
+            (
+                "Respond ONLY with JSON in this schema: {\n"
+                "  \"vendor_name\": string|null,\n"
+                "  \"issue_date\": string|null,\n"
+                "  \"due_date\": string|null,\n"
+                "  \"subtotal\": number|null,\n"
+                "  \"tax\": number|null,\n"
+                "  \"tip\": number|null,\n"
+                "  \"total\": number|null,\n"
+                "  \"currency\": string|null,\n"
+                "  \"payment_method\": string|null,\n"
+                "  \"address\": string|null,\n"
+                "  \"category_guess\": string|null,\n"
+                "  \"notes\": string|null,\n"
+                "  \"line_items\": [ { \"name\": string, \"quantity\": number|null, \"unit_price\": number|null, \"line_total\": number|null } ]\n"
+                "}"
+            )
+        ]
+
+        response = self.model.generate_content(content)
+        raw_text = response.text.strip().replace("```json", "").replace("```", "").strip()
+        return json.loads(raw_text)
+
+
     def find_category(self, user_id, description):
         """Main categorization logic: User's DB -> GenAI Fallback -> Learn."""
         lower_desc = description.lower()
@@ -174,6 +219,50 @@ def api_categorize():
     else:
         result = categorizer.find_category(user.id, description)
         return jsonify(result)
+
+
+@app.route('/api/parse-bill', methods=['POST'])
+def api_parse_bill():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Missing or invalid authorization token'}), 401
+
+    jwt = auth_header.split(' ')[1]
+
+    try:
+        user_response = categorizer.supabase.auth.get_user(jwt)
+        user = user_response.user
+        if not user:
+            raise Exception("Invalid user token")
+    except Exception as e:
+        return jsonify({'error': f'Authentication error: {str(e)}'}), 401
+
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file provided. Use form-data with key "image".'}), 400
+
+    image_file = request.files['image']
+    if image_file.filename == '':
+        return jsonify({'error': 'Empty filename for uploaded image.'}), 400
+
+    try:
+        image_bytes = image_file.read()
+        mime_type = image_file.mimetype or 'image/jpeg'
+
+        parsed = categorizer.parse_bill_image(image_bytes, mime_type)
+
+        # Optionally, you could enrich with user-specific category learning here
+        return jsonify({'parsed': parsed})
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Model returned non-JSON or invalid JSON response.'}), 502
+    except RuntimeError as e:
+        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': f'Failed to parse bill: {str(e)}'}), 500
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({'status': 'ok', 'message': 'Backend is running'})
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
