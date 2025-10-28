@@ -9,6 +9,7 @@ import { Landing } from './components/pages/Landing';
 import { Login } from './components/pages/Login';
 import { Register } from './components/pages/Register';
 import { Dashboard } from './components/pages/Dashboard';
+import { AddExpense } from './components/pages/AddExpense';
 
 import { Layout } from './components/Layout';
 
@@ -86,14 +87,19 @@ function AppRoutes() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <>
               <Layout>
               <Dashboard />
               </Layout>
-              </>
             </ProtectedRoute>
-          }
+          } 
         />
+           <Route path="/add-expense" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <AddExpense />
+                  </Layout>
+                </ProtectedRoute>
+              } />
 
         {/* Catch all route - redirect to dashboard if authenticated, otherwise to landing */}
         <Route
