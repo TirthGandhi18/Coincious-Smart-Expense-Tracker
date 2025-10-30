@@ -1,3 +1,5 @@
+// src/components/Layout.tsx - UPDATED (Profile link sidebar se hataya)
+
 import React from 'react';
 import { useAuth, useTheme } from '../App';
 import { Button } from './ui/button';
@@ -43,8 +45,6 @@ export function Layout({ children }: LayoutProps) {
   }
 
   const supportNavItem: NavItem = { href: '/support', label: 'Support', icon: HelpCircle };
-
-  // For mobile bottom nav, we use the main nav items
   const navItems = [...mainNavItems, supportNavItem];
 
   const handleLogout = () => {
@@ -65,21 +65,21 @@ export function Layout({ children }: LayoutProps) {
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
           
-          <Button 
-            variant="ghost" 
-            className="relative h-10 w-10 rounded-full border-2 border-transparent hover:border-primary hover:bg-accent transition-all duration-200 focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            title="Edit Profile"
-            asChild
-          >
-            <Link to="/profile">
+          {/* PROFILE BUTTON - Top Right Corner Only */}
+          <Link to="/profile">
+            <Button 
+              variant="ghost" 
+              className="relative h-10 w-10 rounded-full border-2 border-transparent hover:border-primary hover:bg-accent transition-all duration-200 focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              title="View Profile"
+            >
               <Avatar className="h-8 w-8">
                 <AvatarImage src={user?.avatar} alt={user?.name} />
                 <AvatarFallback className="bg-primary text-primary-foreground">
                   {user?.name?.charAt(0)?.toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-            </Link>
-          </Button>
+            </Button>
+          </Link>
         </div>
       </header>
 
@@ -124,7 +124,7 @@ export function Layout({ children }: LayoutProps) {
                 })}
               </nav>
               
-              {/* Bottom options: Support, Settings, Sign out */}
+              {/* Bottom options */}
               <div className="border-t pt-4 space-y-2">
                 <Link
                   to={supportNavItem.href}
@@ -163,25 +163,25 @@ export function Layout({ children }: LayoutProps) {
         
         <h1 className="text-lg font-bold">Smart Expense</h1>
         
-        <Button 
-          variant="ghost" 
-          className="relative h-10 w-10 rounded-full border-2 border-transparent hover:border-primary hover:bg-accent transition-all duration-200 focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          title="Edit Profile"
-          asChild
-        >
-          <Link to="/profile">
+        {/* PROFILE BUTTON - Top Right Mobile */}
+        <Link to="/profile">
+          <Button 
+            variant="ghost" 
+            className="relative h-10 w-10 rounded-full border-2 border-transparent hover:border-primary hover:bg-accent transition-all duration-200"
+            title="View Profile"
+          >
             <Avatar className="h-8 w-8">
               <AvatarImage src={user?.avatar} alt={user?.name} />
               <AvatarFallback className="bg-primary text-primary-foreground">
                 {user?.name?.charAt(0)?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
-          </Link>
-        </Button>
+          </Button>
+        </Link>
       </header>
 
       <div className="flex h-[calc(100vh-73px)] md:h-[calc(100vh-81px)]">
-        {/* Desktop Sidebar */}
+        {/* Desktop Sidebar - NO PROFILE LINK */}
         <aside className="hidden md:flex w-64 flex-col border-r bg-card">
           <nav className="flex-1 space-y-2 p-4">
             {mainNavItems.map((item) => {
@@ -210,7 +210,7 @@ export function Layout({ children }: LayoutProps) {
             })}
           </nav>
           
-          {/* Bottom options: Support, Settings, Sign out */}
+          {/* Bottom options */}
           <div className="border-t p-4 space-y-2">
             <Link
               to={supportNavItem.href}
@@ -238,7 +238,6 @@ export function Layout({ children }: LayoutProps) {
           </div>
         </aside>
 
-        {/* Main Content */}
         <main className="flex-1 overflow-auto">
           {children}
         </main>

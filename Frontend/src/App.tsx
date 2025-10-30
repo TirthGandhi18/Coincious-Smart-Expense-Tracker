@@ -1,19 +1,21 @@
+// src/App.tsx - COMPLETE FILE WITH PROFILE ROUTE
+
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
 import { supabase } from "./utils/supabase/client";
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 
-// Page components we're keeping
+// Page components
 import { Landing } from './components/pages/Landing';
 import { Login } from './components/pages/Login';
 import { Register } from './components/pages/Register';
 import { Dashboard } from './components/pages/Dashboard';
 import { AddExpense } from './components/pages/AddExpense';
-
 import { Layout } from './components/Layout';
+import { Profile } from './components/pages/Profile';
 
-// Simple Public Route Component (redirects to dashboard if logged in)
+// Simple Public Route Component
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 
@@ -32,7 +34,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Simple Protected Route Component (redirects to login if not authenticated)
+// Simple Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 
@@ -57,55 +59,27 @@ function AppRoutes() {
     <Router>
       <Routes>
         {/* Public routes */}
-        <Route
-          path="/"
-          element={
-            <PublicRoute>
-              <Landing />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <Login />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <PublicRoute>
-              <Register />
-            </PublicRoute>
-          }
-        />
+        <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
-        {/* Protected dashboard route */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Layout>
-              <Dashboard />
-              </Layout>
-            </ProtectedRoute>
-          } 
-        />
-           <Route path="/add-expense" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <AddExpense />
-                  </Layout>
-                </ProtectedRoute>
-              } />
+        {/* Protected routes */}
+        <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+        <Route path="/add-expense" element={<ProtectedRoute><Layout><AddExpense /></Layout></ProtectedRoute>} />
+        
+        {/* PROFILE ROUTE - PROPERLY CONFIGURED */}
+        <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
 
-        {/* Catch all route - redirect to dashboard if authenticated, otherwise to landing */}
-        <Route
-          path="*"
-          element={<Navigate to="/" replace />}
-        />
+        {/* Placeholder routes for other pages */}
+        <Route path="/groups" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Groups Page</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
+        <Route path="/chatbot" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">AI Assistant</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Notifications</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
+        <Route path="/parental" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Parental Controls</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
+        <Route path="/support" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Support</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Settings</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
+
+        {/* Catch all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster />
     </Router>
@@ -144,14 +118,11 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 // Auth Provider
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Start loading as true to check session
+  const [isLoading, setIsLoading] = useState(true);
 
-  // *** NEW: Check for an active session when the app loads ***
   useEffect(() => {
     setIsLoading(true);
-    // This function gets the current session
-  supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
-      // If a session exists, set the user state
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
       if (session) {
         setUser({
           id: session.user.id,
@@ -163,10 +134,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     });
 
-    // This listens for auth changes (login, logout) and updates the state
     const {
       data: { subscription },
-  } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+    } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       if (session) {
         setUser({
           id: session.user.id,
@@ -180,11 +150,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     });
 
-    // Cleanup the subscription when the component unmounts
     return () => subscription.unsubscribe();
   }, []);
 
-  // *** UPDATED: The login function now calls Supabase ***
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
@@ -195,16 +163,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
       throw error;
     }
-    // The user state will be set automatically by onAuthStateChange
   };
 
-  // *** UPDATED: The register function now calls Supabase ***
   const register = async (email: string, password: string, name: string) => {
     setIsLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      // This sends the full_name to your trigger
       options: {
         data: {
           full_name: name,
@@ -215,27 +180,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
       throw error;
     }
-    // The user state will be set automatically by onAuthStateChange
   };
 
-  // *** UPDATED: The logout function now calls Supabase ***
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
   };
 
-  // Sign in with an OAuth provider (google, github, etc.)
   const signInWithProvider = async (provider: string) => {
     setIsLoading(true);
-    // Determine redirect URL: prefer VITE var, fall back to current origin
     const redirectTo = (import.meta.env.VITE_SUPABASE_REDIRECT_URL as string) || window.location.origin;
-    // supabase-js v2 method to redirect to provider's OAuth flow
     const { error } = await supabase.auth.signInWithOAuth({ provider: provider as any, options: { redirectTo } });
     if (error) {
       setIsLoading(false);
       throw error;
     }
-    // Note: flow will redirect to provider; on return, onAuthStateChange will update user
   };
 
   return (
@@ -248,7 +207,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 // Theme Provider
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const themeState = useState(false);
-  
   const isDark = themeState[0];
   const setIsDark = themeState[1];
 
@@ -257,17 +215,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.toggle('dark', !isDark);
   };
 
-  // Initialize theme
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const shouldBeDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
-    
+
     setIsDark(shouldBeDark);
     document.documentElement.classList.toggle('dark', shouldBeDark);
   }, []);
 
-  // Save theme preference
   useEffect(() => {
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
   }, [isDark]);
