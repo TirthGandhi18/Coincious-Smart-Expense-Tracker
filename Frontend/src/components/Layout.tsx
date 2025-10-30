@@ -5,12 +5,12 @@ import { useAuth, useTheme } from '../App';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
-import { 
-  Home, 
-  Users, 
-  MessageCircle, 
-  Bell, 
-  HelpCircle, 
+import {
+  Home,
+  Users,
+  MessageCircle,
+  Bell,
+  HelpCircle,
   Menu,
   Sun,
   Moon,
@@ -45,6 +45,7 @@ export function Layout({ children }: LayoutProps) {
   }
 
   const supportNavItem: NavItem = { href: '/support', label: 'Support', icon: HelpCircle };
+  const SupportIcon = supportNavItem.icon; // <-- extracted icon component (fixes render issue)
   const navItems = [...mainNavItems, supportNavItem];
 
   const handleLogout = () => {
@@ -59,16 +60,16 @@ export function Layout({ children }: LayoutProps) {
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold text-primary">Smart Expense</h1>
         </div>
-        
+
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={toggleTheme}>
+          <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
-          
+
           {/* PROFILE BUTTON - Top Right Corner Only */}
-          <Link to="/profile">
-            <Button 
-              variant="ghost" 
+          <Link to="/profile" aria-label="Profile">
+            <Button
+              variant="ghost"
               className="relative h-10 w-10 rounded-full border-2 border-transparent hover:border-primary hover:bg-accent transition-all duration-200 focus:ring-2 focus:ring-ring focus:ring-offset-2"
               title="View Profile"
             >
@@ -87,7 +88,7 @@ export function Layout({ children }: LayoutProps) {
       <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-card">
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="Open menu">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
@@ -96,19 +97,20 @@ export function Layout({ children }: LayoutProps) {
               <div className="flex items-center gap-2 px-2 py-4">
                 <h2 className="text-lg font-bold">Smart Expense</h2>
               </div>
-              
+
               <nav className="flex-1 space-y-2">
                 {mainNavItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.href;
-                  
+
                   return (
                     <Link
                       key={item.href}
                       to={item.href}
+                      aria-current={isActive ? 'page' : undefined}
                       className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                        isActive 
-                          ? 'bg-primary text-primary-foreground' 
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
                           : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                       }`}
                     >
@@ -123,33 +125,34 @@ export function Layout({ children }: LayoutProps) {
                   );
                 })}
               </nav>
-              
+
               {/* Bottom options */}
               <div className="border-t pt-4 space-y-2">
                 <Link
                   to={supportNavItem.href}
+                  aria-current={location.pathname === supportNavItem.href ? 'page' : undefined}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                     location.pathname === supportNavItem.href
-                      ? 'bg-primary text-primary-foreground' 
+                      ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                   }`}
                 >
-                  <supportNavItem.icon className="h-4 w-4" />
+                  <SupportIcon className="h-4 w-4" />
                   <span>{supportNavItem.label}</span>
                 </Link>
-                
+
                 <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground hover:bg-accent" asChild>
                   <Link to="/settings">
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>
                   </Link>
                 </Button>
-                
+
                 <Button variant="ghost" className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
                   <LogOut className="h-4 w-4" />
                   <span>Sign out</span>
                 </Button>
-                
+
                 <div className="pt-2 border-t">
                   <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground hover:bg-accent" onClick={toggleTheme}>
                     {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -160,13 +163,13 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </SheetContent>
         </Sheet>
-        
+
         <h1 className="text-lg font-bold">Smart Expense</h1>
-        
+
         {/* PROFILE BUTTON - Top Right Mobile */}
-        <Link to="/profile">
-          <Button 
-            variant="ghost" 
+        <Link to="/profile" aria-label="Profile">
+          <Button
+            variant="ghost"
             className="relative h-10 w-10 rounded-full border-2 border-transparent hover:border-primary hover:bg-accent transition-all duration-200"
             title="View Profile"
           >
@@ -187,14 +190,15 @@ export function Layout({ children }: LayoutProps) {
             {mainNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
-              
+
               return (
                 <Link
                   key={item.href}
                   to={item.href}
+                  aria-current={isActive ? 'page' : undefined}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                    isActive 
-                      ? 'bg-primary text-primary-foreground' 
+                    isActive
+                      ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                   }`}
                 >
@@ -209,28 +213,29 @@ export function Layout({ children }: LayoutProps) {
               );
             })}
           </nav>
-          
+
           {/* Bottom options */}
           <div className="border-t p-4 space-y-2">
             <Link
               to={supportNavItem.href}
+              aria-current={location.pathname === supportNavItem.href ? 'page' : undefined}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                 location.pathname === supportNavItem.href
-                  ? 'bg-primary text-primary-foreground' 
+                  ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent'
               }`}
             >
-              <supportNavItem.icon className="h-4 w-4" />
+              <SupportIcon className="h-4 w-4" />
               <span>{supportNavItem.label}</span>
             </Link>
-            
+
             <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground hover:bg-accent" asChild>
               <Link to="/settings">
                 <Settings className="h-4 w-4" />
                 <span>Settings</span>
               </Link>
             </Button>
-            
+
             <Button variant="ghost" className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
               <span>Sign out</span>
@@ -249,11 +254,12 @@ export function Layout({ children }: LayoutProps) {
           {navItems.slice(0, 4).map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.href;
-            
+
             return (
               <Link
                 key={item.href}
                 to={item.href}
+                aria-current={isActive ? 'page' : undefined}
                 className={`flex flex-col items-center gap-1 px-2 py-1 relative ${
                   isActive ? 'text-primary' : 'text-muted-foreground'
                 }`}

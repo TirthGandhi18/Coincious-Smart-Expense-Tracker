@@ -1,4 +1,4 @@
-// src/App.tsx - COMPLETE FILE WITH PROFILE ROUTE
+// src/App.tsx - complete file with Support route added
 
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
@@ -16,6 +16,7 @@ import { Layout } from './components/Layout';
 import { Profile } from './components/pages/Profile';
 import { Groups } from './components/pages/Groups';
 import { GroupDetail } from './components/pages/GroupDetail';
+import { Support } from './components/pages/Support'; 
 
 // Simple Public Route Component
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -72,7 +73,7 @@ function AppRoutes() {
         {/* PROFILE ROUTE - PROPERLY CONFIGURED */}
         <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
 
-        {/* Gropu ROUTE */}
+        {/* Group ROUTES */}
         <Route path="/groups" element={
           <ProtectedRoute>
             <Layout>
@@ -87,12 +88,21 @@ function AppRoutes() {
             </Layout>
           </ProtectedRoute>
         } />
-        {/* Placeholder routes for other pages */}
 
+        {/* Placeholder routes for other pages */}
         <Route path="/chatbot" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">AI Assistant</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Notifications</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
         <Route path="/parental" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Parental Controls</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
-        <Route path="/support" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Support</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
+
+        {/* SUPPORT ROUTE - renders real Support component */}
+        <Route path="/support" element={
+          <ProtectedRoute>
+            <Layout>
+              <Support />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
         <Route path="/settings" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Settings</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
 
         {/* Catch all */}
