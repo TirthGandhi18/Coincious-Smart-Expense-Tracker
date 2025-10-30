@@ -14,6 +14,8 @@ import { Dashboard } from './components/pages/Dashboard';
 import { AddExpense } from './components/pages/AddExpense';
 import { Layout } from './components/Layout';
 import { Profile } from './components/pages/Profile';
+import { Groups } from './components/pages/Groups';
+import { GroupDetail } from './components/pages/GroupDetail';
 
 // Simple Public Route Component
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -66,12 +68,27 @@ function AppRoutes() {
         {/* Protected routes */}
         <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
         <Route path="/add-expense" element={<ProtectedRoute><Layout><AddExpense /></Layout></ProtectedRoute>} />
-        
+
         {/* PROFILE ROUTE - PROPERLY CONFIGURED */}
         <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
 
+        {/* Gropu ROUTE */}
+        <Route path="/groups" element={
+          <ProtectedRoute>
+            <Layout>
+              <Groups />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/groups/:id" element={
+          <ProtectedRoute>
+            <Layout>
+              <GroupDetail />
+            </Layout>
+          </ProtectedRoute>
+        } />
         {/* Placeholder routes for other pages */}
-        <Route path="/groups" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Groups Page</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
+
         <Route path="/chatbot" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">AI Assistant</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Notifications</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
         <Route path="/parental" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Parental Controls</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
