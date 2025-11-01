@@ -1,4 +1,4 @@
-import requests  # Add this with other imports at the top
+import requests
 import os
 import json
 import base64
@@ -20,30 +20,6 @@ CORS(app, resources={
     }
 })
 
-# Add this route after the CORS configuration
-@app.route('/api/supabase/proxy/<path:subpath>', methods=['GET', 'POST'])
-def supabase_proxy(subpath):
-    auth_header = request.headers.get('Authorization')
-    if not auth_header:
-        return jsonify({'error': 'Missing authorization'}), 401
-
-    url = f"https://xmuallpfxwgapaxawrwk.supabase.co/functions/v1/make-server-7f88878c/{subpath}"
-    
-    headers = {
-        'Authorization': auth_header,
-        'Content-Type': 'application/json'
-    }
-    
-    try:
-        if request.method == 'GET':
-            response = requests.get(url, headers=headers)
-        else:
-            response = requests.post(url, headers=headers, json=request.get_json())
-        
-        return jsonify(response.json()), response.status_code
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 class ExpenseCategorizer:
     def __init__(self):
         self.supabase_url = os.getenv("SUPABASE_URL")
@@ -55,7 +31,9 @@ class ExpenseCategorizer:
         KEY = os.getenv('GEMINI_API_KEY')
         if KEY:
             genai.configure(api_key=KEY) 
-            self.model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+            self.model = genai.GenerativeModel(
+                model_name="gemini-2.5-flash"
+            )
 
     def _get_user_rules(self, user_id):
         """Fetches all learned rules for a specific user from the Supabase database."""
@@ -203,7 +181,6 @@ def api_categorize():
     except Exception as e:
         return jsonify({'error': f'Authentication error: {str(e)}'}), 401
     
-    # 2. Get data from the form
     form_data = request.form
     description = form_data.get('description', '').strip()
 
@@ -212,7 +189,6 @@ def api_categorize():
     
     manual_category = form_data.get('category', '').strip()
     
-    # 3. Perform the correct action based on the input
     if manual_category:
         categorizer.learn_new_rule(user.id, description, manual_category)
         return jsonify({'status': 'learning_successful', 'learned': {description: manual_category}})
@@ -237,10 +213,13 @@ def api_parse_bill():
     except Exception as e:
         return jsonify({'error': f'Authentication error: {str(e)}'}), 401
 
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image file provided. Use form-data with key "image".'}), 400
+    # <<< --- BUG FIX 2: Changed 'image' to 'receipt' ---
+    if 'receipt' not in request.files:
+        return jsonify({'error': 'No image file provided. Use form-data with key "receipt".'}), 400
 
-    image_file = request.files['image']
+    image_file = request.files['receipt']
+    # ---------------------------------------------------
+
     if image_file.filename == '':
         return jsonify({'error': 'Empty filename for uploaded image.'}), 400
 
@@ -250,7 +229,6 @@ def api_parse_bill():
 
         parsed = categorizer.parse_bill_image(image_bytes, mime_type)
 
-        # Optionally, you could enrich with user-specific category learning here
         return jsonify({'parsed': parsed})
     except json.JSONDecodeError:
         return jsonify({'error': 'Model returned non-JSON or invalid JSON response.'}), 502
@@ -266,5 +244,3 @@ def health_check():
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
-
-
