@@ -17,6 +17,7 @@ import { Profile } from './components/pages/Profile';
 import { Groups } from './components/pages/Groups';
 import { GroupDetail } from './components/pages/GroupDetail';
 import { Support } from './components/pages/Support'; 
+import { Notifications } from './components/pages/Notifications';
 
 // Simple Public Route Component
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -91,10 +92,9 @@ function AppRoutes() {
 
         {/* Placeholder routes for other pages */}
         <Route path="/chatbot" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">AI Assistant</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
-        <Route path="/notifications" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Notifications</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
         <Route path="/parental" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Parental Controls</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
 
-        {/* SUPPORT ROUTE - renders real Support component */}
+
         <Route path="/support" element={
           <ProtectedRoute>
             <Layout>
@@ -102,7 +102,14 @@ function AppRoutes() {
             </Layout>
           </ProtectedRoute>
         } />
-
+        
+         <Route path="/notifications" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Notifications />
+                  </Layout>
+                </ProtectedRoute>
+              } />
         <Route path="/settings" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Settings</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
 
         {/* Catch all */}
