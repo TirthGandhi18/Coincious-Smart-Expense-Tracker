@@ -1,12 +1,15 @@
-import requests
 import os
 import json
 import base64
+import calendar
+import requests
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import google.generativeai as genai
 from supabase import create_client, Client
 from flask_cors import CORS
+from datetime import datetime, timedelta, timezone
+from collections import defaultdict
 
 # --- SETUP ---
 load_dotenv()
@@ -241,6 +244,86 @@ def api_parse_bill():
 def health_check():
     return jsonify({'status': 'ok', 'message': 'Backend is running'})
 
+# ===== Monthly Donut Chart Logic =====
+EXP_TABLE = "expenses"
+
+
+def _month_window(year: int, month: int):
+    """Returns the UTC start and end datetime for the given month."""
+    start = datetime(year, month, 1, 0, 0, 0, tzinfo=timezone.utc)
+    last_day = calendar.monthrange(year, month)[1]
+    end = datetime(year, month, last_day, 23, 59, 59, tzinfo=timezone.utc)
+    return start, end
+
+
+def _fetch_expenses(supabase, user_id, start, end):
+    q = (
+        supabase.table(EXP_TABLE)
+        .select("amount,date,category,payer_id")
+        .eq("payer_id", user_id)
+        .gte("date", start.isoformat())
+        .lte("date", end.isoformat())
+    )
+    resp = q.execute()
+    rows = resp.data or []
+    results = []
+    for r in rows:
+        try:
+            dt = datetime.fromisoformat(str(r["date"]).replace("Z", "+00:00"))
+        except Exception:
+            dt = start
+        results.append({
+            "amount": float(r.get("amount") or 0),
+            "date": dt,
+            "category": (r.get("category") or "Uncategorized").strip() or "Uncategorized",
+        })
+    return results
+
+
+def _sum_by_category(rows):
+    sums = defaultdict(float)
+    for r in rows:
+        sums[r["category"]] += r["amount"]
+    return [{"category": k, "total": round(v, 2)} for k, v in sorted(sums.items(), key=lambda kv: kv[1], reverse=True)]
+
+
+@app.route("/api/expense_monthly_donut", methods=["POST"])
+def api_expense_monthly_donut():
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Missing or invalid authorization token"}), 401
+
+    jwt = auth_header.split(" ")[1]
+    try:
+        user_resp = categorizer.supabase.auth.get_user(jwt)
+        user = user_resp.user
+        if not user:
+            raise Exception("Invalid user token")
+    except Exception as e:
+        return jsonify({"error": f"Authentication error: {str(e)}"}), 401
+
+    data = request.get_json(silent=True) or {}
+    period = (data.get("period") or "current").strip().lower()
+
+    now = datetime.now(timezone.utc)
+
+    if period == "previous":
+        # Move to the first day of the previous month
+        year = now.year if now.month > 1 else now.year - 1
+        month = now.month - 1 if now.month > 1 else 12
+    else:
+        # Current month
+        year, month = now.year, now.month
+
+    month_start, month_end = _month_window(year, month)
+
+    try:
+        rows = _fetch_expenses(categorizer.supabase, user.id, month_start, month_end)
+        summary = _sum_by_category(rows)
+        return jsonify(summary), 200
+    except Exception as e:
+        print(f"Error in expense_monthly_donut: {e}")
+        return jsonify({"error": "Failed to fetch data", "details": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
