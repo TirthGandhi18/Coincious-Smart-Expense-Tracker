@@ -7,7 +7,13 @@ import { projectId } from "../../lib/info";
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { useAuth } from '../../App';
-import { Tabs, TabsContent, TabsList, TabsTrigger  } from '../ui/tabs';  
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '../ui/dropdown-menu';
 import {
   DollarSign,
   TrendingUp,
@@ -16,36 +22,34 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Brain,
-  Target
+  Target,
+  ChevronDown
 } from 'lucide-react';
-import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   LineChart,
   Line
 } from 'recharts';
 import { Link } from 'react-router-dom';
 
-
-const categoryData = [
-  { name: 'Food & Dining', value: 680, color: '#ECAABA' },
-  { name: 'Transportation', value: 340, color: '#D38DAB' },
-  { name: 'Shopping', value: 520, color: '#8B4D6C' },
-  { name: 'Entertainment', value: 280, color: '#9B89B0' },
-  { name: 'Utilities', value: 450, color: '#675C83' },
-  { name: 'Others', value: 320, color: '#483B63' }
+const DEFAULT_COLORS = [
+  '#ECAABA',
+  '#D38DAB',
+  '#8B4D6C',
+  '#9B89B0',
+  '#675C83',
+  '#483B63'
 ];
 
 const monthlyTrends = [
-  { month: 'Ramani', personal: 1200, group: 800 },
+  { month: 'Jan', personal: 1200, group: 800 },
   { month: 'Feb', personal: 1100, group: 1400 },
   { month: 'Mar', personal: 1300, group: 850 },
   { month: 'Apr', personal: 1250, group: 1950 },
@@ -121,9 +125,14 @@ const insights = [
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [categoryData, setCategoryData] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [categoryLoading, setCategoryLoading] = useState(true);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [categoryPeriod, setCategoryPeriod] = useState<'current' | 'previous'>('current'); // ✅ simplified
   const { user } = useAuth();
 
+  // Fetch analytics overview
   useEffect(() => {
     const fetchAnalytics = async () => {
       if (!user) return;
@@ -153,8 +162,60 @@ export function Dashboard() {
     fetchAnalytics();
   }, [user]);
 
+  // Correct monthly donut data fetcher
+  useEffect(() => {
+    const fetchMonthlyTotals = async () => {
+      if (!user) return;
+      setCategoryLoading(true);
+      setCategoryError(null);
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          setCategoryError('No session token');
+          return;
+        }
+
+        // Send only the selected period to backend
+        const reqBody = { period: categoryPeriod };
+
+        const res = await fetch(`http://localhost:8000/api/expense_monthly_donut`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(reqBody),
+        });
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => String(res.status));
+          setCategoryError(`Failed to fetch monthly totals: ${text}`);
+          return;
+        }
+
+        const data = await res.json();
+
+        // map to chart data
+        const mapped = (data || []).map((d: any, i: number) => ({
+          name: d.category,
+          value: Number(d.total) || 0,
+          color: DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+        }));
+
+        setCategoryData(mapped);
+      } catch (err: any) {
+        console.error('Error fetching monthly totals', err);
+        setCategoryError(String(err?.message || err));
+      } finally {
+        setCategoryLoading(false);
+      }
+    };
+
+    fetchMonthlyTotals();
+  }, [user, categoryPeriod]); // depends on month type
+
   const totalSpending = analyticsData?.total_spending || 0;
-  const categoryBreakdown = analyticsData?.category_breakdown || {};
   const savingsGoal = 1000;
   const monthlySavings = Math.max(0, savingsGoal - totalSpending);
   const savingsProgress = (monthlySavings / savingsGoal) * 100;
@@ -167,14 +228,12 @@ export function Dashboard() {
           <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">Welcome back! Here's your financial overview.</p>
         </div>
-        <div className="flex gap-2">
-          <Button asChild>
-            <Link to="/add-expense">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Expense
-            </Link>
-          </Button>
-        </div>
+        <Button asChild>
+          <Link to="/add-expense">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Expense
+          </Link>
+        </Button>
       </div>
 
       {/* Overview Cards */}
@@ -185,14 +244,10 @@ export function Dashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? '...' : `${totalSpending.toFixed(2)}`}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-muted-foreground flex items-center">
-                <TrendingUp className="h-3 w-3 mr-1" />
-                This month's total
-              </span>
+            <div className="text-2xl font-bold">{loading ? '...' : `${totalSpending.toFixed(2)}`}</div>
+            <p className="text-xs text-muted-foreground flex items-center">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              This month's total
             </p>
           </CardContent>
         </Card>
@@ -210,10 +265,9 @@ export function Dashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">You Are Owed</CardTitle>
-              <ArrowDownRight className="h-4 w-4 text-[#ac1852]" />
+            <CardTitle className="text-sm font-medium">You Are Owed</CardTitle>
+            <ArrowDownRight className="h-4 w-4 text-[#ac1852]" />
           </CardHeader>
-
           <CardContent>
             <div className="text-2xl font-bold text-green-600">$0.00</div>
             <p className="text-xs text-muted-foreground">All settled up!</p>
@@ -226,13 +280,9 @@ export function Dashboard() {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? '...' : `${monthlySavings.toFixed(2)}`}
-            </div>
+            <div className="text-2xl font-bold">{loading ? '...' : `${monthlySavings.toFixed(2)}`}</div>
             <Progress value={savingsProgress} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              {savingsProgress.toFixed(0)}% of ${savingsGoal} goal
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">{savingsProgress.toFixed(0)}% of ${savingsGoal} goal</p>
           </CardContent>
         </Card>
       </div>
@@ -249,44 +299,70 @@ export function Dashboard() {
             {/* Category Breakdown */}
             <Card>
               <CardHeader>
-                <CardTitle>Expense Categories</CardTitle>
-                <CardDescription>Your spending breakdown this month</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Expense Categories</CardTitle>
+                    <CardDescription>Your spending breakdown</CardDescription>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger>
+                      <Button variant="outline" size="sm" className="flex gap-1 text-sm">
+                        {categoryPeriod === 'current' ? 'Current Month' : 'Previous Month'}
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => setCategoryPeriod('current')}>
+                        Current Month
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setCategoryPeriod('previous')}>
+                        Previous Month
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </CardHeader>
+
               <CardContent>
                 <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={categoryData}
-                        innerRadius={50}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {categoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [`$${value}`, 'Amount']} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {categoryLoading ? (
+                    <div className="h-full flex items-center justify-center">Loading chart...</div>
+                  ) : categoryError ? (
+                    <div className="h-full flex items-center justify-center text-sm text-red-500">
+                      Error: {categoryError}
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={categoryData.length ? categoryData : DEFAULT_COLORS.map((c, i) => ({ name: `Category ${i+1}`, value: 0, color: c }))}
+                          innerRadius={50}
+                          outerRadius={80}
+                          cx="50%"
+                          cy="50%"
+                          dataKey="value"
+                        >
+                          {(categoryData.length ? categoryData : DEFAULT_COLORS).map((entry: any, index: number) => (
+                            <Cell key={`cell-${index}`} fill={entry.color ?? entry} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value, name) => [`$${Number(value).toFixed(2)}`, name]} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
                 <div className="mt-4 space-y-2">
-                  {categoryData.map((category) => (
+                  {categoryData.length ? categoryData.map((category) => (
                     <div key={category.name} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: category.color }}
-                        />
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }} />
                         <span>{category.name}</span>
                       </div>
-                      <span className="font-medium">${category.value}</span>
+                      <span className="font-medium">${category.value.toFixed(2)}</span>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-sm text-muted-foreground">No data for this month</div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -301,13 +377,13 @@ export function Dashboard() {
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={monthlyTrends}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="personal" stroke="#9B1313" />
-                    <Line type="monotone" dataKey="group" stroke="#FFA896" />
-                  </LineChart>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="personal" stroke="#9B1313" name="Personal" />
+                      <Line type="monotone" dataKey="group" stroke="#FFA896" name="Group" />
+                    </LineChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
@@ -340,12 +416,10 @@ export function Dashboard() {
               </div>
             </CardContent>
           </Card>
-
-
         </TabsContent>
 
+        {/* History */}
         <TabsContent value="history" className="space-y-6">
-          {/* Transaction History */}
           <Card>
             <CardHeader>
               <CardTitle>Transaction History</CardTitle>
@@ -357,11 +431,7 @@ export function Dashboard() {
                   <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-                        {transaction.type === 'group' ? (
-                          <Users className="h-4 w-4" />
-                        ) : (
-                          <DollarSign className="h-4 w-4" />
-                        )}
+                        {transaction.type === 'group' ? <Users className="h-4 w-4" /> : <DollarSign className="h-4 w-4" />}
                       </div>
                       <div>
                         <h4 className="font-medium">{transaction.title}</h4>
@@ -379,9 +449,7 @@ export function Dashboard() {
                               <div className="flex -space-x-1">
                                 {transaction.participants.slice(0, 3).map((participant, index) => (
                                   <Avatar key={index} className="h-4 w-4 border border-background">
-                                    <AvatarFallback className="text-xs">
-                                      {participant.charAt(0)}
-                                    </AvatarFallback>
+                                    <AvatarFallback className="text-xs">{participant.charAt(0)}</AvatarFallback>
                                   </Avatar>
                                 ))}
                                 {transaction.participants.length > 3 && (
@@ -396,12 +464,15 @@ export function Dashboard() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-medium text-red-600">
-                        {transaction.amount.toFixed(2)}
-                      </div>
-                      <Badge 
-                        variant={transaction.status === 'settled' ? 'default' : 
-                                transaction.status === 'pending' ? 'secondary' : 'outline'}
+                      <div className="font-medium text-red-600">{transaction.amount.toFixed(2)}</div>
+                      <Badge
+                        variant={
+                          transaction.status === 'settled'
+                            ? 'default'
+                            : transaction.status === 'pending'
+                            ? 'secondary'
+                            : 'outline'
+                        }
                         className="text-xs"
                       >
                         {transaction.status}
@@ -415,43 +486,7 @@ export function Dashboard() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Historical Analytics */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Spending Trends</CardTitle>
-              <CardDescription>Your expense patterns over time</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyTrends}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`${value}`, 'Amount']} />
-                    <Line 
-                      type="monotone" 
-                      dataKey="personal" 
-                      stroke="#9B1313" 
-                      strokeWidth={2}
-                      name="Personal" 
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="group" 
-                      stroke="#AD9CBE" 
-                      strokeWidth={2}
-                      name="Group" 
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
-
-
       </Tabs>
     </div>
   );
