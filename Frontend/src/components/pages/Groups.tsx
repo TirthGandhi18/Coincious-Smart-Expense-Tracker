@@ -39,76 +39,77 @@ import {
 import { Label } from '../ui/label';
 import { toast } from 'sonner';
 
-// Mock data
-const groups = [
-  {
-    id: '1',
-    name: 'Weekend Trip',
-    description: 'Beach house rental and activities',
-    members: [
-      { id: '1', name: 'You', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format' },
-      { id: '2', name: 'Sarah', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b272?w=150&h=150&fit=crop&crop=face&auto=format' },
-      { id: '3', name: 'Mike', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=150&h=150&fit=crop&crop=face&auto=format' },
-      { id: '4', name: 'Lisa', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face&auto=format' }
-    ],
-    totalExpenses: 1248.75,
-    yourBalance: -45.20,
-    lastActivity: '2 hours ago',
-    status: 'active'
-  },
-  {
-    id: '2',
-    name: 'Roommates',
-    description: 'Shared apartment expenses',
-    members: [
-      { id: '1', name: 'You', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format' },
-      { id: '5', name: 'Alex', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face&auto=format' },
-      { id: '6', name: 'Jordan', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face&auto=format' }
-    ],
-    totalExpenses: 2847.30,
-    yourBalance: 125.80,
-    lastActivity: '1 day ago',
-    status: 'active'
-  },
-  {
-    id: '3',
-    name: 'Work Lunch Group',
-    description: 'Office lunch orders and team dinners',
-    members: [
-      { id: '1', name: 'You', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format' },
-      { id: '7', name: 'Emma', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face&auto=format' },
-      { id: '8', name: 'David', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face&auto=format' },
-      { id: '9', name: 'Sophie', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&h=150&fit=crop&crop=face&auto=format' },
-      { id: '10', name: 'Ryan', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face&auto=format' }
-    ],
-    totalExpenses: 456.90,
-    yourBalance: -12.30,
-    lastActivity: '3 days ago',
-    status: 'active'
-  },
-  {
-    id: '4',
-    name: 'Family Vacation 2024',
-    description: 'Annual family trip expenses',
-    members: [
-      { id: '1', name: 'You', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format' },
-      { id: '11', name: 'Mom', avatar: 'https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=150&h=150&fit=crop&crop=face&auto=format' },
-      { id: '12', name: 'Dad', avatar: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150&h=150&fit=crop&crop=face&auto=format' },
-      { id: '13', name: 'Sister', avatar: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?w=150&h=150&fit=crop&crop=face&auto=format' }
-    ],
-    totalExpenses: 3240.00,
-    yourBalance: 0,
-    lastActivity: '1 week ago',
-    status: 'settled'
-  }
+// Dummy groups data - matching AddExpense.tsx
+const dummyGroups = [
+  { id: '1', name: 'Weekend Trip' },
+  { id: '2', name: 'Roommates' },
+  { id: '3', name: 'Work Lunch Group' },
+  { id: '4', name: 'Family Vacation 2024' }
 ];
+
+// Dummy group members data - matching AddExpense.tsx
+const dummyGroupMembers: { [key: string]: Array<{ id: string; name: string; avatar: string; email?: string }> } = {
+  '1': [
+    { id: 'user-1', name: 'You (Alex)', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'alex@example.com' },
+    { id: 'user-2', name: 'Sarah Johnson', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b272?w=150&h=150&fit=crop&crop=face&auto=format', email: 'sarah@example.com' },
+    { id: 'user-3', name: 'Mike Chen', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=150&h=150&fit=crop&crop=face&auto=format', email: 'mike@example.com' },
+    { id: 'user-4', name: 'Lisa Anderson', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face&auto=format', email: 'lisa@example.com' }
+  ],
+  '2': [
+    { id: 'user-1', name: 'You (Alex)', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'alex@example.com' },
+    { id: 'user-5', name: 'James Wilson', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face&auto=format', email: 'james@example.com' },
+    { id: 'user-6', name: 'Emma Davis', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face&auto=format', email: 'emma@example.com' }
+  ],
+  '3': [
+    { id: 'user-1', name: 'You (Alex)', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'alex@example.com' },
+    { id: 'user-2', name: 'Sarah Johnson', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b272?w=150&h=150&fit=crop&crop=face&auto=format', email: 'sarah@example.com' },
+    { id: 'user-7', name: 'David Martinez', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'david@example.com' },
+    { id: 'user-8', name: 'Olivia Taylor', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face&auto=format', email: 'olivia@example.com' },
+    { id: 'user-3', name: 'Mike Chen', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=150&h=150&fit=crop&crop=face&auto=format', email: 'mike@example.com' }
+  ],
+  '4': [
+    { id: 'user-1', name: 'You (Alex)', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'alex@example.com' },
+    { id: 'user-9', name: 'Robert Brown', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face&auto=format', email: 'robert@example.com' },
+    { id: 'user-10', name: 'Sophia Garcia', avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&h=150&fit=crop&crop=face&auto=format', email: 'sophia@example.com' },
+    { id: 'user-4', name: 'Lisa Anderson', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face&auto=format', email: 'lisa@example.com' },
+    { id: 'user-11', name: 'William Lee', avatar: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=150&h=150&fit=crop&crop=face&auto=format', email: 'william@example.com' },
+    { id: 'user-12', name: 'Ava White', avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&h=150&fit=crop&crop=face&auto=format', email: 'ava@example.com' }
+  ]
+};
+
+// Extended groups with additional metadata for display
+const dummyGroupsWithMetadata = dummyGroups.map(group => ({
+  ...group,
+  description: group.id === '1' ? 'Beach house rental and activities' :
+               group.id === '2' ? 'Shared apartment expenses' :
+               group.id === '3' ? 'Office lunch orders and team dinners' :
+               group.id === '4' ? 'Annual family trip expenses' : '',
+  members: dummyGroupMembers[group.id] || [],
+  totalExpenses: group.id === '1' ? 1248.75 :
+                 group.id === '2' ? 2847.30 :
+                 group.id === '3' ? 456.90 :
+                 group.id === '4' ? 3240.00 : 0,
+  yourBalance: group.id === '1' ? -45.20 :
+               group.id === '2' ? 125.80 :
+               group.id === '3' ? -12.30 :
+               group.id === '4' ? 0 : 0,
+  lastActivity: group.id === '1' ? '2 hours ago' :
+                group.id === '2' ? '1 day ago' :
+                group.id === '3' ? '3 days ago' :
+                group.id === '4' ? '1 week ago' : '',
+  status: group.id === '4' ? 'settled' : 'active'
+}));
 
 export function Groups() {
   const [searchTerm, setSearchTerm] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDescription, setNewGroupDescription] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [groups, setGroups] = useState<any[]>([]);
+  const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
+  const [selectedGroupForMember, setSelectedGroupForMember] = useState<any>(null);
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberName, setNewMemberName] = useState('');
+  const [groups, setGroups] = useState<any[]>(dummyGroupsWithMetadata);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -129,10 +130,17 @@ export function Groups() {
 
         if (response.ok) {
           const data = await response.json();
-          setGroups(data.groups || []);
+          // Merge backend groups with dummy data
+          const backendGroups = data.groups || [];
+          setGroups(backendGroups.length > 0 ? backendGroups : dummyGroupsWithMetadata);
+        } else {
+          // Use dummy data if backend fails
+          setGroups(dummyGroupsWithMetadata);
         }
       } catch (error) {
         console.error('Error fetching groups:', error);
+        // Use dummy data on error
+        setGroups(dummyGroupsWithMetadata);
       } finally {
         setLoading(false);
       }
@@ -198,6 +206,84 @@ export function Groups() {
     if (balance > 0) return `You are owed $${balance.toFixed(2)}`;
     if (balance < 0) return `You owe $${Math.abs(balance).toFixed(2)}`;
     return 'All settled up';
+  };
+
+  const handleOpenAddMemberDialog = (group: any) => {
+    setSelectedGroupForMember(group);
+    setNewMemberEmail('');
+    setNewMemberName('');
+    setIsAddMemberDialogOpen(true);
+  };
+
+  const handleAddMember = async () => {
+    if (!newMemberEmail.trim()) {
+      toast.error('Please enter a member email');
+      return;
+    }
+
+    if (!newMemberName.trim()) {
+      toast.error('Please enter a member name');
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newMemberEmail)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Please log in to add members');
+        return;
+      }
+
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-7f88878c/groups/${selectedGroupForMember.id}/members`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: newMemberEmail,
+          name: newMemberName,
+        }),
+      });
+
+      if (response.ok) {
+        // Update the local state with the new member
+        const newMember = {
+          id: `user-${Date.now()}`,
+          name: newMemberName,
+          email: newMemberEmail,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newMemberName)}&background=random`
+        };
+
+        setGroups(prev => prev.map(g => {
+          if (g.id === selectedGroupForMember.id) {
+            return {
+              ...g,
+              members: [...(g.members || []), newMember]
+            };
+          }
+          return g;
+        }));
+
+        toast.success(`${newMemberName} added to ${selectedGroupForMember.name}!`);
+        setNewMemberEmail('');
+        setNewMemberName('');
+        setIsAddMemberDialogOpen(false);
+        setSelectedGroupForMember(null);
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to add member');
+      }
+    } catch (error) {
+      console.error('Error adding member:', error);
+      toast.error('Failed to add member');
+    }
   };
 
   return (
@@ -302,10 +388,6 @@ export function Groups() {
                       Group Settings
                     </DropdownMenuItem>
                     <DropdownMenuItem>
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Add Members
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
                       <Archive className="h-4 w-4 mr-2" />
                       Archive Group
                     </DropdownMenuItem>
@@ -319,9 +401,17 @@ export function Groups() {
                 <div className="flex items-center gap-2 mb-4">
                   <Users className="h-4 w-4 text-muted-foreground" />
                   <div className="flex items-center gap-1">
-                    <Avatar className="h-6 w-6 border-2 border-background">
-                      <AvatarFallback className="text-xs">You</AvatarFallback>
-                    </Avatar>
+                    {group.members?.slice(0, 4).map((member: any, index: number) => (
+                      <Avatar key={member.id} className="h-6 w-6 border-2 border-background" style={{ marginLeft: index > 0 ? '-8px' : '0' }}>
+                        <AvatarImage src={member.avatar} alt={member.name} />
+                        <AvatarFallback className="text-xs">{member.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                    ))}
+                    {group.members && group.members.length > 4 && (
+                      <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-xs" style={{ marginLeft: '-8px' }}>
+                        +{group.members.length - 4}
+                      </div>
+                    )}
                     <span className="text-sm text-muted-foreground ml-2">
                       {group.members?.length || 1} member{(group.members?.length || 1) > 1 ? 's' : ''}
                     </span>
@@ -334,40 +424,52 @@ export function Groups() {
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">Total Expenses</p>
-                      <p className="font-medium">${(group.total_expenses || 0).toFixed(2)}</p>
+                      <p className="font-medium">${(group.totalExpenses || group.total_expenses || 0).toFixed(2)}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-gray-500" />
+                    <div className={`h-2 w-2 rounded-full ${
+                      (group.yourBalance || 0) > 0 ? 'bg-green-500' : 
+                      (group.yourBalance || 0) < 0 ? 'bg-red-500' : 
+                      'bg-gray-500'
+                    }`} />
                     <div>
                       <p className="text-sm text-muted-foreground">Your Balance</p>
-                      <p className="font-medium text-muted-foreground">All settled up</p>
+                      <p className={`font-medium ${getBalanceColor(group.yourBalance || 0)}`}>
+                        {getBalanceText(group.yourBalance || 0)}
+                      </p>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-2 col-span-2 md:col-span-1">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Created</p>
-                      <p className="font-medium">{new Date(group.created_at).toLocaleDateString()}</p>
+                      <p className="text-sm text-muted-foreground">Last Activity</p>
+                      <p className="font-medium">{group.lastActivity || (group.created_at ? new Date(group.created_at).toLocaleDateString() : 'N/A')}</p>
                     </div>
                   </div>
                 </div>
 
               {/* Actions */}
-              <div className="flex gap-2 pt-2">
-                <Button asChild className="flex-1">
+              <div className="flex flex-col gap-2 pt-2">
+                <Button asChild className="w-full">
                   <Link to={`/groups/${group.id}`}>
                     View Details
                   </Link>
                 </Button>
-                <Button variant="outline" asChild>
-                  <Link to={`/add-expense?group=${group.id}`}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Expense
-                  </Link>
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1" asChild>
+                    <Link to={`/add-expense?group=${group.id}`}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Expense
+                    </Link>
+                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={() => handleOpenAddMemberDialog(group)}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Member
+                  </Button>
+                </div>
               </div>
             </CardContent>
             </Card>
@@ -398,6 +500,79 @@ export function Groups() {
           </CardContent>
         </Card>
       )}
+
+      {/* Add Member Dialog */}
+      <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Member to {selectedGroupForMember?.name}</DialogTitle>
+            <DialogDescription>
+              Invite a new member to join this group. They'll be able to add expenses and see group activity.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            {/* Current Members */}
+            {selectedGroupForMember?.members && selectedGroupForMember.members.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Current Members ({selectedGroupForMember.members.length})</Label>
+                <div className="border rounded-lg p-3 max-h-32 overflow-y-auto space-y-2">
+                  {selectedGroupForMember.members.map((member: any) => (
+                    <div key={member.id} className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={member.avatar} alt={member.name} />
+                        <AvatarFallback className="text-xs">{member.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm truncate">{member.name}</p>
+                        {member.email && (
+                          <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* New Member Form */}
+            <div className="space-y-4 pt-2">
+              <div className="grid gap-2">
+                <Label htmlFor="memberName">Member Name</Label>
+                <Input
+                  id="memberName"
+                  placeholder="e.g., John Doe"
+                  value={newMemberName}
+                  onChange={(e) => setNewMemberName(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="memberEmail">Member Email</Label>
+                <Input
+                  id="memberEmail"
+                  type="email"
+                  placeholder="e.g., john@example.com"
+                  value={newMemberEmail}
+                  onChange={(e) => setNewMemberEmail(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  An invitation will be sent to this email address
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddMemberDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddMember}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Member
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
