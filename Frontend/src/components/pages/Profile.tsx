@@ -1,4 +1,4 @@
-// src/components/pages/Profile.tsx - COMPLETE WITH EMAIL & PHONE VALIDATION
+// src/components/pages/Profile.tsx - 2FA section removed
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../App';
 import {
@@ -23,7 +23,6 @@ import {
   Save,
   X,
   Lock,
-  Shield,
   Monitor,
 } from 'lucide-react';
 
@@ -38,10 +37,7 @@ type ProfileData = {
 /* -------------------------
    Validators & helpers
    ------------------------- */
-// Simple but practical email regex for client-side validation
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
-
-// Allow +, digits, spaces, dashes, parentheses, limit to 7-15 digits (international-friendly)
 const PHONE_RE = /^(\+)?[0-9\s\-()]{7,30}$/;
 
 function validateName(name: string) {
@@ -108,9 +104,8 @@ export function Profile() {
   const [errors, setErrors] = useState<Partial<Record<keyof ProfileData, string>>>({});
   const [touched, setTouched] = useState<Partial<Record<keyof ProfileData, boolean>>>({});
 
-  // security & sessions states (unchanged from original)
+  // security & sessions states (2FA removed)
   const [securityData, setSecurityData] = useState({
-    twoFactorEnabled: false,
     lastPasswordChange: '30 days ago',
   });
   const [openPasswordModal, setOpenPasswordModal] = useState(false);
@@ -224,10 +219,8 @@ export function Profile() {
     setIsEditing(false);
   };
 
-  // --- PASSWORD, 2FA, sessions, signout etc (unchanged) ---
+  // --- PASSWORD, sessions, signout etc (2FA removed) ---
   const handleChangePassword = () => setOpenPasswordModal(true);
-  const handleToggle2FA = () =>
-    setSecurityData((s) => ({ ...s, twoFactorEnabled: !s.twoFactorEnabled }));
 
   const handleViewSessions = async () => {
     setOpenSessionsModal(true);
@@ -579,29 +572,6 @@ export function Profile() {
                 </Button>
               </div>
 
-              {/* Two-Factor Authentication */}
-              <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Shield className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Two-Factor Authentication</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {securityData.twoFactorEnabled
-                        ? 'Additional security layer is active'
-                        : 'Add an extra layer of security'}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant={securityData.twoFactorEnabled ? 'default' : 'outline'}
-                  onClick={handleToggle2FA}
-                >
-                  {securityData.twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
-                </Button>
-              </div>
-
               {/* Login Sessions */}
               <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
                 <div className="flex items-center gap-3">
@@ -883,7 +853,6 @@ function PasswordModal({
                   type="button"
                   className="text-sm text-muted-foreground underline"
                   onClick={() => {
-                    // open browser reset via your route or call supabase reset - fallback to alert
                     if (supabase && typeof supabase.auth.resetPasswordForEmail === 'function') {
                       supabase.auth.resetPasswordForEmail(user?.email || '');
                       alert('Password reset email sent (check your inbox).');
@@ -913,7 +882,6 @@ function PasswordModal({
     </div>
   );
 }
-
 
 /* -------------------------
    SessionsModal component

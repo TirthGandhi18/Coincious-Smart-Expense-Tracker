@@ -1,26 +1,10 @@
 // Frontend/src/components/pages/Support.tsx
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
-import {
-  HelpCircle,
-  Phone,
-  Mail,
-  Search,
-  Clock,
-  AlertCircle,
-  Book,
-  MessageCircle,
-  Send
-} from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { toast } from 'sonner';
+import { HelpCircle, Mail, Search, Clock, Book, MessageCircle, AlertCircle } from 'lucide-react';
 
 // FAQ data
 const faqs = [
@@ -92,7 +76,7 @@ const faqs = [
   }
 ];
 
-// Channels (removed live chat)
+// Channels - only email now
 const channels = [
   {
     icon: Mail,
@@ -100,36 +84,11 @@ const channels = [
     description: 'Get help via email',
     availability: 'Response within 24 hours',
     status: 'online'
-  },
-  {
-    icon: Phone,
-    title: 'Phone Support',
-    description: 'Speak with an expert',
-    availability: 'Mon-Fri 9AM-6PM EST',
-    status: 'offline'
   }
 ];
 
 export function Support() {
-  const [tab, setTab] = useState('faq');
   const [query, setQuery] = useState('');
-  const [ticket, setTicket] = useState({
-    subject: '',
-    category: '',
-    priority: '',
-    message: ''
-  });
-
-  const submitTicket = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ticket.subject || !ticket.category || !ticket.message) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    toast.success('Support ticket submitted successfully!');
-    setTicket({ subject: '', category: '', priority: '', message: '' });
-  };
 
   const filteredFaqs = faqs
     .map(cat => ({
@@ -156,18 +115,16 @@ export function Support() {
         </div>
       </div>
 
-      {/* Channels (Live Chat removed) */}
-      <div className="grid md:grid-cols-2 gap-4 mb-8">
+      {/* Channels - single column */}
+      <div className="grid md:grid-cols-1 gap-4 mb-8">
         {channels.map((ch, i) => {
           const Icon = ch.icon;
           return (
-            <Card key={i} className="hover:shadow-lg transition-shadow cursor-pointer">
+            <Card key={i} className="hover:shadow-lg transition-shadow">
               <CardContent className="p-6 text-center">
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                    ch.status === 'online'
-                      ? 'bg-green-100 dark:bg-green-900/20'
-                      : 'bg-gray-100 dark:bg-gray-900/20'
+                    ch.status === 'online' ? 'bg-green-100' : 'bg-gray-100'
                   }`}
                 >
                   <Icon
@@ -186,185 +143,88 @@ export function Support() {
                   />
                   <span className="text-xs text-muted-foreground">{ch.availability}</span>
                 </div>
-                <Button className="w-full mt-4" disabled={ch.status === 'offline'}>
-                  {ch.status === 'online' ? 'Contact Now' : 'Currently Offline'}
-                </Button>
+                <div className="mt-4">
+                  <a
+                    href={`mailto:support@yourdomain.com`}
+                    className="inline-block w-full text-center px-4 py-2 rounded bg-[#8B4513] text-white hover:opacity-95"
+                    aria-label="Contact support via email"
+                  >
+                    Contact via Email
+                  </a>
+                </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      {/* Tabs - only FAQ and Submit Ticket remain */}
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="faq">FAQ</TabsTrigger>
-          <TabsTrigger value="ticket">Submit Ticket</TabsTrigger>
-        </TabsList>
+      {/* FAQ search */}
+      <div className="relative mb-4 max-w-2xl mx-auto">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search FAQ..."
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          className="pl-10"
+        />
+      </div>
 
-        {/* FAQ */}
-        <TabsContent value="faq" className="space-y-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search FAQ..."
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+      {/* FAQs */}
+      {filteredFaqs.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <h3 className="text-lg font-medium mb-2">No results found</h3>
+            <p className="text-muted-foreground">
+              Try searching with different keywords or browse our categories below.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {filteredFaqs.map(cat => {
+            const Icon = cat.icon;
+            return (
+              <Card key={cat.id}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Icon className="h-5 w-5" />
+                    {cat.title}
+                    <Badge variant="outline">{cat.questions.length}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Accordion type="single" collapsible className="w-full">
+                    {cat.questions.map((q, idx) => (
+                      <AccordionItem key={idx} value={`${cat.id}-${idx}`}>
+                        <AccordionTrigger className="text-left">{q.question}</AccordionTrigger>
+                        <AccordionContent className="text-muted-foreground">
+                          {q.answer}
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
-          {filteredFaqs.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="text-lg font-medium mb-2">No results found</h3>
-                <p className="text-muted-foreground">
-                  Try searching with different keywords or browse our categories below.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-6">
-              {filteredFaqs.map(cat => {
-                const Icon = cat.icon;
-                return (
-                  <Card key={cat.id}>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Icon className="h-5 w-5" />
-                        {cat.title}
-                        <Badge variant="outline">{cat.questions.length}</Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Accordion type="single" collapsible className="w-full">
-                        {cat.questions.map((q, idx) => (
-                          <AccordionItem key={idx} value={`${cat.id}-${idx}`}>
-                            <AccordionTrigger className="text-left">{q.question}</AccordionTrigger>
-                            <AccordionContent className="text-muted-foreground">
-                              {q.answer}
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+      {/* Response Times */}
+      <Card className="mt-6">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <Clock className="h-5 w-5 text-blue-600" />
+            <div>
+              <h4 className="font-medium">Response Times</h4>
+              <p className="text-sm text-muted-foreground">
+                We typically respond within 24 hours for most inquiries.
+              </p>
             </div>
-          )}
-        </TabsContent>
-
-        {/* Ticket */}
-        <TabsContent value="ticket">
-          <Card>
-            <CardHeader>
-              <CardTitle>Submit Support Ticket</CardTitle>
-              <CardDescription>
-                Can’t find what you’re looking for? Submit a support ticket and our team will help
-                you.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={submitTicket} className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="subject">Subject *</Label>
-                    <Input
-                      id="subject"
-                      placeholder="Brief description of your issue"
-                      value={ticket.subject}
-                      onChange={e => setTicket(prev => ({ ...prev, subject: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category *</Label>
-                    <Select
-                      value={ticket.category}
-                      onValueChange={val => setTicket(prev => ({ ...prev, category: val }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="account">Account Issues</SelectItem>
-                        <SelectItem value="billing">Billing & Payments</SelectItem>
-                        <SelectItem value="technical">Technical Support</SelectItem>
-                        <SelectItem value="groups">Groups & Splitting</SelectItem>
-                        <SelectItem value="parental">Parental Controls</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="priority">Priority</Label>
-                  <Select
-                    value={ticket.priority}
-                    onValueChange={val => setTicket(prev => ({ ...prev, priority: val }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select priority" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low - General question</SelectItem>
-                      <SelectItem value="medium">Medium - Issue affecting usage</SelectItem>
-                      <SelectItem value="high">High - Unable to use service</SelectItem>
-                      <SelectItem value="urgent">Urgent - Critical issue</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="message">Description *</Label>
-                  <Textarea
-                    id="message"
-                    placeholder="Please describe your issue in detail..."
-                    value={ticket.message}
-                    onChange={e => setTicket(prev => ({ ...prev, message: e.target.value }))}
-                    rows={6}
-                    required
-                  />
-                </div>
-
-                <div className="flex gap-3">
-                  <Button type="submit" className="flex-1">
-                    <Send className="h-4 w-4 mr-2" />
-                    Submit Ticket
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() =>
-                      setTicket({ subject: '', category: '', priority: '', message: '' })
-                    }
-                  >
-                    Clear
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card className="mt-6">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-blue-600" />
-                <div>
-                  <h4 className="font-medium">Response Times</h4>
-                  <p className="text-sm text-muted-foreground">
-                    We typically respond within 24 hours for most tickets. High-priority issues are
-                    addressed within 4 hours.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
