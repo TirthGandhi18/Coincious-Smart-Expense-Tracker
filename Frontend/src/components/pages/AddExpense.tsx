@@ -5,6 +5,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { supabase } from '../../utils/supabase/client';
+import { projectId } from '../../lib/info';
 import { useAuth } from '../../App';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -17,10 +18,10 @@ import {
   Receipt,
   Users,
   Calculator,
+  Upload,
   Plus,
   Minus,
-  User,
-  Zap // Icon for AI button
+  User
 } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -32,22 +33,61 @@ import {
 } from '../ui/select';
 import { toast } from 'sonner';
 
-// This is your hardcoded category list. You can add more.
+// Mock data
+const categories = [
+  { value: 'food', label: 'Food & Dining', icon: '🍽️' },
+  { value: 'transportation', label: 'Transportation', icon: '🚗' },
+  { value: 'accommodation', label: 'Accommodation', icon: '🏠' },
+  { value: 'entertainment', label: 'Entertainment', icon: '🎉' },
+  { value: 'utilities', label: 'Utilities', icon: '💡' },
+  { value: 'shopping', label: 'Shopping', icon: '🛍️' },
+  { value: 'health', label: 'Health & Medical', icon: '⚕️' },
+  { value: 'other', label: 'Other', icon: '💳' }
+];
 
-// Define the shape of a group member (fetched from Supabase)
-interface GroupMember {
-  id: string;
-  name: string;
-  avatar: string;
-  email?: string;
-}
+// Dummy groups data
+const dummyGroups = [
+  { id: '1', name: 'Weekend Trip' },
+  { id: '2', name: 'Roommates' },
+  { id: '3', name: 'Work Lunch Group' },
+  { id: '4', name: 'Family Vacation 2024' }
+];
+
+// Dummy group members data
+const dummyGroupMembers: { [key: string]: Array<{ id: string; name: string; avatar: string; email?: string }> } = {
+  '1': [
+    { id: 'user-1', name: 'You (Alex)', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'alex@example.com' },
+    { id: 'user-2', name: 'Sarah Johnson', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b272?w=150&h=150&fit=crop&crop=face&auto=format', email: 'sarah@example.com' },
+    { id: 'user-3', name: 'Mike Chen', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=150&h=150&fit=crop&crop=face&auto=format', email: 'mike@example.com' },
+    { id: 'user-4', name: 'Lisa Anderson', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face&auto=format', email: 'lisa@example.com' }
+  ],
+  '2': [
+    { id: 'user-1', name: 'You (Alex)', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'alex@example.com' },
+    { id: 'user-5', name: 'James Wilson', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face&auto=format', email: 'james@example.com' },
+    { id: 'user-6', name: 'Emma Davis', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face&auto=format', email: 'emma@example.com' }
+  ],
+  '3': [
+    { id: 'user-1', name: 'You (Alex)', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'alex@example.com' },
+    { id: 'user-2', name: 'Sarah Johnson', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b272?w=150&h=150&fit=crop&crop=face&auto=format', email: 'sarah@example.com' },
+    { id: 'user-7', name: 'David Martinez', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'david@example.com' },
+    { id: 'user-8', name: 'Olivia Taylor', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face&auto=format', email: 'olivia@example.com' },
+    { id: 'user-3', name: 'Mike Chen', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=150&h=150&fit=crop&crop=face&auto=format', email: 'mike@example.com' }
+  ],
+  '4': [
+    { id: 'user-1', name: 'You (Alex)', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'alex@example.com' },
+    { id: 'user-9', name: 'Robert Brown', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face&auto=format', email: 'robert@example.com' },
+    { id: 'user-10', name: 'Sophia Garcia', avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&h=150&fit=crop&crop=face&auto=format', email: 'sophia@example.com' },
+    { id: 'user-4', name: 'Lisa Anderson', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face&auto=format', email: 'lisa@example.com' },
+    { id: 'user-11', name: 'William Lee', avatar: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=150&h=150&fit=crop&crop=face&auto=format', email: 'william@example.com' },
+    { id: 'user-12', name: 'Ava White', avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&h=150&fit=crop&crop=face&auto=format', email: 'ava@example.com' }
+  ]
+};
 
 export function AddExpense() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preselectedGroup = searchParams.get('group');
-  const { user } = useAuth(); // Your custom hook to get the logged-in user
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const { user } = useAuth();
 
   // Expense type state
   const [expenseType, setExpenseType] = useState<'personal' | 'group'>(preselectedGroup ? 'group' : 'personal');
@@ -58,170 +98,55 @@ export function AddExpense() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [selectedGroup, setSelectedGroup] = useState(preselectedGroup || '');
-  const [paidBy, setPaidBy] = useState(user?.id || ''); 
+  const [paidBy, setPaidBy] = useState('user-1'); 
   const [splitMethod, setSplitMethod] = useState<'equal' | 'unequal'>('equal');
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([user?.id || '']);
+  const [selectedMembers, setSelectedMembers] = useState<string[]>(['user-1']);
   const [unequalAmounts, setUnequalAmounts] = useState<{ [key: string]: string }>({});
   const [amountErrors, setAmountErrors] = useState<{ [key: string]: string }>({});
-  
-  // Data state
-  const [groups, setGroups] = useState<any[]>([]);
-  const [currentMembers, setCurrentMembers] = useState<GroupMember[]>([]);
-
-  // Loading states
+  const [groups, setGroups] = useState<any[]>(dummyGroups);
   const [loading, setLoading] = useState(false);
-  const [isCategorizing, setIsCategorizing] = useState(false);
 
-  // ----------------------------------------------------------------
-  // DATA FETCHING (Replaces Dummy Data)
-  // ----------------------------------------------------------------
+  // Get current group members based on selected group
+  const currentMembers = selectedGroup ? (dummyGroupMembers[selectedGroup] || []) : [];
 
-  // Fetch the user's groups from Supabase when the component loads
   useEffect(() => {
     const fetchGroups = async () => {
       if (!user) return;
-      
-      // Use the Supabase database function 'get_user_groups' we created
-      const { data, error } = await supabase.rpc('get_user_groups'); 
 
-      if (error) {
-        console.error('Error fetching groups:', error);
-        toast.error('Could not load your groups.');
-      } else {
-        setGroups(data || []);
-        // If a group was preselected (e.g., coming from a group page), set it
-        if (preselectedGroup && data.find((g: any) => g.id === preselectedGroup)) {
-          setSelectedGroup(preselectedGroup);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+
+        const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-7f88878c/groups`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setGroups(data.groups || []);
         }
+      } catch (error) {
+        console.error('Error fetching groups:', error);
       }
     };
 
     fetchGroups();
-  }, [user, preselectedGroup]);
+  }, [user]);
 
-  // Fetch members whenever the selected group changes
+  // Reset split data when group changes
   useEffect(() => {
-    const fetchGroupMembers = async () => {
-      if (!selectedGroup || !user) {
-        setCurrentMembers([]);
-        return;
-      }
-
-      // Query the group_members table and join with profiles to get names/avatars
-      const { data, error } = await supabase
-        .from('group_members')
-        .select(`
-          profiles (
-            id,
-            full_name,
-            avatar_url
-          )
-        `)
-        .eq('group_id', selectedGroup);
-      
-      if (error) {
-        console.error('Error fetching group members:', error);
-        toast.error('Could not load group members.');
-        setCurrentMembers([]);
-      } else {
-        // Re-format the data to match what the component expects
-        const members: GroupMember[] = data.map((item: any) => ({
-          id: item.profiles.id,
-          name: item.profiles.full_name || 'No Name',
-          avatar: item.profiles.avatar_url,
-        }));
-        setCurrentMembers(members);
-        
-        // Reset split members to just the current user by default
-        setSelectedMembers([user.id]);
-        setPaidBy(user.id);
-        setUnequalAmounts({});
-        setAmountErrors({});
-      }
-    };
-
-    fetchGroupMembers();
-  }, [selectedGroup, user]);
-
-  // This useEffect will run once and fetch all available categories
-  useEffect(() => {
-    const fetchCategories = async () => {
-      if (!user) return; // Wait for the user to be loaded
-
-      // Call the database function we just created
-      const { data, error } = await supabase.rpc('get_all_user_categories');
-
-      if (error) {
-        console.error('Error fetching categories:', error);
-        toast.error('Could not load your categories.');
-      } else {
-        // Use a Set to automatically remove any duplicates, then save to state
-        const uniqueCategories = [...new Set(data as string[])];
-        setAvailableCategories(uniqueCategories);
-      }
-    };
-
-    fetchCategories();
-  }, [user]); // Run this whenever the user object is available
-
-
-  // ----------------------------------------------------------------
-  // AI FEATURE HANDLERS
-  // ----------------------------------------------------------------
-
-  const handleAICategorize = async () => {
-    if (!title.trim()) {
-      toast.error('Please enter a title or description first.');
-      return;
+    if (selectedGroup && currentMembers.length > 0) {
+      // Reset selected members to include the first user
+      setSelectedMembers(['user-1']);
+      setPaidBy('user-1');
+      // Clear unequal amounts
+      setUnequalAmounts({});
+      setAmountErrors({});
     }
-    setIsCategorizing(true);
-    const toastId = toast.loading('Asking the AI for a category...');
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not logged in");
-
-      const formData = new FormData();
-      formData.append('description', title);
-      formData.append('category', ''); // Trigger prediction mode
-
-      const response = await fetch('http://localhost:8000/api/categorize', { // MAKE SURE PORT IS CORRECT
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${session.access_token}` },
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error('AI server failed to respond.');
-
-      const result = await response.json();
-      const aiCategoryLabel = result.category;
-
-      if (aiCategoryLabel) {
-        // --- THIS IS THE FIX ---
-        // Check if the AI's suggestion is already in our dropdown
-        if (!availableCategories.includes(aiCategoryLabel)) {
-          // If not, add it to our state so it's in the list!
-          setAvailableCategories(prevCategories => [...prevCategories, aiCategoryLabel]);
-        }
-        // Now, set the dropdown to the AI's suggestion
-        setCategory(aiCategoryLabel);
-        toast.success(`AI suggested: ${aiCategoryLabel}`, { id: toastId }); 
-      } else {
-        throw new Error("AI could not determine a category.");
-      }
-
-    } catch (error: any) {
-      // 3. UPDATE the original toast with an error message
-      toast.error(error.message || 'Failed to get AI category.', { id: toastId }); 
-    } finally {
-      setIsCategorizing(false);
-    }
-  };
-
-
-  // ----------------------------------------------------------------
-  // FORM HANDLERS (Split Logic)
-  // ----------------------------------------------------------------
+  }, [selectedGroup]);
 
   const handleMemberToggle = (memberId: string) => {
     setSelectedMembers(prev => {
@@ -234,28 +159,50 @@ export function AddExpense() {
   };
 
   const handleUnequalAmountChange = (memberId: string, value: string) => {
+    // Clear previous error for this member
     setAmountErrors(prev => {
       const newErrors = { ...prev };
       delete newErrors[memberId];
       return newErrors;
     });
 
+    // Allow empty string for clearing the input
     if (value === '') {
-      setUnequalAmounts(prev => ({ ...prev, [memberId]: '' }));
+      setUnequalAmounts(prev => ({
+        ...prev,
+        [memberId]: ''
+      }));
       return;
     }
 
-    const numberRegex = /^\d*\.?\d*$/; // Allow only numbers and a decimal
+    // Validate that it's a valid number (integer or float)
+    const numberRegex = /^-?\d*\.?\d*$/;
     if (!numberRegex.test(value)) {
-      setAmountErrors(prev => ({ ...prev, [memberId]: 'Invalid number' }));
+      setAmountErrors(prev => ({
+        ...prev,
+        [memberId]: 'Please enter a valid number'
+      }));
       return;
     }
 
-    setUnequalAmounts(prev => ({ ...prev, [memberId]: value }));
+    // Check if it's a valid positive number
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && numValue < 0) {
+      setAmountErrors(prev => ({
+        ...prev,
+        [memberId]: 'Amount must be positive'
+      }));
+      return;
+    }
+
+    setUnequalAmounts(prev => ({
+      ...prev,
+      [memberId]: value
+    }));
   };
 
   const calculateSplitAmounts = () => {
-    const totalAmount = Number.parseFloat(amount) || 0;
+    const totalAmount = parseFloat(amount) || 0;
     const numMembers = selectedMembers.length;
 
     if (splitMethod === 'equal') {
@@ -268,158 +215,145 @@ export function AddExpense() {
     }
 
     if (splitMethod === 'unequal') {
+      // Return the unequal amounts entered by user
       return unequalAmounts;
     }
+
     return {};
   };
 
   const splitAmounts = calculateSplitAmounts();
-  const totalSplit = Object.values(splitAmounts).reduce((sum, amount) => sum + Number.parseFloat(amount || '0'), 0);
-
-  // ----------------------------------------------------------------
-  // FINAL SUBMIT HANDLER (Connects to Supabase & Python)
-  // ----------------------------------------------------------------
+  const totalSplit = Object.values(splitAmounts).reduce((sum, amount) => sum + parseFloat(amount || '0'), 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // --- 1. VALIDATION ---
-    if (!title.trim()) {
-      toast.error('Please enter an expense title');
-      setLoading(false);
-      return;
-    }
-    const finalAmount = parseFloat(amount);
-    if (isNaN(finalAmount) || finalAmount <= 0) {
-      toast.error('Please enter a valid amount');
-      setLoading(false);
-      return;
-    }
-    // 'category' is now a string like "Food & Dining", so we just check if it's selected
-    if (!category) {
-      toast.error('Please select a category');
-      setLoading(false);
-      return;
-    }
-
-    // --- 2. GET SUPABASE SESSION ---
-    // We need the user's ID and token for both Supabase and the Python server
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token || !user) {
-      toast.error('Please log in to add an expense');
-      setLoading(false);
-      return;
-    }
-
     try {
-      // --- 3. "LEARNING" CALL TO PYTHON SERVER (Fire-and-Forget) ---
-      // This tells the AI backend what the user manually chose, so it can learn.
-      // We don't wait for this to finish ("fire-and-forget").
-      const learningFormData = new FormData();
-      learningFormData.append('description', title);
-      learningFormData.append('amount', String(finalAmount));
-      learningFormData.append('category', category); // Pass the final category label
-      
-      fetch('http://localhost:8000/api/categorize', { // Make sure this port is correct!
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${session.access_token}` },
-        body: learningFormData,
-      }).catch(err => {
-        // Log the error but don't stop the user from saving their expense
-        console.error("AI Learning call failed (this is non-critical):", err)
-      });
+      // Validation
+      if (!title.trim()) {
+        toast.error('Please enter an expense title');
+        return;
+      }
 
-      
-      // --- 4. SAVE THE EXPENSE TO SUPABASE DATABASE ---
+      if (!amount || parseFloat(amount) <= 0) {
+        toast.error('Please enter a valid amount');
+        return;
+      }
+
+      if (!category) {
+        toast.error('Please select a category');
+        return;
+      }
+
+      // Personal expense - simpler validation
       if (expenseType === 'personal') {
-        
-        // --- Save a Personal Expense ---
-        const { error: expenseError } = await supabase
-          .from('expenses')
-          .insert({
-            description: title,
-            amount: finalAmount,
-            category: category, // Save the category label directly
-            payer_id: user.id,
-            group_id: null, // This is what makes it a personal expense
-            date: new Date().toISOString()
-          });
+        // For personal expenses, we'll create a personal expense record
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          toast.error('Please log in to add an expense');
+          return;
+        }
 
-        if (expenseError) throw expenseError;
-
+        // For now, we'll show a success message for personal expenses
+        // In a real app, you'd have a separate endpoint for personal expenses
         toast.success('Personal expense added successfully!');
-        navigate('/dashboard'); // Go back to the dashboard
+        navigate('/dashboard');
+        return;
+      }
 
-      } else {
-        
-        // --- Save a Group Expense ---
-        
-        // Group-specific validation
-        if (!selectedGroup) {
-          toast.error('Please select a group');
-          setLoading(false);
-          return;
-        }
-        if (selectedMembers.length === 0) {
-          toast.error('Please select at least one person to split with');
-          setLoading(false);
-          return;
-        }
+      // Group expense validation
+      if (!selectedGroup) {
+        toast.error('Please select a group');
+        return;
+      }
 
-        // Calculate final splits
-        const finalSplits: { user_id: string, amount_owed: number }[] = [];
-        
-        if (splitMethod === 'equal') {
-          const equalAmount = finalAmount / selectedMembers.length;
-          selectedMembers.forEach(memberId => {
-            finalSplits.push({ user_id: memberId, amount_owed: equalAmount });
-          });
-        } else { // Unequal split
-          // Check if the amounts add up
-          if (Math.abs(totalSplit - finalAmount) > 0.01) {
-            toast.error(`Unequal amounts must add up to the total expense ($${finalAmount.toFixed(2)})`);
-            setLoading(false);
-            return;
-          }
-          currentMembers.forEach(member => {
-            finalSplits.push({ 
-              user_id: member.id, 
-              amount_owed: parseFloat(unequalAmounts[member.id] || '0') 
-            });
-          });
-        }
+      if (selectedMembers.length === 0) {
+        toast.error('Please select at least one person to split with');
+        return;
+      }
 
-        // Call the Supabase Database Function to save everything at once
-        const { error: rpcError } = await supabase.rpc('create_group_expense_and_splits', {
-          expense_data: {
-            description: title,
-            amount: finalAmount,
-            category: category,
-            payer_id: paidBy,
-            group_id: selectedGroup,
-          },
-          splits_data: finalSplits
+      if (splitMethod === 'unequal') {
+        // Check if all members have amounts
+        const hasAllAmounts = currentMembers.every(member => {
+          const amount = unequalAmounts[member.id];
+          return amount && amount.trim() !== '' && !isNaN(parseFloat(amount));
         });
 
-        if (rpcError) throw rpcError;
-        
-        toast.success('Group expense added successfully!');
-        navigate('/groups/' + selectedGroup); // Go to the group page
+        if (!hasAllAmounts) {
+          toast.error('Please enter valid amounts for all members');
+          return;
+        }
+
+        // Check if there are any errors
+        if (Object.keys(amountErrors).length > 0) {
+          toast.error('Please fix amount errors before submitting');
+          return;
+        }
+
+        // Validate that the sum equals the total
+        const unequalTotal = Object.values(unequalAmounts).reduce((sum, amt) => sum + parseFloat(amt || '0'), 0);
+        if (Math.abs(unequalTotal - parseFloat(amount)) > 0.01) {
+          toast.error(`Unequal amounts must add up to the total expense amount ($${parseFloat(amount).toFixed(2)})`);
+          return;
+        }
       }
-    } catch (error: any) {
-      // This will catch errors from either the Supabase insert or the RPC call
+
+      // Calculate splits
+      const totalAmount = parseFloat(amount);
+      const splits: { [key: string]: number } = {};
+      
+      if (splitMethod === 'equal') {
+        const equalAmount = totalAmount / selectedMembers.length;
+        selectedMembers.forEach(memberId => {
+          splits[memberId] = equalAmount;
+        });
+      } else if (splitMethod === 'unequal') {
+        currentMembers.forEach(member => {
+          splits[member.id] = parseFloat(unequalAmounts[member.id] || '0');
+        });
+      }
+
+      // Submit to backend
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Please log in to add an expense');
+        return;
+      }
+
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-7f88878c/expenses`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          amount: totalAmount,
+          description,
+          category,
+          group_id: selectedGroup,
+          paid_by: paidBy,
+          split_method: splitMethod,
+          splits,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success('Expense added successfully!');
+        navigate('/groups/' + selectedGroup);
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to add expense');
+      }
+    } catch (error) {
       console.error('Error adding expense:', error);
-      toast.error(error.message || 'Failed to add expense');
+      toast.error('Failed to add expense');
     } finally {
-      // No matter what, stop the loading spinner
       setLoading(false);
     }
   };
 
-  // ----------------------------------------------------------------
-  // JSX (UI Rendering)
-  // ----------------------------------------------------------------
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto">
       {/* Header */}
@@ -496,27 +430,16 @@ export function AddExpense() {
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* This makes sure the list is always up-to-date */}
-                  {[...new Set(availableCategories.concat(category ? [category] : []))]
-                    .map((categoryName) => (
-                      <SelectItem key={categoryName} value={categoryName}>
-                        {categoryName}
-                      </SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      <div className="flex items-center gap-2">
+                        <span>{cat.icon}</span>
+                        <span>{cat.label}</span>
+                      </div>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {/* AI Categorize Button */}
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                onClick={handleAICategorize} 
-                disabled={isCategorizing || !title.trim()}
-                className="w-full flex items-center gap-2"
-              >
-                <Zap className="h-4 w-4" />
-                {isCategorizing ? 'Asking AI...' : 'Auto-Categorize with AI'}
-              </Button>
             </div>
 
             <div className="space-y-2">
@@ -550,9 +473,15 @@ export function AddExpense() {
                   </SelectTrigger>
                   <SelectContent>
                     {groups.map((group) => {
+                      const memberCount = dummyGroupMembers[group.id]?.length || 0;
                       return (
                         <SelectItem key={group.id} value={group.id}>
-                          {group.name}
+                          <div className="flex items-center justify-between w-full">
+                            <span>{group.name}</span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              ({memberCount} {memberCount === 1 ? 'member' : 'members'})
+                            </span>
+                          </div>
                         </SelectItem>
                       );
                     })}
@@ -617,16 +546,20 @@ export function AddExpense() {
                 </RadioGroup>
               </div>
 
-              {/* Equal Division - Member Selection */}
+              {/* Equal Division - Member Selection with Checkboxes */}
               {splitMethod === 'equal' && (
                 <div className="space-y-3">
                   <div>
                     <Label>Select members to split equally among</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Choose which group members will share the expense equally.
+                    </p>
                   </div>
                   <div className="space-y-3">
                     {currentMembers.map((member) => {
                       const isSelected = selectedMembers.includes(member.id);
                       const splitAmount = splitAmounts[member.id] || '0.00';
+
                       return (
                         <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors">
                           <div className="flex items-center gap-3">
@@ -648,6 +581,7 @@ export function AddExpense() {
                               </div>
                             </Label>
                           </div>
+
                           {isSelected && amount && (
                             <Badge variant="outline" className="ml-2">
                               ${splitAmount}
@@ -660,19 +594,20 @@ export function AddExpense() {
                 </div>
               )}
 
-              {/* Unequal Division - Input boxes */}
+              {/* Unequal Division - Input boxes for each member */}
               {splitMethod === 'unequal' && (
                 <div className="space-y-3">
                   <div>
                     <Label>Enter amount for each member</Label>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Amounts must add up to the total expense.
+                      Specify how much each member should pay. All amounts must add up to the total expense.
                     </p>
                   </div>
                   <div className="space-y-3">
                     {currentMembers.map((member) => {
                       const memberAmount = unequalAmounts[member.id] || '';
                       const hasError = amountErrors[member.id];
+
                       return (
                         <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <div className="flex items-center gap-3 flex-1">
@@ -682,8 +617,12 @@ export function AddExpense() {
                             </Avatar>
                             <div className="flex-1">
                               <div className="font-medium">{member.name}</div>
+                              {member.email && (
+                                <div className="text-xs text-muted-foreground">{member.email}</div>
+                              )}
                             </div>
                           </div>
+
                           <div className="flex flex-col items-end gap-1">
                             <div className="relative">
                               <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -711,30 +650,41 @@ export function AddExpense() {
                 <div className="p-4 bg-muted/50 rounded-lg space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Total Expense Amount:</span>
-                    <span className="font-bold">${Number.parseFloat(amount).toFixed(2)}</span>
+                    <span className="font-bold">${parseFloat(amount).toFixed(2)}</span>
                   </div>
                   
                   {splitMethod === 'equal' && selectedMembers.length > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Amount per Member:</span>
-                      <span className="font-bold text-green-600">
-                        ${(Number.parseFloat(amount) / selectedMembers.length).toFixed(2)}
-                      </span>
-                    </div>
+                    <>
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Members Selected:</span>
+                        <span>{selectedMembers.length}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Amount per Member:</span>
+                        <span className="font-bold text-green-600">
+                          ${(parseFloat(amount) / selectedMembers.length).toFixed(2)}
+                        </span>
+                      </div>
+                    </>
                   )}
 
                   {splitMethod === 'unequal' && (
                     <>
                       <div className="flex justify-between items-center">
                         <span className="font-medium">Amount Split:</span>
-                        <span className={`font-bold ${Math.abs(totalSplit - Number.parseFloat(amount)) > 0.01 ? 'text-red-600' : 'text-green-600'}`}>
+                        <span className={`font-bold ${Math.abs(totalSplit - parseFloat(amount)) > 0.01 ? 'text-red-600' : 'text-green-600'}`}>
                           ${totalSplit.toFixed(2)}
                         </span>
                       </div>
                       {Math.abs(totalSplit - parseFloat(amount)) > 0.01 && (
                         <div className="flex justify-between items-center text-sm text-red-600">
                           <span>Remaining to allocate:</span>
-                            <span>${Math.abs(Number.parseFloat(amount) - totalSplit).toFixed(2)}</span>
+                          <span>${Math.abs(parseFloat(amount) - totalSplit).toFixed(2)}</span>
+                        </div>
+                      )}
+                      {Math.abs(totalSplit - parseFloat(amount)) <= 0.01 && totalSplit > 0 && (
+                        <div className="text-sm text-green-600 text-center">
+                          ✓ Amounts correctly allocated
                         </div>
                       )}
                     </>
@@ -745,12 +695,33 @@ export function AddExpense() {
           </Card>
         )}
 
+        {/* Receipt Upload */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Receipt (Optional)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mb-2">
+                Drag and drop your receipt here, or click to browse
+              </p>
+              <Button variant="outline" size="sm">
+                Choose File
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Submit Buttons */}
         <div className="flex gap-3">
           <Button type="button" variant="outline" className="flex-1" asChild>
             <Link to="/dashboard">Cancel</Link>
           </Button>
-          <Button type="submit" className="flex-1" disabled={loading || isCategorizing}>
+          <Button type="submit" className="flex-1" disabled={loading}>
             {loading ? 'Adding Expense...' : 'Add Expense'}
           </Button>
         </div>

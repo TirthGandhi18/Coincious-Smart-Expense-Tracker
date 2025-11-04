@@ -1,4 +1,4 @@
-// src/components/pages/Profile.tsx - COMPLETE WITH EDITABLE SECURITY & MODALS
+// src/components/pages/Profile.tsx - COMPLETE WITH EMAIL & PHONE VALIDATION
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../App';
 import {
@@ -35,15 +35,65 @@ type ProfileData = {
   bio: string;
 };
 
+/* -------------------------
+   Validators & helpers
+   ------------------------- */
+// Simple but practical email regex for client-side validation
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+
+// Allow +, digits, spaces, dashes, parentheses, limit to 7-15 digits (international-friendly)
+const PHONE_RE = /^(\+)?[0-9\s\-()]{7,30}$/;
+
+function validateName(name: string) {
+  const trimmed = (name || '').trim();
+  if (!trimmed) return 'Name cannot be empty';
+  if (trimmed.length < 2) return 'Name must be at least 2 characters';
+  if (trimmed.length > 100) return 'Name is too long';
+  return null;
+}
+
+function validateEmail(email: string) {
+  const v = (email || '').trim();
+  if (!v) return 'Email cannot be empty';
+  if (!EMAIL_RE.test(v)) return 'Invalid email address';
+  return null;
+}
+
+function validatePhone(phone: string) {
+  if (!phone) return null; // phone optional; change if you want required
+  const v = phone.trim();
+  if (!PHONE_RE.test(v)) return 'Invalid phone format';
+  const digits = v.replace(/\D/g, '');
+  if (digits.length < 7 || digits.length > 15) return 'Phone number length seems invalid';
+  return null;
+}
+
+function validateLocation(location: string) {
+  if (!location) return null;
+  if (location.trim().length > 200) return 'Location is too long';
+  return null;
+}
+
+function validateBio(bio: string) {
+  if (!bio) return null;
+  if (bio.trim().length > 1000) return 'Bio is too long (max 1000 characters)';
+  return null;
+}
+
+function sanitizeInput(s: string) {
+  return (s || '').replace(/[\u0000-\u001F\u007F]/g, '').trim();
+}
+
+/* -------------------------
+   Profile component
+   ------------------------- */
 export function Profile() {
-  // useAuth should ideally return { user, supabase, supabaseAdminEndpoint? }
-  // If your useAuth doesn't return supabase, import your supabase client directly.
   const { user, supabase, supabaseAdminEndpoint } = useAuth() as any;
 
   const [isEditing, setIsEditing] = useState(false);
 
-  // Form state for profile data
-  const [profileData, setProfileData] = useState<ProfileData>({
+  // initial profile snapshot (for dirty check)
+  const [initialProfile, setInitialProfile] = useState<ProfileData>({
     name: user?.name || '',
     email: user?.email || '',
     phone: '',
@@ -51,77 +101,136 @@ export function Profile() {
     bio: '',
   });
 
-  // security state
+  // Form state for profile data
+  const [profileData, setProfileData] = useState<ProfileData>(initialProfile);
+
+  // errors & touched state
+  const [errors, setErrors] = useState<Partial<Record<keyof ProfileData, string>>>({});
+  const [touched, setTouched] = useState<Partial<Record<keyof ProfileData, boolean>>>({});
+
+  // security & sessions states (unchanged from original)
   const [securityData, setSecurityData] = useState({
     twoFactorEnabled: false,
     lastPasswordChange: '30 days ago',
   });
-
-  // modal states
   const [openPasswordModal, setOpenPasswordModal] = useState(false);
   const [openSessionsModal, setOpenSessionsModal] = useState(false);
-
-  // sessions list state
   const [sessions, setSessions] = useState<Array<any>>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
 
+  // keep local profileData in sync when user changes externally
   useEffect(() => {
-    // keep local profileData in sync when user changes externally
-    setProfileData({
+    const snapshot: ProfileData = {
       name: user?.name || '',
       email: user?.email || '',
       phone: '',
       location: '',
       bio: '',
-    });
+    };
+    setInitialProfile(snapshot);
+    setProfileData(snapshot);
   }, [user]);
 
-  const updateField = (fieldName: string, value: string) =>
-    setProfileData((p) => ({ ...p, [fieldName]: value }));
+  // validate whole form when profileData changes
+  useEffect(() => {
+    setErrors(validateAll(profileData));
+  }, [profileData]);
+
+  function validateAll(data: ProfileData) {
+    const newErrors: Partial<Record<keyof ProfileData, string>> = {};
+    const nameErr = validateName(data.name);
+    if (nameErr) newErrors.name = nameErr;
+
+    const emailErr = validateEmail(data.email);
+    if (emailErr) newErrors.email = emailErr;
+
+    const phoneErr = validatePhone(data.phone);
+    if (phoneErr) newErrors.phone = phoneErr;
+
+    const locErr = validateLocation(data.location);
+    if (locErr) newErrors.location = locErr;
+
+    const bioErr = validateBio(data.bio);
+    if (bioErr) newErrors.bio = bioErr;
+
+    return newErrors;
+  }
+
+  const updateField = (fieldName: keyof ProfileData, value: string) => {
+    // sanitize lightly on-change
+    const sanitized = sanitizeInput(value);
+    setProfileData((p) => ({ ...p, [fieldName]: sanitized }));
+    setTouched((t) => ({ ...(t || {}), [fieldName]: true }));
+  };
 
   const saveProfile = async () => {
-    // implement your profile save logic here (update DB or supabase profile)
-    console.log('Saving profile:', profileData);
-    // Example supabase profile update (if you have a "profiles" table)
+    // final validation before submit
+    const finalErrors = validateAll(profileData);
+    setErrors(finalErrors);
+    // mark all fields touched so errors are visible if any
+    setTouched({
+      name: true,
+      email: true,
+      phone: true,
+      location: true,
+      bio: true,
+    });
+
+    if (Object.keys(finalErrors).length > 0) {
+      // focus first invalid field could be added
+      return;
+    }
+
+    // prepare sanitized payload
+    const payload = {
+      name: sanitizeInput(profileData.name),
+      email: profileData.email.trim().toLowerCase(),
+      phone: profileData.phone.trim(),
+      location: sanitizeInput(profileData.location),
+      bio: sanitizeInput(profileData.bio),
+    };
+
     try {
       if (supabase) {
-        // If you use a profiles table:
-        // await supabase.from('profiles').upsert({ id: user.id, ...profileData });
+        // Example upsert - adapt to your DB/schema
+        const { error } = await supabase
+          .from('profiles')
+          .upsert({ id: user.id, ...payload }, { returning: 'minimal' });
+        if (error) throw error;
+      } else {
+        console.log('Mock save payload:', payload);
       }
+
+      // refresh initial snapshot and close editing
+      setInitialProfile({
+        name: payload.name,
+        email: payload.email,
+        phone: payload.phone,
+        location: payload.location,
+        bio: payload.bio,
+      });
       setIsEditing(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert('Failed to save profile: ' + (err?.message || err));
     }
   };
 
   const cancelEdit = () => {
-    setProfileData({
-      name: user?.name || '',
-      email: user?.email || '',
-      phone: '',
-      location: '',
-      bio: '',
-    });
+    setProfileData(initialProfile);
+    setErrors({});
+    setTouched({});
     setIsEditing(false);
   };
 
-  // --- PASSWORD HANDLING (opens modal) ---
+  // --- PASSWORD, 2FA, sessions, signout etc (unchanged) ---
   const handleChangePassword = () => setOpenPasswordModal(true);
+  const handleToggle2FA = () =>
+    setSecurityData((s) => ({ ...s, twoFactorEnabled: !s.twoFactorEnabled }));
 
-  // --- 2FA toggle (existing) ---
-  const handleToggle2FA = () => {
-    setSecurityData((s) => ({
-      ...s,
-      twoFactorEnabled: !s.twoFactorEnabled,
-    }));
-    console.log('2FA toggled');
-  };
-
-  // --- SESSIONS ---
   const handleViewSessions = async () => {
     setOpenSessionsModal(true);
-    // load sessions when modal opens
     await loadSessions();
   };
 
@@ -129,10 +238,7 @@ export function Profile() {
     setSessionsError(null);
     setSessions([]);
     setSessionsLoading(true);
-
     try {
-      // Preferred: call your server-side endpoint that lists sessions using Supabase Admin API.
-      // Example: GET /api/sessions -> returns [{id, user_agent, ip, created_at, last_active, current}]
       if (supabaseAdminEndpoint) {
         const res = await fetch(`${supabaseAdminEndpoint}/sessions`, {
           credentials: 'include',
@@ -140,22 +246,18 @@ export function Profile() {
         if (!res.ok) throw new Error('Failed to fetch sessions from server');
         const data = await res.json();
         setSessions(data.sessions || []);
+      } else if (supabase) {
+        const { data, error } = await supabase
+          .from('user_sessions')
+          .select('*')
+          .eq('user_id', user?.id)
+          .order('last_active', { ascending: false });
+        if (error) throw error;
+        setSessions(data || []);
       } else {
-        // Fallback: try to load from a `sessions` table in the DB (if you maintain one)
-        if (supabase) {
-          // Example if you maintain a sessions table: adjust table/columns to your schema
-          const { data, error } = await supabase
-            .from('user_sessions')
-            .select('*')
-            .eq('user_id', user?.id)
-            .order('last_active', { ascending: false });
-          if (error) throw error;
-          setSessions(data || []);
-        } else {
-          setSessionsError(
-            'No sessions endpoint configured. Please add a server-side endpoint that returns active sessions'
-          );
-        }
+        setSessionsError(
+          'No sessions endpoint configured. Please add a server-side endpoint that returns active sessions'
+        );
       }
     } catch (err: any) {
       console.error(err);
@@ -165,7 +267,6 @@ export function Profile() {
     }
   }
 
-  // Sign out a single session (server-side required for other sessions)
   async function revokeSession(sessionId: string) {
     try {
       if (!supabaseAdminEndpoint) {
@@ -185,12 +286,10 @@ export function Profile() {
     }
   }
 
-  // Sign out current session
   async function signOutCurrent() {
     try {
       if (supabase) {
         await supabase.auth.signOut();
-        // optionally redirect to login
         window.location.href = '/';
       } else {
         console.log('No supabase client available to sign out');
@@ -200,6 +299,10 @@ export function Profile() {
       alert('Failed to sign out');
     }
   }
+
+  // compute validity and dirty state
+  const hasErrors = Object.keys(errors).length > 0;
+  const isDirty = JSON.stringify(profileData) !== JSON.stringify(initialProfile);
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
@@ -221,7 +324,7 @@ export function Profile() {
             </Button>
           ) : (
             <>
-              <Button onClick={saveProfile}>
+              <Button onClick={saveProfile} disabled={hasErrors || !isDirty}>
                 <Save className="h-4 w-4 mr-2" />
                 Save Changes
               </Button>
@@ -292,12 +395,24 @@ export function Profile() {
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
                   {isEditing ? (
-                    <Input
-                      id="name"
-                      value={profileData.name}
-                      onChange={(e) => updateField('name', e.target.value)}
-                      placeholder="Enter your full name"
-                    />
+                    <>
+                      <Input
+                        id="name"
+                        value={profileData.name}
+                        onChange={(e) => updateField('name', e.target.value)}
+                        onBlur={() =>
+                          setErrors((s) => ({
+                            ...(s || {}),
+                            name: validateName(profileData.name) || undefined,
+                          }))
+                        }
+                        placeholder="Enter your full name"
+                        aria-invalid={!!errors.name}
+                      />
+                      {errors.name && touched.name && (
+                        <div className="text-sm text-red-600 mt-1">{errors.name}</div>
+                      )}
+                    </>
                   ) : (
                     <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                       <User className="h-4 w-4 text-muted-foreground" />
@@ -309,13 +424,25 @@ export function Profile() {
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
                   {isEditing ? (
-                    <Input
-                      id="email"
-                      type="email"
-                      value={profileData.email}
-                      onChange={(e) => updateField('email', e.target.value)}
-                      placeholder="Enter your email"
-                    />
+                    <>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={profileData.email}
+                        onChange={(e) => updateField('email', e.target.value)}
+                        onBlur={() =>
+                          setErrors((s) => ({
+                            ...(s || {}),
+                            email: validateEmail(profileData.email) || undefined,
+                          }))
+                        }
+                        placeholder="Enter your email"
+                        aria-invalid={!!errors.email}
+                      />
+                      {errors.email && touched.email && (
+                        <div className="text-sm text-red-600 mt-1">{errors.email}</div>
+                      )}
+                    </>
                   ) : (
                     <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                       <Mail className="h-4 w-4 text-muted-foreground" />
@@ -327,13 +454,25 @@ export function Profile() {
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
                   {isEditing ? (
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={profileData.phone}
-                      onChange={(e) => updateField('phone', e.target.value)}
-                      placeholder="Enter your phone number"
-                    />
+                    <>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={profileData.phone}
+                        onChange={(e) => updateField('phone', e.target.value)}
+                        onBlur={() =>
+                          setErrors((s) => ({
+                            ...(s || {}),
+                            phone: validatePhone(profileData.phone) || undefined,
+                          }))
+                        }
+                        placeholder="Enter your phone number (e.g. +91 98765 43210)"
+                        aria-invalid={!!errors.phone}
+                      />
+                      {errors.phone && touched.phone && (
+                        <div className="text-sm text-red-600 mt-1">{errors.phone}</div>
+                      )}
+                    </>
                   ) : (
                     <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                       <Phone className="h-4 w-4 text-muted-foreground" />
@@ -512,9 +651,7 @@ export function Profile() {
   );
 }
 
-/* -------------------------
-   PasswordModal component
-   ------------------------- */
+// Replace your PasswordModal function with this (immediate client-side flow)
 function PasswordModal({
   onClose,
   supabase,
@@ -524,6 +661,7 @@ function PasswordModal({
   supabase?: any;
   onSuccess?: () => void;
 }) {
+  const { user } = useAuth() as any;
   const [current, setCurrent] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -531,46 +669,103 @@ function PasswordModal({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const [touched, setTouched] = useState({
+    current: false,
+    newPassword: false,
+    confirm: false,
+  });
+
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const newRef = React.useRef<HTMLInputElement | null>(null);
+  const confirmRef = React.useRef<HTMLInputElement | null>(null);
+  const currentRef = React.useRef<HTMLInputElement | null>(null);
+
+  const RULES = {
+    minLen: (pw: string) => pw.length >= 8,
+    upper: (pw: string) => /[A-Z]/.test(pw),
+    lower: (pw: string) => /[a-z]/.test(pw),
+    digit: (pw: string) => /\d/.test(pw),
+    special: (pw: string) => /[^A-Za-z0-9]/.test(pw),
+  };
+
+  const ruleState = {
+    minLen: RULES.minLen(newPassword),
+    upper: RULES.upper(newPassword),
+    lower: RULES.lower(newPassword),
+    digit: RULES.digit(newPassword),
+    special: RULES.special(newPassword),
+  };
+
+  const allRulesSatisfied = Object.values(ruleState).every(Boolean);
+
+  function validateConfirmPassword(pw: string, c: string) {
+    if (!c) return 'Please confirm your new password.';
+    if (pw !== c) return 'Passwords do not match.';
+    return null;
+  }
+
+  const confirmError = touched.confirm ? validateConfirmPassword(newPassword, confirm) : undefined;
+  const isFormValid = allRulesSatisfied && !confirmError;
+  const showRules = touched.newPassword || newPassword.length > 0;
+
+  // NOTE: This version does not re-verify the current password on the server.
+  // It requires current password presence and then calls Supabase updateUser.
+  // For production: implement server-side re-auth verification for security.
+
   async function handleSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setError(null);
     setSuccess(null);
 
-    if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters.');
+    setTouched({ current: true, newPassword: true, confirm: true });
+
+    // require current password presence
+    if (!current || current.trim().length === 0) {
+      setError('Current password is required.');
+      currentRef.current?.focus();
       return;
     }
-    if (newPassword !== confirm) {
-      setError('Passwords do not match.');
+
+    // client checks for new/confirm
+    const confErr = validateConfirmPassword(newPassword, confirm);
+    if (!allRulesSatisfied || confErr) {
+      if (!allRulesSatisfied && newRef.current) newRef.current.focus();
+      else if (confErr && confirmRef.current) confirmRef.current.focus();
       return;
     }
 
     setLoading(true);
     try {
       if (!supabase) {
-        // No supabase client available — just fake success for dev or instruct user
+        // dev fallback: mock success
         console.warn('No supabase client provided to PasswordModal');
         setSuccess('Password updated (mock). Add supabase client to perform real update.');
         if (onSuccess) onSuccess();
+        setLoading(false);
         return;
       }
 
-      // Current Supabase client API to update user's password:
-      // Note: This requires a valid session (user logged in).
-      const { data, error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
-      if (error) {
-        throw error;
+      // Attempt to call Supabase update user API directly
+      if (typeof supabase.auth.updateUser === 'function') {
+        const { data, error: supaErr } = await supabase.auth.updateUser({
+          password: newPassword,
+        });
+        if (supaErr) throw supaErr;
+      } else if (typeof supabase.auth.update === 'function') {
+        const { error: supaErr } = await supabase.auth.update({ password: newPassword });
+        if (supaErr) throw supaErr;
+      } else {
+        throw new Error('Supabase client does not support updateUser in this SDK version.');
       }
 
       setSuccess('Password updated successfully.');
       if (onSuccess) onSuccess();
-      // Optionally close modal after a delay
-      setTimeout(() => onClose(), 1200);
+      setTimeout(() => onClose(), 1000);
     } catch (err: any) {
       console.error(err);
+      // If supabase returns "invalid password" or similar, display it
       setError(err?.message || 'Failed to update password');
     } finally {
       setLoading(false);
@@ -594,48 +789,124 @@ function PasswordModal({
         </div>
 
         <form onSubmit={(e) => handleSubmit(e)}>
-          {/* NOTE: Many providers require re-authentication by providing the current password;
-              Supabase's client updateUser doesn't accept current password - backend may be needed
-              for strict re-authenticate flows. Here we collect it for UX but only use newPassword. */}
           <div className="space-y-3">
             <div>
-              <Label>Current Password (optional)</Label>
+              <Label>Current Password</Label>
               <Input
+                ref={currentRef}
                 type="password"
                 value={current}
-                onChange={(e) => setCurrent(e.target.value)}
+                onChange={(e) => {
+                  setCurrent(e.target.value);
+                  setTouched((t) => ({ ...t, current: true }));
+                }}
+                onBlur={() => setTouched((t) => ({ ...t, current: true }))}
+                placeholder="Enter your current password"
               />
             </div>
 
             <div>
               <Label>New Password</Label>
-              <Input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  ref={newRef}
+                  type={showNew ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    setTouched((t) => ({ ...t, newPassword: true }));
+                  }}
+                  onBlur={() => setTouched((t) => ({ ...t, newPassword: true }))}
+                  placeholder="Create a strong password"
+                  aria-invalid={showRules && !allRulesSatisfied}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNew((s) => !s)}
+                  className="absolute right-2 top-2 text-sm px-2 py-1"
+                >
+                  {showNew ? 'Hide' : 'Show'}
+                </button>
+              </div>
+
+              {showRules && (
+                <ul className="mt-2 ml-4 text-sm space-y-1">
+                  <li className={ruleState.minLen ? 'text-green-600' : 'text-red-600'}>
+                    {ruleState.minLen ? '✓' : '•'} At least 8 characters
+                  </li>
+                  <li className={ruleState.upper ? 'text-green-600' : 'text-red-600'}>
+                    {ruleState.upper ? '✓' : '•'} Uppercase letter (A–Z)
+                  </li>
+                  <li className={ruleState.lower ? 'text-green-600' : 'text-red-600'}>
+                    {ruleState.lower ? '✓' : '•'} Lowercase letter (a–z)
+                  </li>
+                  <li className={ruleState.digit ? 'text-green-600' : 'text-red-600'}>
+                    {ruleState.digit ? '✓' : '•'} Number (0–9)
+                  </li>
+                  <li className={ruleState.special ? 'text-green-600' : 'text-red-600'}>
+                    {ruleState.special ? '✓' : '•'} Special character (e.g. !@#$%)
+                  </li>
+                </ul>
+              )}
             </div>
 
             <div>
               <Label>Confirm New Password</Label>
-              <Input
-                type="password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  ref={confirmRef}
+                  type={showConfirm ? 'text' : 'password'}
+                  value={confirm}
+                  onChange={(e) => {
+                    setConfirm(e.target.value);
+                    setTouched((t) => ({ ...t, confirm: true }));
+                  }}
+                  onBlur={() => setTouched((t) => ({ ...t, confirm: true }))}
+                  aria-invalid={!!confirmError}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((s) => !s)}
+                  className="absolute right-2 top-2 text-sm px-2 py-1"
+                >
+                  {showConfirm ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              {touched.confirm && confirmError && (
+                <div className="text-sm text-red-600 mt-1">{confirmError}</div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <button
+                  type="button"
+                  className="text-sm text-muted-foreground underline"
+                  onClick={() => {
+                    // open browser reset via your route or call supabase reset - fallback to alert
+                    if (supabase && typeof supabase.auth.resetPasswordForEmail === 'function') {
+                      supabase.auth.resetPasswordForEmail(user?.email || '');
+                      alert('Password reset email sent (check your inbox).');
+                    } else {
+                      alert('No reset configured. Configure supabase or server endpoint to send reset email.');
+                    }
+                  }}
+                >
+                  Forgot password?
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => !loading && onClose()}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={loading || !isFormValid}>
+                  {loading ? 'Updating...' : 'Update Password'}
+                </Button>
+              </div>
             </div>
 
             {error && <div className="text-sm text-red-600">{error}</div>}
             {success && <div className="text-sm text-green-600">{success}</div>}
-
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => !loading && onClose()}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Updating...' : 'Update Password'}
-              </Button>
-            </div>
           </div>
         </form>
       </div>
@@ -643,8 +914,10 @@ function PasswordModal({
   );
 }
 
+
 /* -------------------------
    SessionsModal component
+   (unchanged)
    ------------------------- */
 function SessionsModal({
   onClose,
@@ -730,7 +1003,6 @@ function SessionsModal({
             </div>
           )}
 
-          {/* If no server endpoint available, show helpful instructions */}
           {!loading && !error && sessions.length === 0 && (
             <div className="p-3 text-sm text-muted-foreground border rounded">
               If you want to list and revoke other sessions you will need a server
