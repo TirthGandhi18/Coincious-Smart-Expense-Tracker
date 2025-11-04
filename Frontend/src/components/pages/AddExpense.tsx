@@ -21,7 +21,8 @@ import {
   Upload,
   Plus,
   Minus,
-  User
+  User,
+  Calendar
 } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -97,6 +98,7 @@ export function AddExpense() {
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [expenseDate, setExpenseDate] = useState('');
   const [selectedGroup, setSelectedGroup] = useState(preselectedGroup || '');
   const [paidBy, setPaidBy] = useState('user-1'); 
   const [splitMethod, setSplitMethod] = useState<'equal' | 'unequal'>('equal');
@@ -105,6 +107,15 @@ export function AddExpense() {
   const [amountErrors, setAmountErrors] = useState<{ [key: string]: string }>({});
   const [groups, setGroups] = useState<any[]>(dummyGroups);
   const [loading, setLoading] = useState(false);
+
+  // Format today's date as DD/MM/YYYY
+  useEffect(() => {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    setExpenseDate(`${day}/${month}/${year}`);
+  }, []);
 
   // Get current group members based on selected group
   const currentMembers = selectedGroup ? (dummyGroupMembers[selectedGroup] || []) : [];
@@ -147,6 +158,52 @@ export function AddExpense() {
       setAmountErrors({});
     }
   }, [selectedGroup]);
+
+  // Handle date input with auto-formatting
+  const handleDateChange = (value: string) => {
+    // Remove all non-numeric characters
+    const numbersOnly = value.replace(/\D/g, '');
+    
+    // Format as DD/MM/YYYY
+    let formatted = '';
+    if (numbersOnly.length > 0) {
+      formatted = numbersOnly.substring(0, 2);
+      if (numbersOnly.length >= 3) {
+        formatted += '/' + numbersOnly.substring(2, 4);
+      }
+      if (numbersOnly.length >= 5) {
+        formatted += '/' + numbersOnly.substring(4, 8);
+      }
+    }
+    
+    setExpenseDate(formatted);
+  };
+
+  // Validate date format and validity
+  const isValidDate = (dateString: string): boolean => {
+    const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    const match = dateString.match(regex);
+    
+    if (!match) return false;
+    
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const year = parseInt(match[3], 10);
+    
+    // Check if month is valid
+    if (month < 1 || month > 12) return false;
+    
+    // Check if day is valid for the given month
+    const daysInMonth = new Date(year, month, 0).getDate();
+    if (day < 1 || day > daysInMonth) return false;
+    
+    // Check if the date is not in the future
+    const inputDate = new Date(year, month - 1, day);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    
+    return inputDate <= today;
+  };
 
   const handleMemberToggle = (memberId: string) => {
     setSelectedMembers(prev => {
@@ -246,6 +303,16 @@ export function AddExpense() {
         return;
       }
 
+      if (!expenseDate.trim()) {
+        toast.error('Please enter a date');
+        return;
+      }
+
+      if (!isValidDate(expenseDate)) {
+        toast.error('Please enter a valid date in DD/MM/YYYY format (cannot be in the future)');
+        return;
+      }
+
       // Personal expense - simpler validation
       if (expenseType === 'personal') {
         // For personal expenses, we'll create a personal expense record
@@ -299,6 +366,11 @@ export function AddExpense() {
         }
       }
 
+      // Convert date from DD/MM/YYYY to ISO format
+      const [day, month, year] = expenseDate.split('/').map(num => parseInt(num, 10));
+      const dateObj = new Date(year, month - 1, day);
+      const isoDate = dateObj.toISOString();
+
       // Calculate splits
       const totalAmount = parseFloat(amount);
       const splits: { [key: string]: number } = {};
@@ -332,6 +404,7 @@ export function AddExpense() {
           amount: totalAmount,
           description,
           category,
+          date: isoDate,
           group_id: selectedGroup,
           paid_by: paidBy,
           split_method: splitMethod,
@@ -440,6 +513,26 @@ export function AddExpense() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="date">Date</Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="date"
+                  type="text"
+                  placeholder="DD/MM/YYYY"
+                  value={expenseDate}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                  className="pl-10"
+                  maxLength={10}
+                  required
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Enter the date when this expense occurred (DD/MM/YYYY)
+              </p>
             </div>
 
             <div className="space-y-2">
