@@ -1,5 +1,3 @@
-// src/components/Layout.tsx - UPDATED (Profile link sidebar se hataya)
-
 import React from 'react';
 import { useAuth, useTheme } from '../App';
 import { Button } from './ui/button';
@@ -58,7 +56,14 @@ export function Layout({ children }: LayoutProps) {
       {/* Desktop Header */}
       <header className="hidden md:flex items-center justify-between px-6 py-4 border-b bg-card">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-primary">Smart Expense</h1>
+          <button // for making clickable to LOGO button i use navigate hook
+            onClick={() => navigate("/dashboard")}
+            className="text-2xl font-bold text-primary hover:opacity-80 transition cursor-pointer"
+            aria-label="Go to dashboard"
+          >
+            Smart Expense
+          </button>
+          <Badge variant="secondary" className="hidden sm:inline-flex">PWA</Badge>
         </div>
 
         <div className="flex items-center gap-4">
