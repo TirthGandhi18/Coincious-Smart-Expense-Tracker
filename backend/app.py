@@ -603,6 +603,7 @@ def get_group_detail(group_id):
         expenses_result = categorizer.supabase.table('expenses') \
             .select('amount') \
             .eq('group_id', group_id) \
+            .neq('category', 'Settlement') \
             .execute()
         
         total_expenses = sum(float(exp.get('amount', 0)) for exp in (expenses_result.data or [])) if expenses_result and hasattr(expenses_result, 'data') else 0
