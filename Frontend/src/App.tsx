@@ -18,6 +18,7 @@ import { Groups } from './components/pages/Groups';
 import { GroupDetail } from './components/pages/GroupDetail';
 import { Support } from './components/pages/Support'; 
 import { Notifications } from './components/pages/Notifications';
+import { Chatbot } from './components/pages/Chatbot';
 
 // Simple Public Route Component
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -91,7 +92,6 @@ function AppRoutes() {
         } />
 
         {/* Placeholder routes for other pages */}
-        <Route path="/chatbot" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">AI Assistant</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
         <Route path="/parental" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Parental Controls</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
 
 
@@ -102,7 +102,14 @@ function AppRoutes() {
             </Layout>
           </ProtectedRoute>
         } />
-        
+        <Route path="/chatbot" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Chatbot />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              
          <Route path="/notifications" element={
                 <ProtectedRoute>
                   <Layout>
