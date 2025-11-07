@@ -7,7 +7,6 @@ import { projectId } from '../../lib/info';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { useAuth } from '../../App';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -123,13 +122,12 @@ const insights = [
 ];
 
 export function Dashboard() {
-  const [activeTab, setActiveTab] = useState('overview');
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [categoryData, setCategoryData] = useState<{ name: string; value: number; color: string }[]>([]);
   const [categoryLoading, setCategoryLoading] = useState(true);
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [categoryPeriod, setCategoryPeriod] = useState<'current' | 'previous'>('current'); // ✅ simplified
+  const [categoryPeriod, setCategoryPeriod] = useState<'current' | 'previous'>('current');
   const { user } = useAuth();
 
   // Fetch analytics overview
@@ -287,207 +285,130 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-        </TabsList>
+      {/* Overview Content - No Tabs, just direct content */}
+      <div className="space-y-6">
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Category Breakdown */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Expense Categories</CardTitle>
+                  <CardDescription>Your spending breakdown</CardDescription>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger>
+                    <Button variant="outline" size="sm" className="flex gap-1 text-sm">
+                      {categoryPeriod === 'current' ? 'Current Month' : 'Previous Month'}
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => setCategoryPeriod('current')}>
+                      Current Month
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setCategoryPeriod('previous')}>
+                      Previous Month
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardHeader>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Category Breakdown */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Expense Categories</CardTitle>
-                    <CardDescription>Your spending breakdown</CardDescription>
+            <CardContent>
+              <div className="h-[300px]">
+                {categoryLoading ? (
+                  <div className="h-full flex items-center justify-center">Loading chart...</div>
+                ) : categoryError ? (
+                  <div className="h-full flex items-center justify-center text-sm text-red-500">
+                    Error: {categoryError}
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger>
-                      <Button variant="outline" size="sm" className="flex gap-1 text-sm">
-                        {categoryPeriod === 'current' ? 'Current Month' : 'Previous Month'}
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => setCategoryPeriod('current')}>
-                        Current Month
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setCategoryPeriod('previous')}>
-                        Previous Month
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-
-              <CardContent>
-                <div className="h-[300px]">
-                  {categoryLoading ? (
-                    <div className="h-full flex items-center justify-center">Loading chart...</div>
-                  ) : categoryError ? (
-                    <div className="h-full flex items-center justify-center text-sm text-red-500">
-                      Error: {categoryError}
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={categoryData.length ? categoryData : DEFAULT_COLORS.map((c, i) => ({ name: `Category ${i+1}`, value: 0, color: c }))}
-                          innerRadius={50}
-                          outerRadius={80}
-                          cx="50%"
-                          cy="50%"
-                          dataKey="value"
-                        >
-                          {(categoryData.length ? categoryData : DEFAULT_COLORS).map((entry: any, index: number) => (
-                            <Cell key={`cell-${index}`} fill={entry.color ?? entry} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value, name) => [`$${Number(value).toFixed(2)}`, name]} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-                <div className="mt-4 space-y-2">
-                  {categoryData.length ? categoryData.map((category) => (
-                    <div key={category.name} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }} />
-                        <span>{category.name}</span>
-                      </div>
-                      <span className="font-medium">${category.value.toFixed(2)}</span>
-                    </div>
-                  )) : (
-                    <div className="text-sm text-muted-foreground">No data for this month</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Monthly Trends */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Trends</CardTitle>
-                <CardDescription>Personal vs Group expenses over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
+                ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={monthlyTrends}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="personal" stroke="#9B1313" name="Personal" />
-                      <Line type="monotone" dataKey="group" stroke="#FFA896" name="Group" />
-                    </LineChart>
+                    <PieChart>
+                      <Pie
+                        data={categoryData.length ? categoryData : DEFAULT_COLORS.map((c, i) => ({ name: `Category ${i+1}`, value: 0, color: c }))}
+                        innerRadius={50}
+                        outerRadius={80}
+                        cx="50%"
+                        cy="50%"
+                        dataKey="value"
+                      >
+                        {(categoryData.length ? categoryData : DEFAULT_COLORS).map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={entry.color ?? entry} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value, name) => [`$${Number(value).toFixed(2)}`, name]} />
+                    </PieChart>
                   </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* AI Insights */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="h-5 w-5" />
-                AI Insights
-              </CardTitle>
-              <CardDescription>Personalized financial insights powered by AI</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {insights.map((insight, index) => {
-                  const Icon = insight.icon;
-                  return (
-                    <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                      <Icon className={`h-5 w-5 mt-0.5 ${insight.color}`} />
-                      <div className="flex-1">
-                        <h4 className="font-medium">{insight.title}</h4>
-                        <p className="text-sm text-muted-foreground">{insight.message}</p>
-                      </div>
+                )}
+              </div>
+              <div className="mt-4 space-y-2">
+                {categoryData.length ? categoryData.map((category) => (
+                  <div key={category.name} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }} />
+                      <span>{category.name}</span>
                     </div>
-                  );
-                })}
+                    <span className="font-medium">${category.value.toFixed(2)}</span>
+                  </div>
+                )) : (
+                  <div className="text-sm text-muted-foreground">No data for this month</div>
+                )}
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        {/* History */}
-        <TabsContent value="history" className="space-y-6">
+          {/* Monthly Trends */}
           <Card>
             <CardHeader>
-              <CardTitle>Transaction History</CardTitle>
-              <CardDescription>Your complete expense history</CardDescription>
+              <CardTitle>Monthly Trends</CardTitle>
+              <CardDescription>Personal vs Group expenses over time</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {recentTransactions.map((transaction) => (
-                  <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
-                        {transaction.type === 'group' ? <Users className="h-4 w-4" /> : <DollarSign className="h-4 w-4" />}
-                      </div>
-                      <div>
-                        <h4 className="font-medium">{transaction.title}</h4>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span>{transaction.category}</span>
-                          <span>•</span>
-                          <span>{transaction.date}</span>
-                          <span>•</span>
-                          <Badge variant="outline" className="text-xs">
-                            {transaction.type}
-                          </Badge>
-                          {transaction.participants && (
-                            <>
-                              <span>•</span>
-                              <div className="flex -space-x-1">
-                                {transaction.participants.slice(0, 3).map((participant, index) => (
-                                  <Avatar key={index} className="h-4 w-4 border border-background">
-                                    <AvatarFallback className="text-xs">{participant.charAt(0)}</AvatarFallback>
-                                  </Avatar>
-                                ))}
-                                {transaction.participants.length > 3 && (
-                                  <div className="h-4 w-4 bg-muted border border-background rounded-full flex items-center justify-center text-xs">
-                                    +{transaction.participants.length - 3}
-                                  </div>
-                                )}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-medium text-red-600">{transaction.amount.toFixed(2)}</div>
-                      <Badge
-                        variant={
-                          transaction.status === 'settled'
-                            ? 'default'
-                            : transaction.status === 'pending'
-                            ? 'secondary'
-                            : 'outline'
-                        }
-                        className="text-xs"
-                      >
-                        {transaction.status}
-                      </Badge>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyTrends}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="personal" stroke="#9B1313" name="Personal" />
+                    <Line type="monotone" dataKey="group" stroke="#FFA896" name="Group" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* AI Insights */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5" />
+              AI Insights
+            </CardTitle>
+            <CardDescription>Personalized financial insights powered by AI</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {insights.map((insight, index) => {
+                const Icon = insight.icon;
+                return (
+                  <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                    <Icon className={`h-5 w-5 mt-0.5 ${insight.color}`} />
+                    <div className="flex-1">
+                      <h4 className="font-medium">{insight.title}</h4>
+                      <p className="text-sm text-muted-foreground">{insight.message}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-              <div className="mt-6 text-center">
-                <Button variant="outline">Load More Transactions</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
