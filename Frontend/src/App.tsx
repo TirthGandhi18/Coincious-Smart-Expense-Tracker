@@ -143,6 +143,8 @@ interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   signInWithProvider: (provider: string) => Promise<void>;
+  supabase?: any;
+  supabaseAdminEndpoint?: string;
 }
 
 interface ThemeContextType {
@@ -239,7 +241,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading, signInWithProvider }}>
+     <AuthContext.Provider
+      value={{
+        user,
+        login,
+        register,
+        logout,
+        isLoading,
+        signInWithProvider,
+        supabase,
+        supabaseAdminEndpoint: (import.meta.env.VITE_SUPABASE_ADMIN_ENDPOINT as string) || undefined,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
