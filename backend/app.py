@@ -1,27 +1,73 @@
+import requests
 import os
 import json
 import base64
-import calendar
-import requests
+from datetime import datetime
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import google.generativeai as genai
 from supabase import create_client, Client
 from flask_cors import CORS
+import traceback # Import traceback for better error logging
+import calendar
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 
 # --- SETUP ---
 load_dotenv()
 app = Flask(__name__)
-CORS(app, resources={
-    r"/api/*": {
-        "origins": ["http://localhost:3000"],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Authorization", "Content-Type"],
-        "supports_credentials": True
+
+# --- CORS Configuration ---
+from flask_cors import CORS
+
+# Enable CORS for all routes under /api
+CORS(
+    app,
+    resources={
+        r"/api/*": {
+            "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+            "supports_credentials": True,
+            "expose_headers": ["Content-Disposition"],
+            "max_age": 600
+        }
+    },
+    supports_credentials=True
+)
+
+# Handle OPTIONS method for all routes
+@app.before_request
+def handle_options():
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        # The CORS middleware will add the necessary headers
+        return response
+
+
+# Add this route after the CORS configuration
+@app.route('/api/supabase/proxy/<path:subpath>', methods=['GET', 'POST'])
+def supabase_proxy(subpath):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        return jsonify({'error': 'Missing authorization'}), 401
+
+    url = f"https{os.getenv('SUPABASE_URL').lstrip('https')}/functions/v1/make-server-7f88878c/{subpath}"
+    
+    headers = {
+        'Authorization': auth_header,
+        'Content-Type': 'application/json'
     }
-})
+    
+    try:
+        if request.method == 'GET':
+            response = requests.get(url, headers=headers)
+        else:
+            response = requests.post(url, headers=headers, json=request.get_json())
+        
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 class ExpenseCategorizer:
     def __init__(self):
@@ -34,9 +80,7 @@ class ExpenseCategorizer:
         KEY = os.getenv('GEMINI_API_KEY')
         if KEY:
             genai.configure(api_key=KEY) 
-            self.model = genai.GenerativeModel(
-                model_name="gemini-2.5-flash"
-            )
+            self.model = genai.GenerativeModel(model_name="gemini-2.5-flash")
 
     def _get_user_rules(self, user_id):
         """Fetches all learned rules for a specific user from the Supabase database."""
@@ -44,8 +88,9 @@ class ExpenseCategorizer:
             response = self.supabase.table('user_categories').select('category_name', 'keywords').eq('user_id', user_id).execute()
             
             user_rules = {}
-            for item in response.data:
-                user_rules[item['category_name']] = item['keywords']
+            if response and hasattr(response, 'data'):
+                for item in response.data:
+                    user_rules[item['category_name']] = item['keywords']
             return user_rules
         except Exception as e:
             print(f"Error fetching user rules: {e}")
@@ -59,7 +104,7 @@ class ExpenseCategorizer:
         try:
             response = self.supabase.table('user_categories').select('keywords').eq('user_id', user_id).eq('category_name', category).execute()
             
-            if response.data:
+            if response and hasattr(response, 'data') and response.data:
                 existing_keywords = response.data[0]['keywords']
                 if keyword not in existing_keywords:
                     new_keywords = existing_keywords + [keyword]
@@ -216,13 +261,10 @@ def api_parse_bill():
     except Exception as e:
         return jsonify({'error': f'Authentication error: {str(e)}'}), 401
 
-    # <<< --- BUG FIX 2: Changed 'image' to 'receipt' ---
-    if 'receipt' not in request.files:
-        return jsonify({'error': 'No image file provided. Use form-data with key "receipt".'}), 400
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file provided. Use form-data with key "image".'}), 400
 
-    image_file = request.files['receipt']
-    # ---------------------------------------------------
-
+    image_file = request.files['image']
     if image_file.filename == '':
         return jsonify({'error': 'Empty filename for uploaded image.'}), 400
 
@@ -231,7 +273,7 @@ def api_parse_bill():
         mime_type = image_file.mimetype or 'image/jpeg'
 
         parsed = categorizer.parse_bill_image(image_bytes, mime_type)
-
+        
         return jsonify({'parsed': parsed})
     except json.JSONDecodeError:
         return jsonify({'error': 'Model returned non-JSON or invalid JSON response.'}), 502
@@ -244,86 +286,6 @@ def api_parse_bill():
 def health_check():
     return jsonify({'status': 'ok', 'message': 'Backend is running'})
 
-# ===== Monthly Donut Chart Logic =====
-EXP_TABLE = "expenses"
-
-
-def _month_window(year: int, month: int):
-    """Returns the UTC start and end datetime for the given month."""
-    start = datetime(year, month, 1, 0, 0, 0, tzinfo=timezone.utc)
-    last_day = calendar.monthrange(year, month)[1]
-    end = datetime(year, month, last_day, 23, 59, 59, tzinfo=timezone.utc)
-    return start, end
-
-
-def _fetch_expenses(supabase, user_id, start, end):
-    q = (
-        supabase.table(EXP_TABLE)
-        .select("amount,date,category,payer_id")
-        .eq("payer_id", user_id)
-        .gte("date", start.isoformat())
-        .lte("date", end.isoformat())
-    )
-    resp = q.execute()
-    rows = resp.data or []
-    results = []
-    for r in rows:
-        try:
-            dt = datetime.fromisoformat(str(r["date"]).replace("Z", "+00:00"))
-        except Exception:
-            dt = start
-        results.append({
-            "amount": float(r.get("amount") or 0),
-            "date": dt,
-            "category": (r.get("category") or "Uncategorized").strip() or "Uncategorized",
-        })
-    return results
-
-
-def _sum_by_category(rows):
-    sums = defaultdict(float)
-    for r in rows:
-        sums[r["category"]] += r["amount"]
-    return [{"category": k, "total": round(v, 2)} for k, v in sorted(sums.items(), key=lambda kv: kv[1], reverse=True)]
-
-
-@app.route("/api/expense_monthly_donut", methods=["POST"])
-def api_expense_monthly_donut():
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        return jsonify({"error": "Missing or invalid authorization token"}), 401
-
-    jwt = auth_header.split(" ")[1]
-    try:
-        user_resp = categorizer.supabase.auth.get_user(jwt)
-        user = user_resp.user
-        if not user:
-            raise Exception("Invalid user token")
-    except Exception as e:
-        return jsonify({"error": f"Authentication error: {str(e)}"}), 401
-
-    data = request.get_json(silent=True) or {}
-    period = (data.get("period") or "current").strip().lower()
-
-    now = datetime.now(timezone.utc)
-
-    if period == "previous":
-        # Move to the first day of the previous month
-        year = now.year if now.month > 1 else now.year - 1
-        month = now.month - 1 if now.month > 1 else 12
-    else:
-        # Current month
-        year, month = now.year, now.month
-
-    month_start, month_end = _month_window(year, month)
-
-    try:
-        rows = _fetch_expenses(categorizer.supabase, user.id, month_start, month_end)
-        summary = _sum_by_category(rows)
-        return jsonify(summary), 200
-    except Exception as e:
-        print(f"Error in expense_monthly_donut: {e}")
-        return jsonify({"error": "Failed to fetch data", "details": str(e)}), 500
 
 # --- THIS IS THE FIXED FUNCTION ---
 @app.route('/api/groups', methods=['GET'])
@@ -384,14 +346,50 @@ def get_groups():
                     .eq('group_id', group_id) \
                     .execute()
                 
-                # Get total expenses
+                # Get total expenses (excluding settlements)
                 expenses_resp = categorizer.supabase.table('expenses') \
                     .select('amount') \
                     .eq('group_id', group_id) \
+                    .neq('category', 'Settlement') \
                     .execute()
-
+                
+                # Calculate user's balance in this group
+                user_balance = 0.0
+                
+                # Get all expenses where user is the payer
+                user_paid_expenses = categorizer.supabase.table('expenses') \
+                    .select('amount') \
+                    .eq('group_id', group_id) \
+                    .eq('payer_id', user_id) \
+                    .execute()
+                
+                # Add amounts user paid
+                for exp in (user_paid_expenses.data or []):
+                    user_balance += float(exp.get('amount', 0))
+                
+                # Get all expense splits where user is involved
+                expense_ids = categorizer.supabase.table('expenses') \
+                    .select('id') \
+                    .eq('group_id', group_id) \
+                    .execute()
+                
+                if expense_ids and hasattr(expense_ids, 'data') and expense_ids.data:
+                    expense_id_list = [exp['id'] for exp in expense_ids.data]
+                    
+                    # Get all splits where user owes money
+                    user_owed_splits = categorizer.supabase.table('expense_split') \
+                        .select('amount_owed') \
+                        .in_('expense_id', expense_id_list) \
+                        .eq('user_id', user_id) \
+                        .execute()
+                    
+                    # Subtract amounts user owes
+                    for split in (user_owed_splits.data or []):
+                        user_balance -= float(split.get('amount_owed', 0))
+                
                 group['member_count'] = member_count_resp.count if member_count_resp else 0
                 group['total_expenses'] = sum(float(exp.get('amount', 0)) for exp in (expenses_resp.data or []))
+                group['your_balance'] = round(user_balance, 2)
                 
                 enriched_groups.append(group)
 
@@ -640,6 +638,8 @@ def delete_group(group_id):
         user_id = user_response.user.id
         
         print(f"User {user_id} attempting to delete group {group_id}")
+        
+        # Check if group exists and user is the creator
         group_result = categorizer.supabase.table('groups') \
             .select('created_by') \
             .eq('id', group_id) \
@@ -657,17 +657,49 @@ def delete_group(group_id):
             print("Permission denied")
             return jsonify({'error': 'You do not have permission to delete this group'}), 403
         
-        print(f"Permission granted. Deleting group {group_id}...")
+        print(f"Permission granted. Deleting group {group_id} and related data...")
+        
+        # Get all expenses for this group
+        expenses_result = categorizer.supabase.table('expenses') \
+            .select('id') \
+            .eq('group_id', group_id) \
+            .execute()
+        
+        # Delete all expense splits first (if any expenses exist)
+        if expenses_result.data:
+            expense_ids = [exp['id'] for exp in expenses_result.data]
+            if expense_ids:
+                categorizer.supabase.table('expense_split') \
+                    .delete() \
+                    .in_('expense_id', expense_ids) \
+                    .execute()
+                print(f"Deleted expense splits for {len(expense_ids)} expenses")
+        
+        # Delete all expenses
+        categorizer.supabase.table('expenses') \
+            .delete() \
+            .eq('group_id', group_id) \
+            .execute()
+        print("Deleted all expenses")
+        
+        # Delete all group members
+        categorizer.supabase.table('group_members') \
+            .delete() \
+            .eq('group_id', group_id) \
+            .execute()
+        print("Deleted all group members")
+        
+        # Finally, delete the group
         delete_result = categorizer.supabase.table('groups') \
             .delete() \
             .eq('id', group_id) \
             .execute()
 
         if not delete_result or not hasattr(delete_result, 'data') or not delete_result.data:
-             print(f"Delete failed or group not found during delete: {getattr(delete_result, 'error', 'Unknown error')}")
-             return jsonify({'error': 'Failed to delete group, or group not found'}), 500
+             print(f"Delete failed: {getattr(delete_result, 'error', 'Unknown error')}")
+             return jsonify({'error': 'Failed to delete group'}), 500
 
-        print(f"Group {group_id} deleted successfully.")
+        print(f"Group {group_id} and all related data deleted successfully.")
         return jsonify({'message': 'Group deleted successfully'}), 200
         
     except Exception as e:
@@ -1171,8 +1203,8 @@ def settle_up(group_id):
         }
 
         expense_result = categorizer.supabase.table('expenses') \
-    .insert(expense_payload) \
-    .execute()
+            .insert(expense_payload) \
+            .execute()
         
         if not expense_result.data or not hasattr(expense_result, 'data'):
             print(f"Error creating expense: {getattr(expense_result, 'error', 'Unknown')}")
@@ -1207,6 +1239,88 @@ def settle_up(group_id):
             'details': str(e),
             'trace': error_trace
         }), 500
+
+
+# ===== Monthly Donut Chart Logic =====
+EXP_TABLE = "expenses"
+
+
+def _month_window(year: int, month: int):
+    """Returns the UTC start and end datetime for the given month."""
+    start = datetime(year, month, 1, 0, 0, 0, tzinfo=timezone.utc)
+    last_day = calendar.monthrange(year, month)[1]
+    end = datetime(year, month, last_day, 23, 59, 59, tzinfo=timezone.utc)
+    return start, end
+
+
+def _fetch_expenses(supabase, user_id, start, end):
+    q = (
+        supabase.table(EXP_TABLE)
+        .select("amount,date,category,payer_id")
+        .eq("payer_id", user_id)
+        .gte("date", start.isoformat())
+        .lte("date", end.isoformat())
+    )
+    resp = q.execute()
+    rows = resp.data or []
+    results = []
+    for r in rows:
+        try:
+            dt = datetime.fromisoformat(str(r["date"]).replace("Z", "+00:00"))
+        except Exception:
+            dt = start
+        results.append({
+            "amount": float(r.get("amount") or 0),
+            "date": dt,
+            "category": (r.get("category") or "Uncategorized").strip() or "Uncategorized",
+        })
+    return results
+
+
+def _sum_by_category(rows):
+    sums = defaultdict(float)
+    for r in rows:
+        sums[r["category"]] += r["amount"]
+    return [{"category": k, "total": round(v, 2)} for k, v in sorted(sums.items(), key=lambda kv: kv[1], reverse=True)]
+
+
+@app.route("/api/expense_monthly_donut", methods=["POST"])
+def api_expense_monthly_donut():
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return jsonify({"error": "Missing or invalid authorization token"}), 401
+
+    jwt = auth_header.split(" ")[1]
+    try:
+        user_resp = categorizer.supabase.auth.get_user(jwt)
+        user = user_resp.user
+        if not user:
+            raise Exception("Invalid user token")
+    except Exception as e:
+        return jsonify({"error": f"Authentication error: {str(e)}"}), 401
+
+    data = request.get_json(silent=True) or {}
+    period = (data.get("period") or "current").strip().lower()
+
+    now = datetime.now(timezone.utc)
+
+    if period == "previous":
+        # Move to the first day of the previous month
+        year = now.year if now.month > 1 else now.year - 1
+        month = now.month - 1 if now.month > 1 else 12
+    else:
+        # Current month
+        year, month = now.year, now.month
+
+    month_start, month_end = _month_window(year, month)
+
+    try:
+        rows = _fetch_expenses(categorizer.supabase, user.id, month_start, month_end)
+        summary = _sum_by_category(rows)
+        return jsonify(summary), 200
+    except Exception as e:
+        print(f"Error in expense_monthly_donut: {e}")
+        return jsonify({"error": "Failed to fetch data", "details": str(e)}), 500
 
 
 if __name__ == '__main__':
