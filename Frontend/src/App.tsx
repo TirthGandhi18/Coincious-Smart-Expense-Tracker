@@ -19,6 +19,8 @@ import { GroupDetail } from './components/pages/GroupDetail';
 import { Support } from './components/pages/Support'; 
 import { Notifications } from './components/pages/Notifications';
 import { Chatbot } from './components/pages/Chatbot';
+import { Settings } from './components/pages/Settings';
+
 
 // Simple Public Route Component
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -57,6 +59,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
+
 
 // Main App Component
 function AppRoutes() {
@@ -117,8 +120,13 @@ function AppRoutes() {
                   </Layout>
                 </ProtectedRoute>
               } />
-        <Route path="/settings" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Settings</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
-
+          <Route path="/settings" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Settings />
+                  </Layout>
+                </ProtectedRoute>
+              } />
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
