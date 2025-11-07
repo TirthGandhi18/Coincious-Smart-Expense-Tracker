@@ -1,32 +1,23 @@
 import React, { useState, useEffect } from 'react';
+import { User as SupabaseUser } from '@supabase/supabase-js';
+import { Loader2 } from 'lucide-react';
+
+type AppUser = SupabaseUser & {
+  user_metadata?: {
+    full_name?: string;
+    avatar_url?: string;
+  };
+};
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import { Input } from '../ui/input';
 import { supabase } from '../../utils/supabase/client';
-import { projectId, publicAnonKey } from '../../lib/info';
 import { useAuth } from '../../App';
-import { 
-  Plus, 
-  Search, 
-  Users, 
-  DollarSign, 
-  Calendar,
-  MoreVertical,
-  Settings,
-  UserPlus,
-  Archive
-} from 'lucide-react';
+import { Plus, Search, Users, DollarSign, Calendar, Settings, Trash } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -36,111 +27,161 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 import { Label } from '../ui/label';
 import { toast } from 'sonner';
-
-// Dummy groups data - matching AddExpense.tsx
-const dummyGroups = [
-  { id: '1', name: 'Weekend Trip' },
-  { id: '2', name: 'Roommates' },
-  { id: '3', name: 'Work Lunch Group' },
-  { id: '4', name: 'Family Vacation 2024' }
-];
-
-// Dummy group members data - matching AddExpense.tsx
-const dummyGroupMembers: { [key: string]: Array<{ id: string; name: string; avatar: string; email?: string }> } = {
-  '1': [
-    { id: 'user-1', name: 'You (Alex)', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'alex@example.com' },
-    { id: 'user-2', name: 'Sarah Johnson', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b272?w=150&h=150&fit=crop&crop=face&auto=format', email: 'sarah@example.com' },
-    { id: 'user-3', name: 'Mike Chen', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=150&h=150&fit=crop&crop=face&auto=format', email: 'mike@example.com' },
-    { id: 'user-4', name: 'Lisa Anderson', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face&auto=format', email: 'lisa@example.com' }
-  ],
-  '2': [
-    { id: 'user-1', name: 'You (Alex)', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'alex@example.com' },
-    { id: 'user-5', name: 'James Wilson', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face&auto=format', email: 'james@example.com' },
-    { id: 'user-6', name: 'Emma Davis', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face&auto=format', email: 'emma@example.com' }
-  ],
-  '3': [
-    { id: 'user-1', name: 'You (Alex)', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'alex@example.com' },
-    { id: 'user-2', name: 'Sarah Johnson', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b272?w=150&h=150&fit=crop&crop=face&auto=format', email: 'sarah@example.com' },
-    { id: 'user-7', name: 'David Martinez', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'david@example.com' },
-    { id: 'user-8', name: 'Olivia Taylor', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face&auto=format', email: 'olivia@example.com' },
-    { id: 'user-3', name: 'Mike Chen', avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=150&h=150&fit=crop&crop=face&auto=format', email: 'mike@example.com' }
-  ],
-  '4': [
-    { id: 'user-1', name: 'You (Alex)', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format', email: 'alex@example.com' },
-    { id: 'user-9', name: 'Robert Brown', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face&auto=format', email: 'robert@example.com' },
-    { id: 'user-10', name: 'Sophia Garcia', avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&h=150&fit=crop&crop=face&auto=format', email: 'sophia@example.com' },
-    { id: 'user-4', name: 'Lisa Anderson', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face&auto=format', email: 'lisa@example.com' },
-    { id: 'user-11', name: 'William Lee', avatar: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=150&h=150&fit=crop&crop=face&auto=format', email: 'william@example.com' },
-    { id: 'user-12', name: 'Ava White', avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&h=150&fit=crop&crop=face&auto=format', email: 'ava@example.com' }
-  ]
-};
-
-// Extended groups with additional metadata for display
-const dummyGroupsWithMetadata = dummyGroups.map(group => ({
-  ...group,
-  description: group.id === '1' ? 'Beach house rental and activities' :
-               group.id === '2' ? 'Shared apartment expenses' :
-               group.id === '3' ? 'Office lunch orders and team dinners' :
-               group.id === '4' ? 'Annual family trip expenses' : '',
-  members: dummyGroupMembers[group.id] || [],
-  totalExpenses: group.id === '1' ? 1248.75 :
-                 group.id === '2' ? 2847.30 :
-                 group.id === '3' ? 456.90 :
-                 group.id === '4' ? 3240.00 : 0,
-  yourBalance: group.id === '1' ? -45.20 :
-               group.id === '2' ? 125.80 :
-               group.id === '3' ? -12.30 :
-               group.id === '4' ? 0 : 0,
-  lastActivity: group.id === '1' ? '2 hours ago' :
-                group.id === '2' ? '1 day ago' :
-                group.id === '3' ? '3 days ago' :
-                group.id === '4' ? '1 week ago' : '',
-  status: group.id === '4' ? 'settled' : 'active'
-}));
 
 export function Groups() {
   const [searchTerm, setSearchTerm] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
-  const [newGroupDescription, setNewGroupDescription] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
-  const [selectedGroupForMember, setSelectedGroupForMember] = useState<any>(null);
-  const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [newMemberName, setNewMemberName] = useState('');
-  const [groups, setGroups] = useState<any[]>(dummyGroupsWithMetadata);
+  const [groups, setGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: AppUser | null };
+
+  // State for delete confirmation
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<any | null>(null);
+
+  // Function to handle the delete button click
+  const handleDeleteClick = (group: any) => {
+    console.log('Delete clicked for group:', group);
+    setGroupToDelete(group);
+    setDeleteAlertOpen(true);
+  };
+
+  const handleDeleteGroup = async (groupId: string) => {
+    if (!user) {
+      toast.error('You must be logged in to delete a group');
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session');
+      }
+
+      const response = await fetch(`http://localhost:8000/api/groups/${groupId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to delete group');
+      }
+
+      // Remove the deleted group from the state
+      setGroups(groups.filter(group => group.id !== groupId));
+      setDeleteAlertOpen(false);
+      setGroupToDelete(null);
+      toast.success('Group deleted successfully');
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete group');
+    }
+  };
+
+  // Helper function to get user display info
+  const getUserDisplayInfo = (user: AppUser | null) => ({
+    id: user?.id || '',
+    name: user?.user_metadata?.full_name || 'You',
+    avatar: user?.user_metadata?.avatar_url ||
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.email?.charAt(0).toUpperCase() || 'U')}`
+  });
 
   useEffect(() => {
     const fetchGroups = async () => {
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) return;
+        setLoading(true);
 
-        const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-7f88878c/groups`, {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          console.error('Error getting session:', sessionError);
+          throw new Error('Your session has expired. Please log in again.');
+        }
+
+        if (!session?.access_token) {
+          throw new Error('No active session. Please log in again.');
+        }
+
+        const response = await fetch('http://localhost:8000/api/groups', {
+          method: 'GET',
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          // Merge backend groups with dummy data
-          const backendGroups = data.groups || [];
-          setGroups(backendGroups.length > 0 ? backendGroups : dummyGroupsWithMetadata);
-        } else {
-          // Use dummy data if backend fails
-          setGroups(dummyGroupsWithMetadata);
+        let responseData;
+        try {
+          responseData = await response.clone().json();
+        } catch (jsonError) {
+          const textResponse = await response.text();
+          console.error('Failed to parse JSON response:', textResponse);
+          throw new Error(`Invalid server response: ${textResponse.substring(0, 200)}`);
         }
+
+        if (!response.ok) {
+          console.error('API Error - Status:', response.status);
+          let errorMessage = 'Failed to fetch groups';
+
+          if (responseData) {
+            if (responseData.details) {
+              errorMessage = `Error: ${responseData.error || 'Unknown error'}`;
+            } else if (responseData.error) {
+              errorMessage = typeof responseData.error === 'string'
+                ? responseData.error
+                : JSON.stringify(responseData.error);
+            }
+          } else {
+            errorMessage = `Server returned ${response.status}: ${response.statusText}`;
+          }
+
+          throw new Error(errorMessage);
+        }
+
+        const transformedGroups = (responseData.groups || []).map((group: any) => ({
+          ...group,
+          id: group.id || '',
+          name: group.name || 'Unnamed Group',
+          created_at: group.created_at || new Date().toISOString(),
+          updated_at: group.updated_at || new Date().toISOString(),
+          member_count: group.member_count || 1,
+          total_expenses: group.total_expenses || 0,
+          yourBalance: group.your_balance || 0,
+          lastActivity: 'Just now',
+          status: 'active' as const
+        }));
+
+        setGroups(transformedGroups);
       } catch (error) {
-        console.error('Error fetching groups:', error);
-        // Use dummy data on error
-        setGroups(dummyGroupsWithMetadata);
+        console.error('Error in fetchGroups:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load groups';
+        toast.error(errorMessage, {
+          duration: 5000,
+          description: 'Please check your connection and try again.'
+        });
       } finally {
         setLoading(false);
       }
@@ -150,8 +191,7 @@ export function Groups() {
   }, [user]);
 
   const filteredGroups = groups.filter(group =>
-    group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (group.description && group.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    group.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleCreateGroup = async () => {
@@ -159,15 +199,25 @@ export function Groups() {
       toast.error('Please enter a group name');
       return;
     }
-    
+
+    if (!user) {
+      toast.error('You must be logged in to create a group');
+      return;
+    }
+
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        toast.error('Please log in to create a group');
-        return;
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw new Error('Failed to get session');
       }
 
-      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-7f88878c/groups`, {
+      if (!session?.access_token) {
+        throw new Error('No active session');
+      }
+
+      const response = await fetch('http://localhost:8000/api/groups', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -175,114 +225,57 @@ export function Groups() {
         },
         body: JSON.stringify({
           name: newGroupName,
-          description: newGroupDescription,
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setGroups(prev => [...prev, data.group]);
-        toast.success('Group created successfully!');
-        setNewGroupName('');
-        setNewGroupDescription('');
-        setIsCreateDialogOpen(false);
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to create group');
-      }
-    } catch (error) {
-      console.error('Error creating group:', error);
-      toast.error('Failed to create group');
-    }
-  };
-
-  const getBalanceColor = (balance: number) => {
-    if (balance > 0) return 'text-green-600';
-    if (balance < 0) return 'text-red-600';
-    return 'text-muted-foreground';
-  };
-
-  const getBalanceText = (balance: number) => {
-    if (balance > 0) return `You are owed $${balance.toFixed(2)}`;
-    if (balance < 0) return `You owe $${Math.abs(balance).toFixed(2)}`;
-    return 'All settled up';
-  };
-
-  const handleOpenAddMemberDialog = (group: any) => {
-    setSelectedGroupForMember(group);
-    setNewMemberEmail('');
-    setNewMemberName('');
-    setIsAddMemberDialogOpen(true);
-  };
-
-  const handleAddMember = async () => {
-    if (!newMemberEmail.trim()) {
-      toast.error('Please enter a member email');
-      return;
-    }
-
-    if (!newMemberName.trim()) {
-      toast.error('Please enter a member name');
-      return;
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newMemberEmail)) {
-      toast.error('Please enter a valid email address');
-      return;
-    }
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        toast.error('Please log in to add members');
-        return;
+      let responseData;
+      try {
+        responseData = await response.clone().json();
+      } catch (jsonError) {
+        const textResponse = await response.text();
+        console.error('Failed to parse JSON response:', textResponse);
+        throw new Error(`Invalid server response: ${textResponse.substring(0, 200)}`);
       }
 
-      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-7f88878c/groups/${selectedGroupForMember.id}/members`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: newMemberEmail,
-          name: newMemberName,
-        }),
-      });
+      if (!response.ok) {
+        let errorMessage = 'Failed to create group';
 
-      if (response.ok) {
-        // Update the local state with the new member
-        const newMember = {
-          id: `user-${Date.now()}`,
-          name: newMemberName,
-          email: newMemberEmail,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newMemberName)}&background=random`
-        };
-
-        setGroups(prev => prev.map(g => {
-          if (g.id === selectedGroupForMember.id) {
-            return {
-              ...g,
-              members: [...(g.members || []), newMember]
-            };
+        if (responseData) {
+          if (responseData.details) {
+            errorMessage = `Error: ${responseData.error || 'Unknown error'}`;
+          } else if (responseData.error) {
+            errorMessage = typeof responseData.error === 'string'
+              ? responseData.error
+              : JSON.stringify(responseData.error);
           }
-          return g;
-        }));
+        } else {
+          errorMessage = `Server returned ${response.status}: ${response.statusText}`;
+        }
 
-        toast.success(`${newMemberName} added to ${selectedGroupForMember.name}!`);
-        setNewMemberEmail('');
-        setNewMemberName('');
-        setIsAddMemberDialogOpen(false);
-        setSelectedGroupForMember(null);
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Failed to add member');
+        throw new Error(errorMessage);
       }
+
+      const newGroup = responseData.group || responseData;
+
+      setGroups(prev => [{
+        ...newGroup,
+        member_count: newGroup.member_count || 1,
+        total_expenses: 0,
+        yourBalance: 0,
+        lastActivity: 'Just now',
+        status: 'active' as const
+      }, ...prev]);
+
+      toast.success('Group created successfully!');
+      setNewGroupName('');
+      setIsCreateDialogOpen(false);
     } catch (error) {
-      console.error('Error adding member:', error);
-      toast.error('Failed to add member');
+      console.error('Error in handleCreateGroup:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create group';
+      toast.error(errorMessage, {
+        duration: 5000,
+        description: 'Please check your connection and try again.'
+      });
     }
   };
 
@@ -294,7 +287,7 @@ export function Groups() {
           <h1 className="text-2xl md:text-3xl font-bold">Groups</h1>
           <p className="text-muted-foreground">Manage your shared expense groups</p>
         </div>
-        
+
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -317,15 +310,6 @@ export function Groups() {
                   placeholder="e.g., Weekend Trip"
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="groupDescription">Description (Optional)</Label>
-                <Input
-                  id="groupDescription"
-                  placeholder="e.g., Beach house rental and activities"
-                  value={newGroupDescription}
-                  onChange={(e) => setNewGroupDescription(e.target.value)}
                 />
               </div>
             </div>
@@ -353,7 +337,7 @@ export function Groups() {
       {loading && (
         <Card>
           <CardContent className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
             <p className="text-muted-foreground">Loading your groups...</p>
           </CardContent>
         </Card>
@@ -363,7 +347,7 @@ export function Groups() {
       {!loading && (
         <div className="grid gap-4 md:gap-6">
           {filteredGroups.map((group) => (
-            <Card key={group.id} className="hover:shadow-lg transition-shadow">
+            <Card key={group.id} className="">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -371,49 +355,33 @@ export function Groups() {
                       <CardTitle className="text-lg">{group.name}</CardTitle>
                       <Badge variant="default">Active</Badge>
                     </div>
-                    <CardDescription>{group.description || 'No description'}</CardDescription>
                   </div>
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Group Actions</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <Settings className="h-4 w-4 mr-2" />
-                      Group Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Archive className="h-4 w-4 mr-2" />
-                      Archive Group
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardHeader>
-            
-            <CardContent>
+
+                  {/* Settings Icon Button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
+                    onClick={() => handleDeleteClick(group)}
+                    title="Delete Group"
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
+
+                </div>
+              </CardHeader>
+
+              <CardContent>
                 {/* Members */}
                 <div className="flex items-center gap-2 mb-4">
                   <Users className="h-4 w-4 text-muted-foreground" />
                   <div className="flex items-center gap-1">
-                    {group.members?.slice(0, 4).map((member: any, index: number) => (
-                      <Avatar key={member.id} className="h-6 w-6 border-2 border-background" style={{ marginLeft: index > 0 ? '-8px' : '0' }}>
-                        <AvatarImage src={member.avatar} alt={member.name} />
-                        <AvatarFallback className="text-xs">{member.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                    ))}
-                    {group.members && group.members.length > 4 && (
-                      <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-xs" style={{ marginLeft: '-8px' }}>
-                        +{group.members.length - 4}
-                      </div>
-                    )}
+                    <Avatar className="h-6 w-6 border-2 border-background">
+                      <AvatarImage src={getUserDisplayInfo(user).avatar} />
+                      <AvatarFallback className="text-xs">{getUserDisplayInfo(user).name.charAt(0)}</AvatarFallback>
+                    </Avatar>
                     <span className="text-sm text-muted-foreground ml-2">
-                      {group.members?.length || 1} member{(group.members?.length || 1) > 1 ? 's' : ''}
+                      {group.member_count || 1} member{(group.member_count || 1) !== 1 ? 's' : ''}
                     </span>
                   </div>
                 </div>
@@ -424,54 +392,44 @@ export function Groups() {
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">Total Expenses</p>
-                      <p className="font-medium">${(group.totalExpenses || group.total_expenses || 0).toFixed(2)}</p>
+                      <p className="font-medium">${(group.total_expenses || 0).toFixed(2)}</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
-                    <div className={`h-2 w-2 rounded-full ${
-                      (group.yourBalance || 0) > 0 ? 'bg-green-500' : 
-                      (group.yourBalance || 0) < 0 ? 'bg-red-500' : 
-                      'bg-gray-500'
-                    }`} />
+                    <div className={`h-2 w-2 rounded-full ${group.yourBalance > 0 ? 'bg-green-500' : group.yourBalance < 0 ? 'bg-red-500' : 'bg-gray-500'}`} />
                     <div>
                       <p className="text-sm text-muted-foreground">Your Balance</p>
-                      <p className={`font-medium ${getBalanceColor(group.yourBalance || 0)}`}>
-                        {getBalanceText(group.yourBalance || 0)}
+                      <p className={`font-medium ${group.yourBalance > 0 ? 'text-green-600' : group.yourBalance < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+                        {group.yourBalance === 0 ? 'All settled up' : `$${Math.abs(group.yourBalance).toFixed(2)} ${group.yourBalance > 0 ? 'owed to you' : 'you owe'}`}
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 col-span-2 md:col-span-1">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Last Activity</p>
-                      <p className="font-medium">{group.lastActivity || (group.created_at ? new Date(group.created_at).toLocaleDateString() : 'N/A')}</p>
+                      <p className="text-sm text-muted-foreground">Created</p>
+                      <p className="font-medium">{new Date(group.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </div>
 
-              {/* Actions */}
-              <div className="flex flex-col gap-2 pt-2">
-                <Button asChild className="w-full">
-                  <Link to={`/groups/${group.id}`}>
-                    View Details
-                  </Link>
-                </Button>
-                <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1" asChild>
+                {/* Actions */}
+                <div className="flex gap-2 pt-2">
+                  <Button asChild className="flex-1">
+                    <Link to={`/groups/${group.id}`}>
+                      View Details
+                    </Link>
+                  </Button>
+                  <Button variant="outline" asChild>
                     <Link to={`/add-expense?group=${group.id}`}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Expense
                     </Link>
                   </Button>
-                  <Button variant="outline" className="flex-1" onClick={() => handleOpenAddMemberDialog(group)}>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add Member
-                  </Button>
                 </div>
-              </div>
-            </CardContent>
+              </CardContent>
             </Card>
           ))}
         </div>
@@ -486,7 +444,7 @@ export function Groups() {
               {searchTerm ? 'No groups found' : 'No groups yet'}
             </h3>
             <p className="text-muted-foreground mb-4">
-              {searchTerm 
+              {searchTerm
                 ? `No groups match "${searchTerm}". Try a different search term.`
                 : 'Create your first group to start splitting expenses with friends and family.'
               }
@@ -501,78 +459,28 @@ export function Groups() {
         </Card>
       )}
 
-      {/* Add Member Dialog */}
-      <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add Member to {selectedGroupForMember?.name}</DialogTitle>
-            <DialogDescription>
-              Invite a new member to join this group. They'll be able to add expenses and see group activity.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            {/* Current Members */}
-            {selectedGroupForMember?.members && selectedGroupForMember.members.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Current Members ({selectedGroupForMember.members.length})</Label>
-                <div className="border rounded-lg p-3 max-h-32 overflow-y-auto space-y-2">
-                  {selectedGroupForMember.members.map((member: any) => (
-                    <div key={member.id} className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={member.avatar} alt={member.name} />
-                        <AvatarFallback className="text-xs">{member.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate">{member.name}</p>
-                        {member.email && (
-                          <p className="text-xs text-muted-foreground truncate">{member.email}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the group
+              <span className="font-semibold"> "{groupToDelete?.name}"</span> and all its data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => groupToDelete && handleDeleteGroup(groupToDelete.id)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-            {/* New Member Form */}
-            <div className="space-y-4 pt-2">
-              <div className="grid gap-2">
-                <Label htmlFor="memberName">Member Name</Label>
-                <Input
-                  id="memberName"
-                  placeholder="e.g., John Doe"
-                  value={newMemberName}
-                  onChange={(e) => setNewMemberName(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="memberEmail">Member Email</Label>
-                <Input
-                  id="memberEmail"
-                  type="email"
-                  placeholder="e.g., john@example.com"
-                  value={newMemberEmail}
-                  onChange={(e) => setNewMemberEmail(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  An invitation will be sent to this email address
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddMemberDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddMember}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add Member
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
