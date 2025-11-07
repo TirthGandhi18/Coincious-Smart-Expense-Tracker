@@ -639,10 +639,20 @@ function PasswordModal({
         return;
       }
 
+      const email = user?.email;
+      if (!email) {
+        throw new Error('No user email available to verify current password');
+      }
+      const { error: signErr } = await supabase.auth.signInWithPassword({
+        email,
+        password: current,
+      });
+      if (signErr) {
+        throw signErr;
+      }
+
       if (typeof supabase.auth.updateUser === 'function') {
-        const { data, error: supaErr } = await supabase.auth.updateUser({
-          password: newPassword,
-        });
+        const { error: supaErr } = await supabase.auth.updateUser({ password: newPassword });
         if (supaErr) throw supaErr;
       } else if (typeof supabase.auth.update === 'function') {
         const { error: supaErr } = await supabase.auth.update({ password: newPassword });
