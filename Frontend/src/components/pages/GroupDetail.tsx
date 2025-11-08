@@ -5,6 +5,7 @@ import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Separator } from '../ui/separator';
+import { useAuth } from '../../App';
 import {
   ArrowLeft,
   Plus,
@@ -86,6 +87,7 @@ interface Expense {
 
 export function GroupDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('expenses');
   const [groupData, setGroupData] = useState<GroupData>({
     id: id || '',
@@ -504,10 +506,17 @@ export function GroupDetail() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-red-600">${settlement.amount.toFixed(2)}</span>
-                      <Button size="sm" onClick={() => handleOpenSettleDialog(settlement)}>
-                        <Check className="h-4 w-4 mr-2" />
-                        Settle Up
-                      </Button>
+
+                      {/* --- THIS IS THE FIX --- */}
+                      {/* Only show the button if the current user is the one who owes */}
+                      {user?.id === settlement.from_id && (
+                        <Button size="sm" onClick={() => handleOpenSettleDialog(settlement)}>
+                          <Check className="h-4 w-4 mr-2" />
+                          Settle Up
+                        </Button>
+                      )}
+                      {/* --- END OF FIX --- */}
+
                     </div>
                   </div>
                 ))
