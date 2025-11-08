@@ -159,7 +159,7 @@ export function AddExpense() {
         setCurrentMembers(formattedMembers);
 
         // Reset split members to just the current user by default
-        setSelectedMembers([user.id]);
+        setSelectedMembers(formattedMembers.map(member => member.id));
         setPaidBy(user.id);
         setUnequalAmounts({});
         setAmountErrors({});
@@ -883,9 +883,8 @@ export function AddExpense() {
                                     e.target.value
                                   )
                                 }
-                                className={`w-28 text-right pl-8 ${
-                                  hasError ? "border-red-500" : ""
-                                }`}
+                                className={`w-28 text-right pl-8 ${hasError ? "border-red-500" : ""
+                                  }`}
                               />
                             </div>
                             {hasError && (
@@ -928,12 +927,11 @@ export function AddExpense() {
                       <div className="flex justify-between items-center">
                         <span className="font-medium">Amount Split:</span>
                         <span
-                          className={`font-bold ${
-                            Math.abs(totalSplit - Number.parseFloat(amount)) >
-                            0.01
+                          className={`font-bold ${Math.abs(totalSplit - Number.parseFloat(amount)) >
+                              0.01
                               ? "text-red-600"
                               : "text-green-600"
-                          }`}
+                            }`}
                         >
                           ${totalSplit.toFixed(2)}
                         </span>
