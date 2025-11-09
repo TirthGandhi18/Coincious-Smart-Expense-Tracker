@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Textarea } from "../ui/textarea";
-import { supabase } from "../../utils/supabase/client";
-import { useAuth } from "../../App";
-import { Badge } from "../ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Checkbox } from "../ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Loader2 } from 'lucide-react';
+import { Textarea } from '../ui/textarea';
+import { supabase } from '../../utils/supabase/client';
+import { useAuth } from '../../App';
+import { Badge } from '../ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Checkbox } from '../ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import {
   ArrowLeft,
   DollarSign,
@@ -21,17 +22,17 @@ import {
   Minus,
   User,
   Zap, // Icon for AI button
-  Upload, // Icon for Receipt Upload
-} from "lucide-react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+  Upload // Icon for Receipt Upload
+} from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { toast } from "sonner";
+} from '../ui/select';
+import { toast } from 'sonner';
 
 // Define the shape of a group member (fetched from Supabase)
 interface GroupMember {
@@ -44,32 +45,24 @@ interface GroupMember {
 export function AddExpense() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const preselectedGroup = searchParams.get("group");
+  const preselectedGroup = searchParams.get('group');
   const { user } = useAuth(); // Your custom hook to get the logged-in user
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   // Expense type state
-  const [expenseType, setExpenseType] = useState<"personal" | "group">(
-    preselectedGroup ? "group" : "personal"
-  );
+  const [expenseType, setExpenseType] = useState<'personal' | 'group'>(preselectedGroup ? 'group' : 'personal');
 
   // Form state
-  const [title, setTitle] = useState("");
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [selectedGroup, setSelectedGroup] = useState(preselectedGroup || "");
-  const [paidBy, setPaidBy] = useState(user?.id || ""); // Correctly defaults to logged-in user
-  const [splitMethod, setSplitMethod] = useState<"equal" | "unequal">("equal");
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([
-    user?.id || "",
-  ]);
-  const [unequalAmounts, setUnequalAmounts] = useState<{
-    [key: string]: string;
-  }>({});
-  const [amountErrors, setAmountErrors] = useState<{ [key: string]: string }>(
-    {}
-  );
+  const [title, setTitle] = useState('');
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState(preselectedGroup || '');
+  const [paidBy, setPaidBy] = useState(user?.id || ''); // Correctly defaults to logged-in user
+  const [splitMethod, setSplitMethod] = useState<'equal' | 'unequal'>('equal');
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([user?.id || '']);
+  const [unequalAmounts, setUnequalAmounts] = useState<{ [key: string]: string }>({});
+  const [amountErrors, setAmountErrors] = useState<{ [key: string]: string }>({});
 
   // Data state
   const [groups, setGroups] = useState<any[]>([]);
@@ -77,9 +70,20 @@ export function AddExpense() {
 
   // Loading states
   const [loading, setLoading] = useState(false);
+  const [membersLoading, setMembersLoading] = useState(false); // For tracking group members loading
   const [isCategorizing, setIsCategorizing] = useState(false); // For AI Categorize
   const [receiptFile, setReceiptFile] = useState<File | null>(null); // For Receipt Upload
   const [isParsingReceipt, setIsParsingReceipt] = useState(false); // For Receipt Upload
+  const [expenseDate, setExpenseDate] = useState(''); // For storing the expense date
+
+  // Format today's date as DD/MM/YYYY
+  useEffect(() => {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    setExpenseDate(`${day}/${month}/${year}`);
+  }, []);
 
   // ----------------------------------------------------------------
   // DATA FETCHING (Replaces Dummy Data)
@@ -91,18 +95,15 @@ export function AddExpense() {
       if (!user) return;
 
       // Use the Supabase database function 'get_user_groups'
-      const { data, error } = await supabase.rpc("get_user_groups");
+      const { data, error } = await supabase.rpc('get_user_groups');
 
       if (error) {
-        console.error("Error fetching groups:", error);
-        toast.error("Could not load your groups.");
+        console.error('Error fetching groups:', error);
+        toast.error('Could not load your groups.');
       } else {
         setGroups(data || []);
         // If a group was preselected (e.g., coming from a group page), set it
-        if (
-          preselectedGroup &&
-          data.find((g: any) => g.id === preselectedGroup)
-        ) {
+        if (preselectedGroup && data.find((g: any) => g.id === preselectedGroup)) {
           setSelectedGroup(preselectedGroup);
         }
       }
@@ -123,26 +124,21 @@ export function AddExpense() {
         setLoading(true);
 
         // Get the current session
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) {
-          throw new Error("No active session");
+          throw new Error('No active session');
         }
 
         // Fetch members using the API endpoint
-        const response = await fetch(
-          `http://localhost:8000/api/groups/${selectedGroup}/members`,
-          {
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const response = await fetch(`http://localhost:8000/api/groups/${selectedGroup}/members`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
         if (!response.ok) {
-          throw new Error("Failed to fetch group members");
+          throw new Error('Failed to fetch group members');
         }
 
         const data = await response.json();
@@ -151,21 +147,22 @@ export function AddExpense() {
         // Format members data
         const formattedMembers: GroupMember[] = members.map((member: any) => ({
           id: member.user_id || member.id,
-          name: member.name || member.email || "No Name",
-          avatar: member.avatar_url || "",
-          email: member.email || "",
+          name: member.name || member.email || 'No Name',
+          avatar: member.avatar_url || '',
+          email: member.email || ''
         }));
 
         setCurrentMembers(formattedMembers);
 
-        // Reset split members to just the current user by default
-        setSelectedMembers(formattedMembers.map(member => member.id));
-        setPaidBy(user.id);
+        // Reset split members to ALL group members by default
+        setSelectedMembers(formattedMembers.map(m => m.id));
+        setPaidBy(user.id); // Keep the default payer as the current user
         setUnequalAmounts({});
         setAmountErrors({});
+
       } catch (error) {
-        console.error("Error fetching group members:", error);
-        toast.error("Could not load group members. Please try again.");
+        console.error('Error fetching group members:', error);
+        toast.error('Could not load group members. Please try again.');
         setCurrentMembers([]);
       } finally {
         setLoading(false);
@@ -182,11 +179,11 @@ export function AddExpense() {
       if (!user) return; // Wait for the user to be loaded
 
       // Call the database function
-      const { data, error } = await supabase.rpc("get_all_user_categories");
+      const { data, error } = await supabase.rpc('get_all_user_categories');
 
       if (error) {
-        console.error("Error fetching categories:", error);
-        toast.error("Could not load your categories.");
+        console.error('Error fetching categories:', error);
+        toast.error('Could not load your categories.');
       } else {
         // Use a Set to automatically remove any duplicates, then save to state
         const uniqueCategories = [...new Set(data as string[])];
@@ -197,36 +194,34 @@ export function AddExpense() {
     fetchCategories();
   }, [user]); // Run this whenever the user object is available
 
+
   // ----------------------------------------------------------------
   // AI/FEATURE HANDLERS
   // ----------------------------------------------------------------
 
   const handleAICategorize = async () => {
     if (!title.trim()) {
-      toast.error("Please enter a title or description first.");
+      toast.error('Please enter a title or description first.');
       return;
     }
     setIsCategorizing(true);
-    const toastId = toast.loading("Asking the AI for a category...");
+    const toastId = toast.loading('Asking the AI for a category...');
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not logged in");
 
       const formData = new FormData();
-      formData.append("description", title);
-      formData.append("category", ""); // Trigger prediction mode
+      formData.append('description', title);
+      formData.append('category', ''); // Trigger prediction mode
 
-      const response = await fetch("http://localhost:8000/api/categorize", {
-        // MAKE SURE PORT IS CORRECT
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}` },
+      const response = await fetch('http://localhost:8000/api/categorize', { // MAKE SURE PORT IS CORRECT
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
         body: formData,
       });
 
-      if (!response.ok) throw new Error("AI server failed to respond.");
+      if (!response.ok) throw new Error('AI server failed to respond.');
 
       const result = await response.json();
       const aiCategoryLabel = result.category;
@@ -235,10 +230,7 @@ export function AddExpense() {
         // Check if the AI's suggestion is already in our dropdown
         if (!availableCategories.includes(aiCategoryLabel)) {
           // If not, add it to our state so it's in the list
-          setAvailableCategories((prevCategories) => [
-            ...prevCategories,
-            aiCategoryLabel,
-          ]);
+          setAvailableCategories(prevCategories => [...prevCategories, aiCategoryLabel]);
         }
         // Now, set the dropdown to the AI's suggestion
         setCategory(aiCategoryLabel);
@@ -246,10 +238,9 @@ export function AddExpense() {
       } else {
         throw new Error("AI could not determine a category.");
       }
+
     } catch (error: any) {
-      toast.error(error.message || "Failed to get AI category.", {
-        id: toastId,
-      });
+      toast.error(error.message || 'Failed to get AI category.', { id: toastId });
     } finally {
       setIsCategorizing(false);
     }
@@ -260,30 +251,28 @@ export function AddExpense() {
 
     setReceiptFile(file);
     setIsParsingReceipt(true);
-    const toastId = toast.loading("Parsing receipt...");
+    const toastId = toast.loading('Parsing receipt...');
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        toast.error("Please log in to upload receipts", { id: toastId });
+        toast.error('Please log in to upload receipts', { id: toastId });
         return;
       }
 
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append('image', file);
 
-      const response = await fetch("http://localhost:8000/api/parse-bill", {
-        method: "POST",
+      const response = await fetch('http://localhost:8000/api/parse-bill', {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error("Failed to parse receipt");
+        throw new Error('Failed to parse receipt');
       }
 
       const { parsed } = await response.json();
@@ -294,10 +283,8 @@ export function AddExpense() {
       if (parsed.issue_date) {
         const date = new Date(parsed.issue_date);
         if (!isNaN(date.getTime())) {
-          const formattedDate = date.toISOString().split("T")[0];
-          setDescription((currentDesc) =>
-            `Date: ${formattedDate}\n${parsed.notes || ""}`.trim()
-          );
+          const formattedDate = date.toISOString().split('T')[0];
+          setDescription(currentDesc => `Date: ${formattedDate}\n${parsed.notes || ''}`.trim());
         }
       } else if (parsed.notes) {
         setDescription(parsed.notes);
@@ -309,15 +296,14 @@ export function AddExpense() {
 
         // Find a match in the user's availableCategories
         let matchedCategory = availableCategories.find(
-          (cat) => cat.toLowerCase() === normalizedGuess
+          cat => cat.toLowerCase() === normalizedGuess
         );
 
         // If no exact match, try partial match
         if (!matchedCategory) {
-          matchedCategory = availableCategories.find(
-            (cat) =>
-              cat.toLowerCase().includes(normalizedGuess) ||
-              normalizedGuess.includes(cat.toLowerCase())
+          matchedCategory = availableCategories.find(cat =>
+            cat.toLowerCase().includes(normalizedGuess) ||
+            normalizedGuess.includes(cat.toLowerCase())
           );
         }
 
@@ -327,35 +313,32 @@ export function AddExpense() {
         } else {
           // If no match, but the AI gave a guess, add it as a new category
           // and select it.
-          const capitalizedGuess =
-            parsed.category_guess.charAt(0).toUpperCase() +
-            parsed.category_guess.slice(1);
+          const capitalizedGuess = parsed.category_guess.charAt(0).toUpperCase() + parsed.category_guess.slice(1);
           if (!availableCategories.includes(capitalizedGuess)) {
-            setAvailableCategories((prev) => [...prev, capitalizedGuess]);
+            setAvailableCategories(prev => [...prev, capitalizedGuess]);
           }
           setCategory(capitalizedGuess);
         }
       }
 
-      toast.success("Receipt processed successfully!", { id: toastId });
+      toast.success('Receipt processed successfully!', { id: toastId });
     } catch (error) {
-      console.error("Error processing receipt:", error);
-      toast.error("Failed to process receipt. Please enter details manually.", {
-        id: toastId,
-      });
+      console.error('Error processing receipt:', error);
+      toast.error('Failed to process receipt. Please enter details manually.', { id: toastId });
     } finally {
       setIsParsingReceipt(false);
     }
   };
+
 
   // ----------------------------------------------------------------
   // FORM HANDLERS (Split Logic)
   // ----------------------------------------------------------------
 
   const handleMemberToggle = (memberId: string) => {
-    setSelectedMembers((prev) => {
+    setSelectedMembers(prev => {
       if (prev.includes(memberId)) {
-        return prev.filter((id) => id !== memberId);
+        return prev.filter(id => id !== memberId);
       } else {
         return [...prev, memberId];
       }
@@ -363,31 +346,31 @@ export function AddExpense() {
   };
 
   const handleUnequalAmountChange = (memberId: string, value: string) => {
-    setAmountErrors((prev) => {
+    setAmountErrors(prev => {
       const newErrors = { ...prev };
       delete newErrors[memberId];
       return newErrors;
     });
 
-    if (value === "") {
-      setUnequalAmounts((prev) => ({ ...prev, [memberId]: "" }));
+    if (value === '') {
+      setUnequalAmounts(prev => ({ ...prev, [memberId]: '' }));
       return;
     }
 
     const numberRegex = /^\d*\.?\d*$/; // Allow only numbers and a decimal
     if (!numberRegex.test(value)) {
-      setAmountErrors((prev) => ({ ...prev, [memberId]: "Invalid number" }));
+      setAmountErrors(prev => ({ ...prev, [memberId]: 'Invalid number' }));
       return;
     }
 
-    setUnequalAmounts((prev) => ({ ...prev, [memberId]: value }));
+    setUnequalAmounts(prev => ({ ...prev, [memberId]: value }));
   };
 
   const calculateSplitAmounts = () => {
     const totalAmount = Number.parseFloat(amount) || 0;
     const numMembers = selectedMembers.length;
 
-    if (splitMethod === "equal") {
+    if (splitMethod === 'equal') {
       if (numMembers === 0) return {};
       const equalAmount = totalAmount / numMembers;
       return selectedMembers.reduce((acc, memberId) => {
@@ -396,17 +379,14 @@ export function AddExpense() {
       }, {} as { [key: string]: string });
     }
 
-    if (splitMethod === "unequal") {
+    if (splitMethod === 'unequal') {
       return unequalAmounts;
     }
     return {};
   };
 
   const splitAmounts = calculateSplitAmounts();
-  const totalSplit = Object.values(splitAmounts).reduce(
-    (sum, amount) => sum + Number.parseFloat(amount || "0"),
-    0
-  );
+  const totalSplit = Object.values(splitAmounts).reduce((sum, amount) => sum + Number.parseFloat(amount || '0'), 0);
 
   // ----------------------------------------------------------------
   // FINAL SUBMIT HANDLER (Connects to Supabase & Python)
@@ -418,28 +398,26 @@ export function AddExpense() {
 
     // --- 1. VALIDATION ---
     if (!title.trim()) {
-      toast.error("Please enter an expense title");
+      toast.error('Please enter an expense title');
       setLoading(false);
       return;
     }
     const finalAmount = parseFloat(amount);
     if (isNaN(finalAmount) || finalAmount <= 0) {
-      toast.error("Please enter a valid amount");
+      toast.error('Please enter a valid amount');
       setLoading(false);
       return;
     }
     if (!category) {
-      toast.error("Please select a category");
+      toast.error('Please select a category');
       setLoading(false);
       return;
     }
 
     // --- 2. GET SUPABASE SESSION ---
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token || !user) {
-      toast.error("Please log in to add an expense");
+      toast.error('Please log in to add an expense');
       setLoading(false);
       return;
     }
@@ -448,103 +426,100 @@ export function AddExpense() {
       // --- 3. "LEARNING" CALL TO PYTHON SERVER (Fire-and-Forget) ---
       // This tells the AI backend what the user manually chose, so it can learn.
       const learningFormData = new FormData();
-      learningFormData.append("description", title);
-      learningFormData.append("amount", String(finalAmount));
-      learningFormData.append("category", category); // Pass the final category label
+      learningFormData.append('description', title);
+      learningFormData.append('amount', String(finalAmount));
+      learningFormData.append('category', category); // Pass the final category label
 
-      fetch("http://localhost:8000/api/categorize", {
-        // Make sure this port is correct!
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}` },
+      fetch('http://localhost:8000/api/categorize', { // Make sure this port is correct!
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
         body: learningFormData,
-      }).catch((err) => {
+      }).catch(err => {
         // Log the error but don't stop the user from saving their expense
-        console.error("AI Learning call failed (this is non-critical):", err);
+        console.error("AI Learning call failed (this is non-critical):", err)
       });
 
+
       // --- 4. SAVE THE EXPENSE TO SUPABASE DATABASE ---
-      if (expenseType === "personal") {
+      if (expenseType === 'personal') {
+
         // --- Save a Personal Expense ---
-        const { error: expenseError } = await supabase.from("expenses").insert({
-          description: title,
-          amount: finalAmount,
-          category: category, // Save the category label directly
-          payer_id: user.id,
-          group_id: null, // This is what makes it a personal expense
-          date: new Date().toISOString(),
-        });
+        const { error: expenseError } = await supabase
+          .from('expenses')
+          .insert({
+            description: title,
+            amount: finalAmount,
+            category: category, // Save the category label directly
+            payer_id: user.id,
+            group_id: null, // This is what makes it a personal expense
+            date: new Date().toISOString()
+          });
 
         if (expenseError) throw expenseError;
 
-        toast.success("Personal expense added successfully!");
-        navigate("/dashboard"); // Go back to the dashboard
+        toast.success('Personal expense added successfully!');
+        navigate('/dashboard'); // Go back to the dashboard
+
       } else {
+
         // --- Save a Group Expense ---
 
         // Group-specific validation
         if (!selectedGroup) {
-          toast.error("Please select a group");
+          toast.error('Please select a group');
           setLoading(false);
           return;
         }
         if (selectedMembers.length === 0) {
-          toast.error("Please select at least one person to split with");
+          toast.error('Please select at least one person to split with');
           setLoading(false);
           return;
         }
 
         // Calculate final splits
-        const finalSplits: { user_id: string; amount_owed: number }[] = [];
+        const finalSplits: { user_id: string, amount_owed: number }[] = [];
 
-        if (splitMethod === "equal") {
+        if (splitMethod === 'equal') {
           const equalAmount = finalAmount / selectedMembers.length;
-          selectedMembers.forEach((memberId) => {
+          selectedMembers.forEach(memberId => {
             finalSplits.push({ user_id: memberId, amount_owed: equalAmount });
           });
-        } else {
-          // Unequal split
+        } else { // Unequal split
           // Check if the amounts add up
           if (Math.abs(totalSplit - finalAmount) > 0.01) {
-            toast.error(
-              `Unequal amounts must add up to the total expense ($${finalAmount.toFixed(
-                2
-              )})`
-            );
+            toast.error(`Unequal amounts must add up to the total expense ($${finalAmount.toFixed(2)})`);
             setLoading(false);
             return;
           }
-          currentMembers.forEach((member) => {
+          currentMembers.forEach(member => {
             finalSplits.push({
               user_id: member.id,
-              amount_owed: parseFloat(unequalAmounts[member.id] || "0"),
+              amount_owed: parseFloat(unequalAmounts[member.id] || '0')
             });
           });
         }
 
         // Call the Supabase Database Function to save everything at once
-        const { error: rpcError } = await supabase.rpc(
-          "create_group_expense_and_splits",
-          {
-            expense_data: {
-              description: title,
-              amount: finalAmount,
-              category: category,
-              payer_id: paidBy,
-              group_id: selectedGroup,
-            },
-            splits_data: finalSplits,
-          }
-        );
+        const { error: rpcError } = await supabase.rpc('create_group_expense_and_splits', {
+          expense_data: {
+            description: title,
+            amount: finalAmount,
+            category: category,
+            payer_id: paidBy,
+            group_id: selectedGroup,
+          },
+          splits_data: finalSplits
+        });
 
         if (rpcError) throw rpcError;
 
-        toast.success("Group expense added successfully!");
-        navigate("/groups/" + selectedGroup); // Go to the group page
+        toast.success('Group expense added successfully!');
+        navigate('/groups/' + selectedGroup); // Go to the group page
       }
     } catch (error: any) {
       // This will catch errors from either the Supabase insert or the RPC call
-      console.error("Error adding expense:", error);
-      toast.error(error.message || "Failed to add expense");
+      console.error('Error adding expense:', error);
+      toast.error(error.message || 'Failed to add expense');
     } finally {
       // No matter what, stop the loading spinner
       setLoading(false);
@@ -566,19 +541,13 @@ export function AddExpense() {
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Add Expense</h1>
           <p className="text-muted-foreground">
-            {expenseType === "personal"
-              ? "Track your personal expense"
-              : "Split a new expense with your group"}
+            {expenseType === 'personal' ? 'Track your personal expense' : 'Split a new expense with your group'}
           </p>
         </div>
       </div>
 
       {/* Expense Type Navigation */}
-      <Tabs
-        value={expenseType}
-        onValueChange={(value) => setExpenseType(value as "personal" | "group")}
-        className="mb-6"
-      >
+      <Tabs value={expenseType} onValueChange={(value) => setExpenseType(value as 'personal' | 'group')} className="mb-6">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="personal" className="flex items-center gap-2">
             <User className="h-4 w-4" />
@@ -630,6 +599,21 @@ export function AddExpense() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="date">Date</Label>
+              <Input
+                id="date"
+                type="date"
+                value={expenseDate.split('/').reverse().join('-')}
+                onChange={(e) => {
+                  const [year, month, day] = e.target.value.split('-');
+                  setExpenseDate(`${day}/${month}/${year}`);
+                }}
+                required
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger>
@@ -637,15 +621,12 @@ export function AddExpense() {
                 </SelectTrigger>
                 <SelectContent>
                   {/* This makes sure the list is always up-to-date */}
-                  {[
-                    ...new Set(
-                      availableCategories.concat(category ? [category] : [])
-                    ),
-                  ].map((categoryName) => (
-                    <SelectItem key={categoryName} value={categoryName}>
-                      {categoryName}
-                    </SelectItem>
-                  ))}
+                  {[...new Set(availableCategories.concat(category ? [category] : []))]
+                    .map((categoryName) => (
+                      <SelectItem key={categoryName} value={categoryName}>
+                        {categoryName}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               {/* AI Categorize Button */}
@@ -658,7 +639,7 @@ export function AddExpense() {
                 className="w-full flex items-center gap-2"
               >
                 <Zap className="h-4 w-4" />
-                {isCategorizing ? "Asking AI..." : "Auto-Categorize with AI"}
+                {isCategorizing ? 'Asking AI...' : 'Auto-Categorize with AI'}
               </Button>
             </div>
 
@@ -676,7 +657,7 @@ export function AddExpense() {
         </Card>
 
         {/* Group Selection - Only shown for group expenses */}
-        {expenseType === "group" && (
+        {expenseType === 'group' && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -701,39 +682,26 @@ export function AddExpense() {
                     })}
                   </SelectContent>
                 </Select>
-                {selectedGroup && currentMembers.length > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    This group has {currentMembers.length}{" "}
-                    {currentMembers.length === 1 ? "member" : "members"}
-                  </p>
-                )}
               </div>
 
-              {selectedGroup && (
+              {membersLoading && (
+                <div className="flex items-center p-4 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Loading members...
+                </div>
+              )}
+
+              {!membersLoading && selectedGroup && (
                 <div className="space-y-2">
                   <Label>Paid by</Label>
                   <RadioGroup value={paidBy} onValueChange={setPaidBy}>
                     {currentMembers.map((member) => (
-                      <div
-                        key={member.id}
-                        className="flex items-center space-x-2"
-                      >
-                        <RadioGroupItem
-                          value={member.id}
-                          id={`payer-${member.id}`}
-                        />
-                        <Label
-                          htmlFor={`payer-${member.id}`}
-                          className="flex items-center gap-2 cursor-pointer"
-                        >
+                      <div key={member.id} className="flex items-center space-x-2">
+                        <RadioGroupItem value={member.id} id={`payer-${member.id}`} />
+                        <Label htmlFor={`payer-${member.id}`} className="flex items-center gap-2 cursor-pointer">
                           <Avatar className="h-6 w-6">
-                            <AvatarImage
-                              src={member.avatar}
-                              alt={member.name}
-                            />
-                            <AvatarFallback className="text-xs">
-                              {member.name.charAt(0)}
-                            </AvatarFallback>
+                            <AvatarImage src={member.avatar || undefined} alt={member.name} />
+                            <AvatarFallback className="text-xs">{member.name.charAt(0)}</AvatarFallback>
                           </Avatar>
                           {member.name}
                         </Label>
@@ -747,7 +715,7 @@ export function AddExpense() {
         )}
 
         {/* Split Configuration - Only shown for group expenses */}
-        {expenseType === "group" && selectedGroup && (
+        {expenseType === 'group' && selectedGroup && !membersLoading && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -759,12 +727,7 @@ export function AddExpense() {
               {/* Split Method */}
               <div className="space-y-3">
                 <Label>Split Method</Label>
-                <RadioGroup
-                  value={splitMethod}
-                  onValueChange={(value) =>
-                    setSplitMethod(value as "equal" | "unequal")
-                  }
-                >
+                <RadioGroup value={splitMethod} onValueChange={(value) => setSplitMethod(value as 'equal' | 'unequal')}>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="equal" id="equal" />
                     <Label htmlFor="equal" className="cursor-pointer">
@@ -781,7 +744,7 @@ export function AddExpense() {
               </div>
 
               {/* Equal Division - Member Selection */}
-              {splitMethod === "equal" && (
+              {splitMethod === 'equal' && (
                 <div className="space-y-3">
                   <div>
                     <Label>Select members to split equally among</Label>
@@ -789,39 +752,24 @@ export function AddExpense() {
                   <div className="space-y-3">
                     {currentMembers.map((member) => {
                       const isSelected = selectedMembers.includes(member.id);
-                      const splitAmount = splitAmounts[member.id] || "0.00";
+                      const splitAmount = splitAmounts[member.id] || '0.00';
                       return (
-                        <div
-                          key={member.id}
-                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
-                        >
+                        <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors">
                           <div className="flex items-center gap-3">
                             <Checkbox
                               checked={isSelected}
-                              onCheckedChange={() =>
-                                handleMemberToggle(member.id)
-                              }
+                              onCheckedChange={() => handleMemberToggle(member.id)}
                               id={`member-${member.id}`}
                             />
-                            <Label
-                              htmlFor={`member-${member.id}`}
-                              className="flex items-center gap-3 cursor-pointer"
-                            >
+                            <Label htmlFor={`member-${member.id}`} className="flex items-center gap-3 cursor-pointer">
                               <Avatar className="h-8 w-8">
-                                <AvatarImage
-                                  src={member.avatar}
-                                  alt={member.name}
-                                />
-                                <AvatarFallback className="text-xs">
-                                  {member.name.charAt(0)}
-                                </AvatarFallback>
+                                <AvatarImage src={member.avatar || undefined} alt={member.name} />
+                                <AvatarFallback className="text-xs">{member.name.charAt(0)}</AvatarFallback>
                               </Avatar>
                               <div>
                                 <div className="font-medium">{member.name}</div>
                                 {member.email && (
-                                  <div className="text-xs text-muted-foreground">
-                                    {member.email}
-                                  </div>
+                                  <div className="text-xs text-muted-foreground">{member.email}</div>
                                 )}
                               </div>
                             </Label>
@@ -839,7 +787,7 @@ export function AddExpense() {
               )}
 
               {/* Unequal Division - Input boxes */}
-              {splitMethod === "unequal" && (
+              {splitMethod === 'unequal' && (
                 <div className="space-y-3">
                   <div>
                     <Label>Enter amount for each member</Label>
@@ -849,22 +797,14 @@ export function AddExpense() {
                   </div>
                   <div className="space-y-3">
                     {currentMembers.map((member) => {
-                      const memberAmount = unequalAmounts[member.id] || "";
+                      const memberAmount = unequalAmounts[member.id] || '';
                       const hasError = amountErrors[member.id];
                       return (
-                        <div
-                          key={member.id}
-                          className="flex items-center justify-between p-3 border rounded-lg"
-                        >
+                        <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <div className="flex items-center gap-3 flex-1">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage
-                                src={member.avatar}
-                                alt={member.name}
-                              />
-                              <AvatarFallback className="text-xs">
-                                {member.name.charAt(0)}
-                              </AvatarFallback>
+                              <AvatarImage src={member.avatar || undefined} alt={member.name} />
+                              <AvatarFallback className="text-xs">{member.name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
                               <div className="font-medium">{member.name}</div>
@@ -877,20 +817,12 @@ export function AddExpense() {
                                 type="text"
                                 placeholder="0.00"
                                 value={memberAmount}
-                                onChange={(e) =>
-                                  handleUnequalAmountChange(
-                                    member.id,
-                                    e.target.value
-                                  )
-                                }
-                                className={`w-28 text-right pl-8 ${hasError ? "border-red-500" : ""
-                                  }`}
+                                onChange={(e) => handleUnequalAmountChange(member.id, e.target.value)}
+                                className={`w-28 text-right pl-8 ${hasError ? 'border-red-500' : ''}`}
                               />
                             </div>
                             {hasError && (
-                              <span className="text-xs text-red-500">
-                                {hasError}
-                              </span>
+                              <span className="text-xs text-red-500">{hasError}</span>
                             )}
                           </div>
                         </div>
@@ -905,46 +837,30 @@ export function AddExpense() {
                 <div className="p-4 bg-muted/50 rounded-lg space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Total Expense Amount:</span>
-                    <span className="font-bold">
-                      ${Number.parseFloat(amount).toFixed(2)}
-                    </span>
+                    <span className="font-bold">${Number.parseFloat(amount).toFixed(2)}</span>
                   </div>
 
-                  {splitMethod === "equal" && selectedMembers.length > 0 && (
+                  {splitMethod === 'equal' && selectedMembers.length > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="font-medium">Amount per Member:</span>
                       <span className="font-bold text-green-600">
-                        $
-                        {(
-                          Number.parseFloat(amount) / selectedMembers.length
-                        ).toFixed(2)}
+                        ${(Number.parseFloat(amount) / selectedMembers.length).toFixed(2)}
                       </span>
                     </div>
                   )}
 
-                  {splitMethod === "unequal" && (
+                  {splitMethod === 'unequal' && (
                     <>
                       <div className="flex justify-between items-center">
                         <span className="font-medium">Amount Split:</span>
-                        <span
-                          className={`font-bold ${Math.abs(totalSplit - Number.parseFloat(amount)) >
-                              0.01
-                              ? "text-red-600"
-                              : "text-green-600"
-                            }`}
-                        >
+                        <span className={`font-bold ${Math.abs(totalSplit - Number.parseFloat(amount)) > 0.01 ? 'text-red-600' : 'text-green-600'}`}>
                           ${totalSplit.toFixed(2)}
                         </span>
                       </div>
                       {Math.abs(totalSplit - parseFloat(amount)) > 0.01 && (
                         <div className="flex justify-between items-center text-sm text-red-600">
                           <span>Remaining to allocate:</span>
-                          <span>
-                            $
-                            {Math.abs(
-                              Number.parseFloat(amount) - totalSplit
-                            ).toFixed(2)}
-                          </span>
+                          <span>${Math.abs(Number.parseFloat(amount) - totalSplit).toFixed(2)}</span>
                         </div>
                       )}
                     </>
@@ -969,7 +885,7 @@ export function AddExpense() {
               <p className="text-sm text-muted-foreground mb-2">
                 {receiptFile
                   ? `Selected: ${receiptFile.name}`
-                  : "Drag and drop your receipt here, or click to browse"}
+                  : 'Drag and drop your receipt here, or click to browse'}
               </p>
               <div className="relative">
                 <input
@@ -989,39 +905,21 @@ export function AddExpense() {
                   type="button" // Important: type="button" so it doesn't submit the form
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    document.getElementById("receipt-upload")?.click()
-                  } // Manually trigger file input
+                  onClick={() => document.getElementById('receipt-upload')?.click()} // Manually trigger file input
                   disabled={isParsingReceipt}
                 >
                   {isParsingReceipt ? (
                     <>
-                      <svg
-                        className="animate-spin -ml-1 mr-2 h-4 w-4"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
                       Processing...
                     </>
                   ) : receiptFile ? (
-                    "Change File"
+                    'Change File'
                   ) : (
-                    "Choose File"
+                    'Choose File'
                   )}
                 </Button>
                 {receiptFile && !isParsingReceipt && (
@@ -1048,12 +946,8 @@ export function AddExpense() {
           <Button type="button" variant="outline" className="flex-1" asChild>
             <Link to="/dashboard">Cancel</Link>
           </Button>
-          <Button
-            type="submit"
-            className="flex-1"
-            disabled={loading || isCategorizing || isParsingReceipt}
-          >
-            {loading ? "Adding Expense..." : "Add Expense"}
+          <Button type="submit" className="flex-1" disabled={loading || isCategorizing || isParsingReceipt}>
+            {loading ? 'Adding Expense...' : 'Add Expense'}
           </Button>
         </div>
       </form>
