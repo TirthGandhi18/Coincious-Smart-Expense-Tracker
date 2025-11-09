@@ -29,10 +29,47 @@ type ProfileData = {
   email: string;
   phone: string;
   bio: string;
+  avatar?: string;
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 const PHONE_RE = /^(\+)?[0-9\s\-()]{7,30}$/;
+
+// Function to convert image file to base64 string
+const convertImageToString = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = () => {
+      const result = reader.result as string;
+      console.log('Image converted to base64 string successfully');
+      resolve(result);
+    };
+    
+    reader.onerror = (error) => {
+      console.error('Error converting image to string:', error);
+      reject(error);
+    };
+    
+    reader.readAsDataURL(file);
+  });
+};
+
+// Function to validate image file
+const validateImageFile = (file: File): string | null => {
+  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+  const maxSize = 5 * 1024 * 1024; // 5MB
+
+  if (!validTypes.includes(file.type)) {
+    return 'Please select a valid image file (JPEG, PNG, GIF, WebP)';
+  }
+
+  if (file.size > maxSize) {
+    return 'Image size should be less than 5MB';
+  }
+
+  return null;
+};
 
 function validateName(name: string) {
   const trimmed = (name || '').trim();
@@ -78,6 +115,7 @@ export function Profile() {
     email: user?.email || '',
     phone: '',
     bio: '',
+    avatar: user?.avatar || '',
   });
 
   const [profileData, setProfileData] = useState<ProfileData>(initialProfile);
@@ -100,6 +138,7 @@ export function Profile() {
       email: user?.email || '',
       phone: '',
       bio: '',
+      avatar: user?.avatar || '',
     };
     setInitialProfile(snapshot);
     setProfileData(snapshot);
@@ -132,6 +171,36 @@ export function Profile() {
     setTouched((t) => ({ ...(t || {}), [fieldName]: true }));
   };
 
+  // Handle avatar upload and conversion
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate the file
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
+
+    try {
+      // Convert image to base64 string
+      const base64String = await convertImageToString(file);
+      
+      // Update profile data with the new avatar string
+      setProfileData((prev) => ({
+        ...prev,
+        avatar: base64String
+      }));
+
+      console.log('Avatar image converted to base64 string and updated in state');
+
+    } catch (error) {
+      console.error('Failed to process avatar image:', error);
+      alert('Failed to upload image. Please try again.');
+    }
+  };
+
   const saveProfile = async () => {
     const finalErrors = validateAll(profileData);
     setErrors(finalErrors);
@@ -151,6 +220,7 @@ export function Profile() {
       email: profileData.email.trim().toLowerCase(),
       phone: profileData.phone.trim(),
       bio: sanitizeInput(profileData.bio),
+      avatar: profileData.avatar, // This will be the base64 string
     };
 
     try {
@@ -168,6 +238,7 @@ export function Profile() {
         email: payload.email,
         phone: payload.phone,
         bio: payload.bio,
+        avatar: payload.avatar,
       });
       setIsEditing(false);
     } catch (err: any) {
@@ -295,27 +366,41 @@ export function Profile() {
             <CardContent>
               <div className="flex flex-col items-center space-y-4">
                 <div className="relative">
-                  <Avatar className="h-32 w-32">
-                    <AvatarImage src={user?.avatar} alt={user?.name} />
-                    <AvatarFallback className="bg-[#8B4513] text-white text-3xl">
-                      {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative inline-block rounded-full overflow-hidden h-32 w-32 bg-white dark:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700">
+                    <Avatar className="h-32 w-32">
+                      <AvatarImage src={profileData.avatar} alt={profileData.name} />
+                      <AvatarFallback className="bg-[#8B4513] dark:bg-[#5a3119] text-white text-3xl">
+                        {profileData.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
 
                   {isEditing && (
-                    <Button
-                      size="icon"
-                      className="absolute bottom-0 right-0 h-10 w-10 rounded-full shadow-lg"
-                      variant="secondary"
-                    >
-                      <Camera className="h-5 w-5" />
-                    </Button>
+                    <>
+                      <input
+                        type="file"
+                        id="avatar-upload"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                      />
+                      <Button
+                        size="icon"
+                        aria-label="Change profile picture"
+                        title="Change profile picture"
+                        className="absolute bottom-0 right-0 h-10 w-10 rounded-full shadow-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center transition-transform transform hover:scale-105 hover:shadow-xl hover:ring-2 hover:ring-purple-500/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                        variant="secondary"
+                        onClick={() => document.getElementById('avatar-upload')?.click()}
+                      >
+                        <Camera className="h-5 w-5 text-gray-700 dark:text-gray-200" />
+                      </Button>
+                    </>
                   )}
                 </div>
 
                 <div className="text-center">
-                  <h3 className="font-semibold text-lg">{user?.name}</h3>
-                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                  <h3 className="font-semibold text-lg">{profileData.name}</h3>
+                  <p className="text-sm text-muted-foreground">{profileData.email}</p>
 
                   {user?.isParent && (
                     <Badge variant="secondary" className="mt-2">
@@ -337,7 +422,7 @@ export function Profile() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-1">
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
                   {isEditing ? (
@@ -428,24 +513,6 @@ export function Profile() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="bio">About You</Label>
-                {isEditing ? (
-                  <textarea
-                    id="bio"
-                    className="w-full p-3 border rounded-md min-h-[100px] resize-none bg-background"
-                    value={profileData.bio}
-                    onChange={(e) => updateField('bio', e.target.value)}
-                    placeholder="Tell us a bit about yourself"
-                  />
-                ) : (
-                  <div className="p-3 bg-muted rounded-md min-h-[100px]">
-                    <span className="text-muted-foreground">
-                      {profileData.bio || 'Nothing here yet'}
-                    </span>
-                  </div>
-                )}
-              </div>
             </CardContent>
           </Card>
 
@@ -551,6 +618,7 @@ export function Profile() {
   );
 }
 
+// KEEP THE FULL PasswordModal COMPONENT
 function PasswordModal({
   onClose,
   supabase,
@@ -680,9 +748,9 @@ function PasswordModal({
           if (!loading) onClose();
         }}
       />
-      <div className="relative z-10 w-full max-w-md p-6 bg-white rounded-lg shadow-lg">
+      <div className="relative z-10 w-full max-w-md p-6 bg-white rounded-lg shadow-lg dark:bg-gray-900 dark:text-white">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Change Password</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Change Password</h3>
           <Button variant="ghost" onClick={() => !loading && onClose()}>
             <X />
           </Button>
@@ -723,7 +791,7 @@ function PasswordModal({
                 <button
                   type="button"
                   onClick={() => setShowNew((s) => !s)}
-                  className="absolute right-2 top-2 text-sm px-2 py-1"
+                  className="absolute right-2 top-2 text-sm px-2 py-1 text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 rounded"
                 >
                   {showNew ? 'Hide' : 'Show'}
                 </button>
@@ -731,19 +799,19 @@ function PasswordModal({
 
               {showRules && (
                 <ul className="mt-2 ml-4 text-sm space-y-1">
-                  <li className={ruleState.minLen ? 'text-green-600' : 'text-red-600'}>
+                  <li className={ruleState.minLen ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                     {ruleState.minLen ? '✓' : '•'} At least 8 characters
                   </li>
-                  <li className={ruleState.upper ? 'text-green-600' : 'text-red-600'}>
+                  <li className={ruleState.upper ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                     {ruleState.upper ? '✓' : '•'} One uppercase letter
                   </li>
-                  <li className={ruleState.lower ? 'text-green-600' : 'text-red-600'}>
+                  <li className={ruleState.lower ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                     {ruleState.lower ? '✓' : '•'} One lowercase letter
                   </li>
-                  <li className={ruleState.digit ? 'text-green-600' : 'text-red-600'}>
+                  <li className={ruleState.digit ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                     {ruleState.digit ? '✓' : '•'} One number
                   </li>
-                  <li className={ruleState.special ? 'text-green-600' : 'text-red-600'}>
+                  <li className={ruleState.special ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                     {ruleState.special ? '✓' : '•'} One special character
                   </li>
                 </ul>
@@ -767,7 +835,7 @@ function PasswordModal({
                 <button
                   type="button"
                   onClick={() => setShowConfirm((s) => !s)}
-                  className="absolute right-2 top-2 text-sm px-2 py-1"
+                  className="absolute right-2 top-2 text-sm px-2 py-1 text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 rounded"
                 >
                   {showConfirm ? 'Hide' : 'Show'}
                 </button>
@@ -780,19 +848,19 @@ function PasswordModal({
             <div className="flex items-center justify-between">
               <div>
                 <button
-                  type="button"
-                  className="text-sm text-muted-foreground underline"
-                  onClick={() => {
-                    if (supabase && typeof supabase.auth.resetPasswordForEmail === 'function') {
-                      supabase.auth.resetPasswordForEmail(user?.email || '');
-                      alert('Check your email for password reset link');
-                    } else {
-                      alert('Password reset not configured yet');
-                    }
-                  }}
-                >
-                  Forgot password?
-                </button>
+                    type="button"
+                    className="text-sm underline text-muted-foreground dark:text-muted-foreground"
+                    onClick={() => {
+                      if (supabase && typeof supabase.auth.resetPasswordForEmail === 'function') {
+                        supabase.auth.resetPasswordForEmail(user?.email || '');
+                        alert('Check your email for password reset link');
+                      } else {
+                        alert('Password reset not configured yet');
+                      }
+                    }}
+                  >
+                    Forgot password?
+                  </button>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={() => !loading && onClose()}>
@@ -804,8 +872,8 @@ function PasswordModal({
               </div>
             </div>
 
-            {error && <div className="text-sm text-red-600">{error}</div>}
-            {success && <div className="text-sm text-green-600">{success}</div>}
+            {error && <div className="text-sm text-red-600 dark:text-red-400">{error}</div>}
+            {success && <div className="text-sm text-green-600 dark:text-green-400">{success}</div>}
           </div>
         </form>
       </div>
@@ -813,6 +881,7 @@ function PasswordModal({
   );
 }
 
+// KEEP THE FULL SessionsModal COMPONENT
 function SessionsModal({
   onClose,
   sessions,
