@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
+// import { Textarea } from '../ui/textarea'; // No longer needed
 import { supabase } from '../../utils/supabase/client';
 import { useAuth } from '../../App';
 import { Badge } from '../ui/badge';
@@ -32,7 +32,7 @@ import {
 } from '../ui/select';
 import { toast } from 'sonner';
 
-// --- TYPES (from Original Robust File) ---
+// --- TYPES ---
 
 type Group = {
   id: string;
@@ -59,7 +59,7 @@ type ExpensePayload = {
   category: string;
   payer_id: string;
   group_id: string | null;
-  notes?: string | null;
+  // notes?: string | null; // Removed
 };
 
 type SplitPayload = {
@@ -68,8 +68,9 @@ type SplitPayload = {
   status: 'pending';
 };
 
-// --- NEW: Date constant (from your new file) ---
-// Get today's date in YYYY-MM-DD format for the input's 'max' prop
+// --- CONSTANTS ---
+
+// Get today's date in YYYY-MM-DD format
 const today = new Date();
 const year = today.getFullYear();
 const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -87,11 +88,10 @@ export function AddExpense() {
   // Expense type state
   const [expenseType, setExpenseType] = useState<'personal' | 'group'>(preselectedGroup ? 'group' : 'personal');
 
-  // --- Form state (Combined) ---
-  // Using 'description' and 'notes' from the original robust file
+  // --- Form state ---
   const [description, setDescription] = useState(''); 
   const [amount, setAmount] = useState('');
-  const [notes, setNotes] = useState(''); // This is for optional details
+  // const [notes, setNotes] = useState(''); // Removed
   const [category, setCategory] = useState('');
   const [selectedGroup, setSelectedGroup] = useState(preselectedGroup || '');
   
@@ -102,7 +102,6 @@ export function AddExpense() {
   const [unequalAmounts, setUnequalAmounts] = useState<StringMap>({});
   const [amountErrors, setAmountErrors] = useState<StringMap>({});
   
-  // --- NEW: Date state (from your new file) ---
   const [expenseDate, setExpenseDate] = useState(todaysDate); 
   
   // --- Feature state ---
@@ -120,12 +119,12 @@ export function AddExpense() {
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
-  // Memoized user detail (from robust file)
+  // Memoized user detail
   const currentUserInGroup = useMemo(() => {
     return currentMembers.find(m => m.id === user?.id);
   }, [currentMembers, user]);
 
-  // Fetch groups (from robust file)
+  // Fetch groups
   useEffect(() => {
     if (!user) return;
     const fetchGroups = async () => {
@@ -144,23 +143,33 @@ export function AddExpense() {
     fetchGroups();
   }, [user]);
 
-  // Fetch dynamic categories (from feature file)
+  // Fetch dynamic categories
   useEffect(() => {
     if (!user) return; 
     const fetchCategories = async () => {
-      const { data, error } = await supabase.rpc('get_all_user_categories');
-      if (error) {
-        console.error('Error fetching categories:', error);
-        toast.error('Could not load your categories.');
-      } else {
-        const uniqueCategories = [...new Set(data as string[])];
+      // Placeholder list
+      const placeholderCategories = [
+        'Food & Dining', 'Transportation', 'Accommodation', 
+        'Entertainment', 'Utilities', 'Shopping', 
+        'Health & Medical', 'Other'
+      ];
+      
+      try {
+        const { data, error } = await supabase.rpc('get_all_user_categories');
+        if (error) throw error;
+        
+        const uniqueCategories = [...new Set((data as string[]).concat(placeholderCategories))];
         setAvailableCategories(uniqueCategories);
+      } catch (error: any) {
+        console.error('Error fetching categories:', error);
+        toast.error('Could not load your categories. Using defaults.');
+        setAvailableCategories(placeholderCategories);
       }
     };
     fetchCategories();
   }, [user]);
 
-  // Fetch members (from robust file's direct Supabase query)
+  // Fetch members
   useEffect(() => {
     if (!selectedGroup || !user) {
       setCurrentMembers([]);
@@ -195,7 +204,7 @@ export function AddExpense() {
   }, [selectedGroup, user]);
 
 
-  // --- FORM HANDLERS (from robust file) ---
+  // --- FORM HANDLERS ---
 
   const handleMemberToggle = (memberId: string) => {
     setSelectedMembers((prev: string[]) => {
@@ -216,10 +225,10 @@ export function AddExpense() {
     setUnequalAmounts((prev: StringMap) => ({ ...prev, [memberId]: value }));
   };
 
-  // --- FEATURE HANDLERS (adapted for robust state names) ---
+  // --- FEATURE HANDLERS ---
 
   const handleAICategorize = async () => {
-    if (!description.trim()) { // Uses 'description'
+    if (!description.trim()) {
       toast.error('Please enter a description first.');
       return;
     }
@@ -229,7 +238,7 @@ export function AddExpense() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Not logged in");
       const formData = new FormData();
-      formData.append('description', description); // Uses 'description'
+      formData.append('description', description);
       formData.append('category', '');
       const response = await fetch('http://localhost:8000/api/categorize', {
         method: 'POST',
@@ -267,36 +276,33 @@ export function AddExpense() {
         return;
       }
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('receipt', file); // Corrected key
       const response = await fetch('http://localhost:8000/api/parse-bill', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session.access_token}` },
         body: formData,
       });
-      if (!response.ok) throw new Error('Failed to parse receipt');
+      if (!response.ok) {
+         const err = await response.json();
+         throw new Error(err.error || 'Failed to parse receipt');
+      }
       const { parsed } = await response.json();
 
-      // Auto-fill using robust state names
-      if (parsed.vendor_name) setDescription(parsed.vendor_name); // Set 'description'
+      if (parsed.vendor_name) setDescription(parsed.vendor_name);
       if (parsed.total) setAmount(parsed.total.toString());
       
-      let parsedNotes = [];
       if (parsed.issue_date) {
-        const date = new Date(parsed.issue_date);
-        if (!isNaN(date.getTime())) {
-          const formattedDate = date.toISOString().split('T')[0];
-          setExpenseDate(formattedDate);
-          parsedNotes.push(`Receipt Date: ${formattedDate}`);
-        }
-      }
-      if (parsed.notes) {
-        parsedNotes.push(parsed.notes);
-      }
-      if (parsedNotes.length > 0) {
-        setNotes(parsedNotes.join('\n')); // Set 'notes'
+        try {
+          const date = new Date(parsed.issue_date);
+          if (!Number.isNaN(date.getTime())) {
+            const formattedDate = date.toISOString().split('T')[0];
+            if (formattedDate <= todaysDate) {
+              setExpenseDate(formattedDate);
+            }
+          }
+        } catch (e) { console.warn("Invalid date from receipt", parsed.issue_date)}
       }
 
-      // Find matching category
       if (parsed.category_guess) {
         const normalizedGuess = parsed.category_guess.toLowerCase().trim();
         let matchedCategory = availableCategories.find(cat => cat.toLowerCase() === normalizedGuess);
@@ -317,16 +323,16 @@ export function AddExpense() {
         }
       }
       toast.success('Receipt processed successfully!', { id: toastId });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing receipt:', error);
-      toast.error('Failed to process receipt. Please enter details manually.', { id: toastId });
+      toast.error(error.message || 'Failed to process receipt.', { id: toastId });
     } finally {
       setIsParsingReceipt(false);
     }
   };
 
 
-  // --- SPLIT CALCULATIONS (from robust file) ---
+  // --- SPLIT CALCULATIONS ---
 
   const splitAmounts = useMemo(() => {
     const totalAmount = Number.parseFloat(amount) || 0;
@@ -351,13 +357,13 @@ export function AddExpense() {
   }, [splitAmounts]);
 
 
-  // --- FORM VALIDATION & SUBMISSION (from robust file) ---
+  // --- FORM VALIDATION & SUBMISSION (REFACTORED) ---
 
   const validateForm = (payload: Partial<ExpensePayload>): string | null => {
     if (!payload.description?.trim()) {
       return 'Please enter an expense description';
     }
-    if (!payload.amount || payload.amount <= 0) {
+    if (payload.amount === undefined || payload.amount === null || payload.amount <= 0) {
       return 'Please enter a valid amount greater than 0';
     }
     if (!payload.category) {
@@ -372,7 +378,6 @@ export function AddExpense() {
     return null;
   }
   
-  // Robust equal split logic with rounding fix
   const calculateEqualSplits = (totalAmount: number): SplitPayload[] | string => {
     if (selectedMembers.length === 0) {
       return 'Please select at least one person to split with';
@@ -391,7 +396,7 @@ export function AddExpense() {
     });
     let remainder = totalAmount - totalAllocated;
     for (let i = 0; i < splits.length && Math.abs(remainder) > 0.001; i++) {
-      splits[i].amount_owed += 0.01;
+      splits[i].amount_owed = Number.parseFloat((splits[i].amount_owed + 0.01).toFixed(2));
       remainder -= 0.01;
     }
     return splits;
@@ -435,13 +440,13 @@ export function AddExpense() {
     const totalAmount = Number.parseFloat(amount);
     
     const expensePayload: ExpensePayload = {
-      description: description.trim(), // Using 'description'
+      description: description.trim(),
       amount: totalAmount,
       date: new Date(expenseDate).toISOString(),
       category: category,
       payer_id: payerId,
       group_id: null,
-      notes: notes.trim() || null // Using 'notes'
+      // notes field removed
     };
 
     const baseError = validateForm(expensePayload);
@@ -505,7 +510,6 @@ export function AddExpense() {
     }
     setLoading(true);
 
-    // 1. Prepare and Validate Payloads (from robust file)
     const { error, expensePayload, splitsToInsert } = preparePayloads();
     if (error) {
       toast.error(error);
@@ -513,7 +517,7 @@ export function AddExpense() {
       return;
     }
 
-    // 2. AI Learning Call (from feature file)
+    // AI Learning Call (Non-critical)
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -531,11 +535,10 @@ export function AddExpense() {
       console.warn("AI Learning call failed (non-critical):", aiError)
     }
 
-    // 3. Execute Transaction (from robust file)
+    // Execute Transaction
     const { success, error: dbError } = await executeTransaction(expensePayload, splitsToInsert);
     setLoading(false);
     
-    // 4. Handle
     if (success) {
       toast.success('Expense added successfully!');
       if (expenseType === 'group' && selectedGroup) {
@@ -592,7 +595,6 @@ export function AddExpense() {
           </CardHeader>
           <CardContent className="space-y-4">
             
-            {/* Using 'description' as the main title field */}
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Input
@@ -604,7 +606,6 @@ export function AddExpense() {
               />
             </div>
 
-            {/* --- NEW VALIDATION: Amount Field --- */}
             <div className="space-y-2">
               <Label htmlFor="amount">Amount</Label>
               <div className="relative">
@@ -612,23 +613,22 @@ export function AddExpense() {
                 <Input
                   id="amount"
                   type="number"
-                  step="1" // From your new file
+                  step="0.01"
                   placeholder="0.00"
                   value={amount}
-                  onChange={(e) => { // From your new file
+                  onChange={(e) => {
                     const val = e.target.value;
-                    if (val === '' || parseFloat(val) >= 0) {
+                    if (val === '' || Number.parseFloat(val) >= 0) {
                       setAmount(val);
                     }
                   }}
                   className="pl-10"
                   required
-                  min="0" // From your new file
+                  min="0.01"
                 />
               </div>
             </div>
 
-            {/* --- NEW VALIDATION: Date Field --- */}
             <div className="space-y-2">
               <Label htmlFor="date">Date</Label>
               <Input
@@ -638,11 +638,10 @@ export function AddExpense() {
                 onChange={(e) => setExpenseDate(e.target.value)}
                 required
                 className="w-full"
-                max={todaysDate} // From your new file
+                max={todaysDate}
               />
             </div>
 
-            {/* Dynamic Category Field */}
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
               <Select value={category} onValueChange={setCategory}>
@@ -652,6 +651,7 @@ export function AddExpense() {
                 <SelectContent>
                   {[...new Set(availableCategories.concat(category ? [category] : []))]
                     .filter(Boolean)
+                    .sort()
                     .map((categoryName) => (
                       <SelectItem key={categoryName} value={categoryName}>
                         {categoryName}
@@ -668,7 +668,7 @@ export function AddExpense() {
                 className="w-full flex items-center gap-2"
               >
                 {isCategorizing ? (
-                   <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Zap className="h-4 w-4" />
                 )}
@@ -676,21 +676,12 @@ export function AddExpense() {
               </Button>
             </div>
 
-            {/* Using 'notes' as the optional details field */}
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes (Optional)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Add any additional details..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
+            {/* Notes field has been removed */}
+
           </CardContent>
         </Card>
 
-        {/* Group Selection (Robust file logic) */}
+        {/* Group Selection */}
         {expenseType === 'group' && (
           <Card>
             <CardHeader>
@@ -716,7 +707,6 @@ export function AddExpense() {
                 </Select>
               </div>
 
-              {/* Payer selection (Locked to current user, from robust file) */}
               {selectedGroup && (
                 <div className="space-y-2">
                   <Label>Paid by</Label>
@@ -739,7 +729,7 @@ export function AddExpense() {
           </Card>
         )}
 
-        {/* Split Configuration (Robust file logic) */}
+        {/* Split Configuration */}
         {expenseType === 'group' && selectedGroup && (
           <Card>
             <CardHeader>
@@ -842,7 +832,6 @@ export function AddExpense() {
                     </div>
                   )}
 
-                  {/* Split Summary (from robust file) */}
                   {Number.parseFloat(amount) > 0 && (
                     <div className="p-4 bg-muted/50 rounded-lg space-y-2">
                       <div className="flex justify-between items-center">
@@ -869,7 +858,7 @@ export function AddExpense() {
           </Card>
         )}
 
-        {/* Functional Receipt Upload (from feature file) */}
+        {/* Functional Receipt Upload */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
