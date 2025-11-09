@@ -74,16 +74,16 @@ export function AddExpense() {
   const [isCategorizing, setIsCategorizing] = useState(false); // For AI Categorize
   const [receiptFile, setReceiptFile] = useState<File | null>(null); // For Receipt Upload
   const [isParsingReceipt, setIsParsingReceipt] = useState(false); // For Receipt Upload
-  const [expenseDate, setExpenseDate] = useState(''); // For storing the expense date
-
-  // Format today's date as DD/MM/YYYY
-  useEffect(() => {
-    const today = new Date();
-    const day = String(today.getDate()).padStart(2, '0');
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const year = today.getFullYear();
-    setExpenseDate(`${day}/${month}/${year}`);
-  }, []);
+  
+  
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const todaysDate = `${year}-${month}-${day}`;
+  const [expenseDate, setExpenseDate] = useState(todaysDate);
+  // Format today's date as yyyy/dd/mm
+ 
 
   // ----------------------------------------------------------------
   // DATA FETCHING (Replaces Dummy Data)
@@ -588,28 +588,34 @@ export function AddExpense() {
                 <Input
                   id="amount"
                   type="number"
-                  step="0.01"
+                  step="1"
                   placeholder="0.00"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '' || parseFloat(val) >= 0) {
+                    setAmount(val);
+                  }
+                  }}
                   className="pl-10"
                   required
+                  min = "0"
                 />
               </div>
             </div>
-
+            
             <div className="space-y-2">
               <Label htmlFor="date">Date</Label>
               <Input
                 id="date"
                 type="date"
-                value={expenseDate.split('/').reverse().join('-')}
+                value={expenseDate} // No conversion needed
                 onChange={(e) => {
-                  const [year, month, day] = e.target.value.split('-');
-                  setExpenseDate(`${day}/${month}/${year}`);
+                  setExpenseDate(e.target.value); // No conversion needed
                 }}
                 required
                 className="w-full"
+                max={todaysDate}
               />
             </div>
 
