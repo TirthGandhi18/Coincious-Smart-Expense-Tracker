@@ -22,7 +22,7 @@ import {
   RefreshCw,
   Check // Added for Settle Up button
 } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link,useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../utils/supabase/client';
 import { toast } from 'sonner';
 import { AddMemberDialog } from '../AddMemberDialog';
@@ -88,7 +88,11 @@ interface Expense {
 export function GroupDetail() {
   const { id } = useParams();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('expenses');
+  const [searchParams] = useSearchParams(); // Get URL search params
+
+  // Read the 'tab' param from the URL or default to 'expenses'
+  const initialTab = searchParams.get('tab') || 'expenses';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [groupData, setGroupData] = useState<GroupData>({
     id: id || '',
     name: 'Loading...',
@@ -243,6 +247,14 @@ export function GroupDetail() {
   useEffect(() => {
     fetchGroupData();
   }, [id]); // Removed 'error' dependency to allow retries
+
+  // Add this useEffect to listen for URL changes
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams, activeTab]);
 
   const handleMemberAdded = () => {
     fetchGroupData(); // Refresh all data

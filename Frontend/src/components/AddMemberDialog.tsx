@@ -3,7 +3,7 @@ import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 
@@ -76,16 +76,16 @@ export function AddMemberDialog({ open, onOpenChange, groupId, onMemberAdded }: 
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to add member');
+        throw new Error(errorData.error || 'Failed to send invitation');
       }
 
-      toast.success('Member added successfully!');
+      toast.success('Invitation sent successfully!');
       setFormData({ name: '', email: '' });
       onMemberAdded();
       onOpenChange(false);
     } catch (error) {
       console.error('Error adding member:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to add member';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send invitation';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -141,10 +141,15 @@ export function AddMemberDialog({ open, onOpenChange, groupId, onMemberAdded }: 
             onClick={handleAddMember}
             disabled={loading || !formData.name.trim() || !formData.email.trim()}
           >
-            {loading ? 'Adding...' : (
+           {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
               <>
                 <UserPlus className="h-4 w-4 mr-2" />
-                Add Member
+                Send Invitation
               </>
             )}
           </Button>

@@ -35,7 +35,9 @@ def create_app():
     from .routes import categorizer_routes
     from .routes import group_routes
     from .routes import expense_routes
-
+    from .routes import invitation_routes
+    
+    app.register_blueprint(invitation_routes.inv_bp, url_prefix='/api/invitations')
     app.register_blueprint(utility_routes.util_bp, url_prefix='/api')
     app.register_blueprint(categorizer_routes.cat_bp, url_prefix='/api')
     app.register_blueprint(group_routes.group_bp, url_prefix='/api/groups')

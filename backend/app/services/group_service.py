@@ -1,6 +1,8 @@
 # app/services/group_service.py
 from app.extensions import supabase
 import traceback
+import json
+from app.services.notification_service import log_notification
 
 # --- GET /groups ---
 def get_user_groups(user_id):
@@ -47,7 +49,8 @@ def get_user_groups(user_id):
                 .execute()
             
             # Add amounts user paid
-            for exp in (user_paid_expenses.data or []):
+            if user_paid_expenses and hasattr(user_paid_expenses, 'data'):
+             for exp in (user_paid_expenses.data or []):
                 user_balance += float(exp.get('amount', 0))
             
             # Get all expense splits where user is involved
@@ -67,11 +70,12 @@ def get_user_groups(user_id):
                     .execute()
                 
                 # Subtract amounts user owes
-                for split in (user_owed_splits.data or []):
+                if user_owed_splits and hasattr(user_owed_splits, 'data'):
+                 for split in (user_owed_splits.data or []):
                     user_balance -= float(split.get('amount_owed', 0))
             
             group['member_count'] = member_count_resp.count if member_count_resp else 0
-            group['total_expenses'] = sum(float(exp.get('amount', 0)) for exp in (expenses_resp.data or []))
+            group['total_expenses'] = sum(float(exp.get('amount', 0)) for exp in (expenses_resp.data or [])) if expenses_resp and hasattr(expenses_resp, 'data') else 0
             group['your_balance'] = round(user_balance, 2)
             
             enriched_groups.append(group)
@@ -268,7 +272,7 @@ def delete_group(group_id, user_id):
             .eq('group_id', group_id) \
             .execute()
         
-        if expenses_result.data:
+        if expenses_result and hasattr(expenses_result, 'data') and expenses_result.data:
             expense_ids = [exp['id'] for exp in expenses_result.data]
             if expense_ids:
                 supabase.table('expense_split') \
@@ -282,6 +286,18 @@ def delete_group(group_id, user_id):
             .eq('group_id', group_id) \
             .execute()
         print("Deleted all expenses")
+        
+        supabase.table('group_invitations') \
+            .delete() \
+            .eq('group_id', group_id) \
+            .execute()
+        print("Deleted all group invitations")
+
+        supabase.table('notifications') \
+            .delete() \
+            .eq('data->>group_id', group_id) \
+            .execute()
+        print("Deleted all group-related notifications")
         
         supabase.table('group_members') \
             .delete() \
@@ -309,112 +325,137 @@ def delete_group(group_id, user_id):
 # --- POST /groups/<id>/add-member ---
 def add_group_member(group_id, requesting_user, data):
     try:
+        if not requesting_user:
+            return {'error': 'Invalid user token'}, 401
+
         if not data or 'email' not in data:
             return {'error': 'Email is required'}, 400
-            
+
+        # --- 1. Check if requesting user is in the group and fetch group info ---
         group_response = supabase.table('group_members') \
-            .select('user_id') \
+            .select('groups(id, name)') \
             .eq('group_id', group_id) \
             .eq('user_id', requesting_user.id) \
             .maybe_single() \
             .execute()
 
-        if not group_response.data:
+        if not group_response or not hasattr(group_response, 'data') or not group_response.data or not group_response.data.get('groups'):
             return {'error': 'Group not found or access denied'}, 404
-            
+
+        group = group_response.data.get('groups')
+
+        # --- 2. Find target user by email ---
         target_user_id = None
         target_user_email = data['email'].lower()
-        target_user_metadata = {}
         target_user_name_from_input = data.get('name', '').strip()
 
-        # 1. Check public 'users' table first
         user_response = supabase.table('users') \
             .select('*') \
             .eq('email', target_user_email) \
             .maybe_single() \
             .execute()
-        
+
         user_data = user_response.data if user_response and hasattr(user_response, 'data') else None
 
         if user_data:
-            print(f"Found user in public.users: {user_data['id']}")
             target_user_id = user_data['id']
-            try:
-                auth_user_resp = supabase.auth.admin.get_user_by_id(target_user_id)
-                if auth_user_resp.user:
-                    target_user_metadata = auth_user_resp.user.user_metadata or {}
-            except Exception as e:
-                print(f"Could not fetch metadata for existing user {target_user_id}: {e}")
-
         else:
-            # 2. User not in public.users, check auth.users via RPC
-            print(f"User not in public.users, checking auth...")
+            # Not in public.users → check auth.users
             try:
                 rpc_response = supabase.rpc('get_user_by_email', {
                     'user_email': target_user_email
                 }).execute()
-                
-                if not rpc_response.data:
+
+                if not rpc_response or not hasattr(rpc_response, 'data') or not rpc_response.data:
                     return {'error': 'User with this email does not exist in the system'}, 404
-                    
+
                 auth_user_data = rpc_response.data[0]
                 target_user_id = auth_user_data['id']
                 target_user_metadata = auth_user_data.get('raw_user_meta_data', {}) or {}
-                print(f"Found user in auth: {target_user_id}")
 
-                public_user_name = target_user_metadata.get('full_name') or target_user_name_from_input or target_user_email.split('@')[0]
-                
+                # Create entry in public.users
+                public_user_name = (
+                    target_user_metadata.get('full_name') or
+                    target_user_name_from_input or
+                    target_user_email.split('@')[0]
+                )
                 new_user_record = {
                     'id': target_user_id,
                     'email': target_user_email,
-                    'full_name': public_user_name
+                    'name': public_user_name
                 }
-                
-                print(f"Creating public user record: {new_user_record}")
                 upsert_resp = supabase.table('users').upsert(new_user_record).execute()
-                if not upsert_resp.data and (hasattr(upsert_resp, 'error') and upsert_resp.error):
+                if not upsert_resp or (hasattr(upsert_resp, 'error') and upsert_resp.error):
                     print(f"Error upserting user to public.users: {getattr(upsert_resp, 'error', 'Unknown')}")
                     return {'error': 'Failed to create user profile'}, 500
 
             except Exception as e:
                 print(f"Error looking up user in auth.users: {str(e)}")
                 return {'error': 'Error looking up user information'}, 500
-            
-        # 3. Check if user is already in the group
+
+        # --- 3. Pre-invitation checks ---
+        if str(target_user_id) == str(requesting_user.id):
+            return {'error': 'You cannot invite yourself to the group'}, 400
+
         existing_member = supabase.table('group_members') \
             .select('*') \
             .eq('group_id', group_id) \
             .eq('user_id', target_user_id) \
             .maybe_single() \
             .execute()
-            
+
         if existing_member and hasattr(existing_member, 'data') and existing_member.data:
             return {'error': 'User is already a member of this group'}, 409
-            
-        # 4. Add user to group_members
-        member_data = {
+
+        existing_invitation = supabase.table('group_invitations') \
+            .select('id') \
+            .eq('group_id', group_id) \
+            .eq('invited_user_id', target_user_id) \
+            .eq('status', 'pending') \
+            .maybe_single() \
+            .execute()
+
+        if existing_invitation and hasattr(existing_invitation, 'data') and existing_invitation.data:
+            return {'error': 'User already has a pending invitation for this group'}, 409
+
+        # --- 4. Create Invitation ---
+        invitation_payload = {
             'group_id': group_id,
-            'user_id': target_user_id
+            'invited_by_id': requesting_user.id,
+            'invited_user_id': target_user_id,
+            'status': 'pending'
         }
-        
-        result = supabase.table('group_members').insert([member_data]).execute()
 
-        if not result or not hasattr(result, 'data'):
-            print(f"Error inserting new member: {getattr(result, 'error', 'Unknown error')}")
-            return {'error': 'Failed to add member to group database'}, 500
+        invitation_result = supabase.table('group_invitations').insert(invitation_payload).execute()
+        if not invitation_result or not hasattr(invitation_result, 'data') or not invitation_result.data:
+            return {'error': 'Failed to create invitation'}, 500
 
-        full_name = target_user_metadata.get('full_name', target_user_name_from_input or target_user_email.split('@')[0])
-        
-        return {
-            'message': 'Member added successfully',
-            'member': {
-                'id': target_user_id,
-                'email': target_user_email,
-                'name': full_name,
-                'role': 'member'
+        new_invitation_id = invitation_result.data[0]['id']
+
+        # --- 5. Create Notification ---
+        requesting_user_name = requesting_user.user_metadata.get('full_name', requesting_user.email)
+        notification_payload = {
+            'user_id': target_user_id,
+            'actor_id': requesting_user.id,
+            'type': 'group_invitation',
+            'actionable': True,
+            'message': f"{requesting_user_name} invited you to join \"{group['name']}\"",
+            'data': {
+                'invitation_id': new_invitation_id,
+                'group_id': group_id,
+                'group_name': group['name'],
+                'inviter_name': requesting_user_name
             }
-        }, 201
-        
+        }
+
+        notification_result = supabase.table('notifications').insert(notification_payload).execute()
+        if not notification_result or not hasattr(notification_result, 'data') or not notification_result.data:
+            # rollback
+            supabase.table('group_invitations').delete().eq('id', new_invitation_id).execute()
+            return {'error': 'Failed to send notification'}, 500
+
+        return {'message': 'Invitation sent successfully'}, 201
+
     except Exception as e:
         error_trace = traceback.format_exc()
         print(f"Error adding member: {str(e)}\n{error_trace}")
@@ -423,34 +464,38 @@ def add_group_member(group_id, requesting_user, data):
 # --- GET /groups/<id>/balances ---
 def get_group_balances(group_id, user_id):
     try:
+        # Step 1: Check if user is part of the group
         member_check = supabase.table('group_members') \
             .select('user_id') \
             .eq('group_id', group_id) \
             .eq('user_id', user_id) \
             .maybe_single() \
             .execute()
-        
-        if not member_check.data:
+
+        if not member_check or not hasattr(member_check, 'data') or not member_check.data:
             return {'error': 'You are not a member of this group'}, 403
 
+        # Step 2: Fetch group members and their emails
         members_resp = supabase.table('group_members') \
             .select('users!inner(id, email)') \
             .eq('group_id', group_id) \
             .execute()
 
-        if not members_resp.data:
-            print(f"No members found for group {group_id}. Response: {getattr(members_resp, 'error', 'No data')}")
+        if not members_resp or not hasattr(members_resp, 'data') or not members_resp.data:
+            print(f"No members found for group {group_id}. Response: {getattr(members_resp, 'error', 'Unknown')}")
             return {'error': 'No members found for this group'}, 404
 
+        # Step 3: Build members dictionary with full_name + avatar
         members = {}
         for item in members_resp.data:
-            user = item.get('users') 
-            if user and user.get('id'): 
+            user = item.get('users')
+            if user and user.get('id'):
                 user_id_str = str(user['id'])
                 user_email = user.get('email')
                 user_name = user_email.split('@')[0] if user_email else 'Unknown'
                 user_avatar = None
-                
+
+                # Fetch user metadata from auth
                 try:
                     auth_user_resp = supabase.auth.admin.get_user_by_id(user_id_str)
                     if hasattr(auth_user_resp, 'user') and auth_user_resp.user:
@@ -469,46 +514,49 @@ def get_group_balances(group_id, user_id):
             else:
                 print(f"Skipping member item with no user data: {item}")
 
-        balances = {user_id: 0.0 for user_id in members.keys()}
+        # Step 4: Initialize balances
+        balances = {uid: 0.0 for uid in members.keys()}
 
+        # Step 5: Fetch all group expenses
         expenses_resp = supabase.table('expenses') \
             .select('id, payer_id, amount') \
             .eq('group_id', group_id) \
             .execute()
-        
-        if expenses_resp.data:
+
+        if expenses_resp and hasattr(expenses_resp, 'data') and expenses_resp.data:
             expense_ids = [exp['id'] for exp in expenses_resp.data]
-            
-            if not expense_ids:
-                print("No expenses found for group, skipping splits.")
-            else:
+
+            if expense_ids:
+                # Step 6: Fetch expense splits for all expenses
                 splits_resp = supabase.table('expense_split') \
                     .select('expense_id, user_id, amount_owed') \
                     .in_('expense_id', expense_ids) \
                     .execute()
-                
+
                 splits_by_expense = {}
-                if splits_resp.data:
+                if splits_resp and hasattr(splits_resp, 'data') and splits_resp.data:
                     for split in splits_resp.data:
                         exp_id = split['expense_id']
                         if exp_id not in splits_by_expense:
                             splits_by_expense[exp_id] = []
                         splits_by_expense[exp_id].append(split)
 
+                # Step 7: Update balances
                 for expense in expenses_resp.data:
                     payer_id = str(expense['payer_id'])
                     amount = float(expense.get('amount', 0))
 
                     if payer_id in balances:
-                        balances[payer_id] += amount # You paid
+                        balances[payer_id] += amount  # Paid -> positive
 
                     splits = splits_by_expense.get(expense['id'], [])
                     for split in splits:
                         owed_user_id = str(split['user_id'])
                         amount_owed = float(split.get('amount_owed', 0))
                         if owed_user_id in balances:
-                            balances[owed_user_id] -= amount_owed # You owe
+                            balances[owed_user_id] -= amount_owed  # Owes -> negative
 
+        # Step 8: Compute settlements
         settlements = []
         creditors = {uid: b for uid, b in balances.items() if b > 0.01}
         debtors = {uid: b for uid, b in balances.items() if b < -0.01}
@@ -522,12 +570,12 @@ def get_group_balances(group_id, user_id):
         while cred_idx < len(cred_list) and debt_idx < len(debt_list):
             cred_id, cred_amt = cred_list[cred_idx]
             debt_id, debt_amt = debt_list[debt_idx]
-            
+
             payment = min(cred_amt, abs(debt_amt))
             payment = round(payment, 2)
 
             if payment == 0:
-                break 
+                break
 
             settlements.append({
                 'from_id': debt_id,
@@ -544,12 +592,13 @@ def get_group_balances(group_id, user_id):
                 cred_idx += 1
             else:
                 cred_list[cred_idx] = (cred_id, new_cred_amt)
-                
+
             if new_debt_amt >= -0.01:
                 debt_idx += 1
             else:
                 debt_list[debt_idx] = (debt_id, new_debt_amt)
 
+        # Step 9: Final balances output
         final_balances = [
             {
                 'user_id': uid,
@@ -588,6 +637,7 @@ def settle_group_balance(group_id, user_id, data):
         except ValueError:
             return {'error': 'Invalid amount'}, 400
         
+        # --- Authorization: Check if user is a member of this group ---
         member_check = supabase.table('group_members') \
             .select('user_id') \
             .eq('group_id', group_id) \
@@ -595,9 +645,10 @@ def settle_group_balance(group_id, user_id, data):
             .maybe_single() \
             .execute()
         
-        if not member_check.data:
+        if not member_check or not hasattr(member_check, 'data') or not member_check.data:
             return {'error': 'You are not a member of this group'}, 403
         
+        # --- Fetch User Names for Settlement Description ---
         from_user_name = "Unknown"
         to_user_name = "Unknown"
         try:
@@ -614,46 +665,61 @@ def settle_group_balance(group_id, user_id, data):
         except Exception as e:
             print(f"Error fetching user names for settlement: {e}")
 
+        # --- Create the Settlement Expense ---
         expense_desc = f"Settlement: {from_user_name} paid {to_user_name}"
 
         expense_payload = {
             'description': expense_desc,
             'amount': amount_float,
             'category': 'Settlement',
-            'payer_id': from_id, # The person who was in debt is the "payer"
+            'payer_id': from_id,
             'group_id': group_id,
             'date': datetime.now().isoformat()
         }
 
-        expense_result = supabase.table('expenses') \
-            .insert(expense_payload) \
-            .execute()
+        expense_result = supabase.table('expenses').insert(expense_payload).execute()
         
-        if not expense_result.data or not hasattr(expense_result, 'data'):
+        if not expense_result or not hasattr(expense_result, 'data') or not expense_result.data:
             print(f"Error creating expense: {getattr(expense_result, 'error', 'Unknown')}")
             return {'error': 'Failed to create settlement expense'}, 500
         
         new_expense_id = expense_result.data[0]['id']
 
+        # --- Create the Split ---
         split_payload = {
             'expense_id': new_expense_id,
-            'user_id': to_id, # The person who was *owed* money "owes" for this tx
+            'user_id': to_id,
             'amount_owed': amount_float
         }
 
-        split_result = supabase.table('expense_split') \
-            .insert([split_payload]) \
-            .execute()
+        split_result = supabase.table('expense_split').insert([split_payload]).execute()
 
-        if not split_result.data or not hasattr(split_result, 'data'):
+        if not split_result or not hasattr(split_result, 'data') or not split_result.data:
             # Rollback: delete the expense
             print(f"Error creating split: {getattr(split_result, 'error', 'Unknown')}")
             supabase.table('expenses').delete().eq('id', new_expense_id).execute()
             return {'error': 'Failed to create settlement split'}, 500
 
+        log_notification(
+                user_id=to_id,
+                actor_id=from_id,
+                type='settlement',
+                message=f"{from_user_name} confirmed they paid you ${amount_float:.2f} for the group balance.",
+                group_id=group_id,
+                related_expense_id=new_expense_id
+            )
+
+            # Clear pending debt-related notifications for the sender
+        supabase.table('notifications') \
+                .delete() \
+                .eq('user_id', from_id) \
+                .eq('data->>group_id', group_id) \
+                .in_('type', ['expense_owed', 'reminder', 'settlement_request']) \
+                .execute()
+
         return {'message': 'Settlement recorded successfully'}, 201
 
     except Exception as e:
         error_trace = traceback.format_exc()
-        print(f"Error in settle_up: {str(e)}\n{error_trace}")
+        print(f"Error in settle_group_balance: {str(e)}\n{error_trace}")
         return {'error': 'Internal server error', 'details': str(e), 'trace': error_trace}, 500

@@ -1,0 +1,95 @@
+from app.extensions import supabase
+from app.services import notification_service # We will update this service next
+from datetime import datetime
+import traceback
+
+def respond_to_invitation(user, invitation_id, action):
+    """
+    Handles a user accepting or declining a group invitation.
+    """
+    if action not in ['accept', 'decline']:
+        return {'error': 'Invalid action. Must be "accept" or "decline"'}, 400
+
+    try:
+        # --- 2. Get the invitation and verify user ---
+        invitation_resp = supabase.table('group_invitations') \
+            .select('*, groups(name)') \
+            .eq('id', invitation_id) \
+            .eq('status', 'pending') \
+            .maybe_single() \
+            .execute()
+        
+        if not invitation_resp or not hasattr(invitation_resp, 'data') or not invitation_resp.data:
+            return {'error': 'Invitation not found or has already been actioned'}, 404
+        
+        invitation = invitation_resp.data
+        
+        # Check if the authenticated user is the one who was invited
+        if str(invitation['invited_user_id']) != str(user.id):
+            return {'error': 'You are not authorized to respond to this invitation'}, 403
+            
+        # --- 3. Process the action ---
+        user_name = user.user_metadata.get('full_name', user.email)
+        group_name = invitation.get('groups', {}).get('name', 'the group')
+
+        notification_payload = None
+        status_payload = {}
+
+        if action == 'accept':
+            # 3.1 Add user to group_members
+            member_payload = {
+                'group_id': invitation['group_id'],
+                'user_id': user.id
+            }
+            member_result = supabase.table('group_members').upsert(member_payload).execute()
+            
+            if (hasattr(member_result, 'error') and member_result.error) and '23505' not in str(member_result.error):
+                # An error occurred that wasn't just a "duplicate key" error
+                raise Exception(f"Failed to add to group_members: {getattr(member_result, 'error', 'Unknown')}")
+            
+            # 3.2 Define invitation status update
+            status_payload = {'status': 'accepted', 'updated_at': datetime.now().isoformat()}
+            
+            # 3.3 Define notification payload for the *inviter*
+            notification_payload = {
+                'user_id': invitation['invited_by_id'], # The inviter
+                'actor_id': user.id, # The user who accepted
+                'type': 'invitation_accepted',
+                'message': f"{user_name} accepted your invitation to join \"{group_name}\"",
+                'data': {'group_id': invitation['group_id'], 'group_name': group_name, 'accepted_user_id': user.id}
+            }
+            
+        else: # action == 'decline'
+            # 3.1 Define invitation status update
+            status_payload = {'status': 'declined', 'updated_at': datetime.now().isoformat()}
+            
+            # 3.2 Define notification payload for the *inviter*
+            notification_payload = {
+                'user_id': invitation['invited_by_id'], # The inviter
+                'actor_id': user.id, # The user who declined
+                'type': 'invitation_declined',
+                'message': f"{user_name} declined your invitation to join \"{group_name}\"",
+                'data': {'group_id': invitation['group_id'], 'group_name': group_name, 'declined_user_id': user.id}
+            }
+        
+        # --- 4. Execute DB changes ---
+        
+        # 4.1 Update invitation status
+        supabase.table('group_invitations') \
+            .update(status_payload) \
+            .eq('id', invitation_id) \
+            .execute()
+            
+        # 4.2 Send the new notification to the inviter
+        if notification_payload:
+            notification_service.create_raw_notification(notification_payload)
+        
+        # 4.3 Delete the original 'group_invitation' notification for the *invitee*
+        notification_service.delete_invitation_notification(invitation_id, user.id)
+
+        return {'message': f'Invitation {action}ed successfully'}, 200
+
+    except Exception as e:
+        error_trace = traceback.format_exc()
+        print(f"Error in respond_to_invitation: {str(e)}\n{error_trace}")
+        return {'error': str(e), 'trace': error_trace}, 500

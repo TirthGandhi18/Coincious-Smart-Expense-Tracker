@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect }  from 'react';
 import { useAuth, useTheme } from '../App';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
+import { supabase } from '../utils/supabase/client'; 
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -31,11 +32,75 @@ export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // === FUNCTION TO FETCH UNREAD COUNT ===
+  const fetchUnreadCount = async () => {
+    if (!user) return;
+
+    try {
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true }) // This just gets the count
+        .eq('user_id', user.id)
+        .eq('read', false);
+
+      if (error) {
+        throw error;
+      }
+
+      setUnreadCount(count ?? 0);
+
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  };
+
+  // === EFFECT TO FETCH COUNT ON LOAD ===
+  useEffect(() => {
+    if (user) {
+      fetchUnreadCount();
+    }
+  }, [user]);
+
+  // === EFFECT TO LISTEN FOR REALTIME CHANGES ===
+  useEffect(() => {
+    if (!user) return;
+
+    // Listen to all changes on the 'notifications' table for this user
+    const channel = supabase
+      .channel(`notifications_count_user_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          // When any change happens, just re-fetch the count
+          fetchUnreadCount();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const mainNavItems: NavItem[] = [
     { href: '/dashboard', label: 'Dashboard', icon: Home },
     { href: '/groups', label: 'Groups', icon: Users },
     { href: '/chatbot', label: 'AI Assistant', icon: MessageCircle },
-    { href: '/notifications', label: 'Notifications', icon: Bell, badge: 3 },
+    { 
+      href: '/notifications', 
+      label: 'Notifications', 
+      icon: Bell, 
+      badge: unreadCount 
+    },
   ];
 
   if (user?.isParent) {

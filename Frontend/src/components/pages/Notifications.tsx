@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -17,112 +17,181 @@ import {
   Receipt,
   TrendingUp,
   Calendar,
-  Settings
+  Settings,
+  Loader2 // Import Loader
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { supabase } from '../../utils/supabase/client'; // Import Supabase client
+import { useAuth } from '../../App'; // Import useAuth to get user
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate for navigation
+// NOTE: Assuming useNotifications is available from a previous step
+// import { useNotifications } from '../../contexts/NotificationContext'; 
 
 interface Notification {
   id: string;
-  type: 'expense' | 'settlement' | 'group' | 'reminder' | 'alert' | 'achievement';
-  title: string;
+  type: 'expense' | 'settlement' | 'group' | 'reminder' | 'alert' | 'achievement' | 'group_invitation' | 'invitation_accepted' | 'invitation_declined' | 'expense_owed' | 'settlement_received';
+  title: string; // We will generate this on the fly
   message: string;
   timestamp: Date;
   read: boolean;
   actionable?: boolean;
-  data?: any;
+  data?: any; // This will hold { invitation_id, group_name, ... }
 }
 
-
-// dummuy data
-const notifications: Notification[] = [
-  {
-    id: '1',
-    type: 'settlement',
-    title: 'Payment Request',
-    message: 'Sarah Johnson requests $45.20 for Weekend Trip expenses',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    read: false,
-    actionable: true,
-    data: { amount: 45.20, from: 'Sarah Johnson', group: 'Weekend Trip' }
-  },
-  {
-    id: '2',
-    type: 'expense',
-    title: 'New Expense Added',
-    message: 'Mike Chen added "Gas for Road Trip" ($89.45) to Weekend Trip',
-    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-    read: false,
-    data: { amount: 89.45, addedBy: 'Mike Chen', group: 'Weekend Trip' }
-  },
-  {
-    id: '3',
-    type: 'group',
-    title: 'Added to Group',
-    message: 'You were added to "Work Lunch Group" by Emma Wilson',
-    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-    read: false,
-    actionable: true,
-    data: { group: 'Work Lunch Group', addedBy: 'Emma Wilson' }
-  },
-  {
-    id: '4',
-    type: 'alert',
-    title: 'Budget Alert',
-    message: 'You\'ve spent 85% of your monthly dining budget',
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-    read: true,
-    data: { category: 'Dining', percentage: 85 }
-  },
-  {
-    id: '5',
-    type: 'achievement',
-    title: 'Savings Goal Reached!',
-    message: 'Congratulations! You\'ve reached your monthly savings goal of $500',
-    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-    read: true,
-    data: { goal: 500, achievement: 'Monthly Savings' }
-  },
-  {
-    id: '6',
-    type: 'reminder',
-    title: 'Settlement Reminder',
-    message: 'Don\'t forget to settle up with Alex for "Movie Night" ($12.50)',
-    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-    read: true,
-    actionable: true,
-    data: { amount: 12.50, with: 'Alex', group: 'Movie Night' }
-  },
-  {
-    id: '7',
-    type: 'expense',
-    title: 'Expense Approved',
-    message: 'Your expense "Team Lunch" ($156.80) was approved and split',
-    timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-    read: true,
-    data: { amount: 156.80, expense: 'Team Lunch' }
-  }
-];
-
 export function Notifications() {
-  const [notificationList, setNotificationList] = useState(notifications);
+  const [notificationList, setNotificationList] = useState<Notification[]>([]);
   const [activeTab, setActiveTab] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const navigate = useNavigate(); // Initialize useNavigate
+  
+  // Placeholder for refreshUnreadCount if context is not available
+  const refreshUnreadCount = () => {}; 
+  // const { refreshUnreadCount } = useNotifications ? useNotifications() : { refreshUnreadCount: () => {} };
+
+
+  // Helper function to generate a title from a type
+  const generateTitle = (type: string) => {
+    switch (type) {
+      case 'group_invitation': return 'Group Invitation';
+      case 'invitation_accepted': return 'Invitation Accepted';
+      case 'invitation_declined': return 'Invitation Declined';
+      case 'expense_owed': return 'Group Debt Added'; 
+      case 'settlement': 
+      case 'settlement_received': return 'Payment Received'; 
+      case 'expense': return 'New Expense';
+      default: return 'Notification';
+    }
+  };
+
+  // Function to fetch notifications
+  const fetchNotifications = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      const formattedNotifications = data.map((n: any) => ({
+        id: n.id,
+        type: n.type as Notification['type'],
+        title: generateTitle(n.type),
+        message: n.message,
+        timestamp: new Date(n.created_at),
+        read: n.read,
+        actionable: n.actionable,
+        data: n.data,
+      }));
+      setNotificationList(formattedNotifications);
+      refreshUnreadCount(); // Update unread count after fetching
+    } catch (error: any) {
+      toast.error('Failed to load notifications', { description: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch notifications on component load
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+    }
+  }, [user]);
+
+  // Set up Supabase Realtime subscription
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`notifications_user_${user.id}`) // Unique channel per user
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`, // Only listen for inserts for this user
+        },
+        (payload) => {
+          const newNotification = {
+            id: payload.new.id,
+            type: payload.new.type,
+            title: generateTitle(payload.new.type),
+            message: payload.new.message,
+            timestamp: new Date(payload.new.created_at),
+            read: payload.new.read,
+            actionable: payload.new.actionable,
+            data: payload.new.data,
+          } as Notification;
+          
+          // Add the new notification to the top of the list
+          setNotificationList((prev) => [newNotification, ...prev]);
+          toast.info(`New notification: ${newNotification.message}`);
+          refreshUnreadCount(); // Update count
+        }
+      )
+      .on( // Handle update/delete events that clear notifications
+        'postgres_changes',
+        {
+          event: '*', // Listen for DELETE and UPDATE events
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            setNotificationList((prev) => prev.filter(n => n.id !== payload.old.id));
+            refreshUnreadCount(); 
+          }
+          if (payload.eventType === 'UPDATE' && payload.new.read === true) {
+            setNotificationList((prev) => prev.map(n => n.id === payload.new.id ? {...n, read: true} : n));
+            refreshUnreadCount(); 
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
+      case 'expense_owed': 
+      case 'settlement': 
+      case 'settlement_received': return DollarSign;
       case 'expense': return Receipt;
-      case 'settlement': return DollarSign;
+      case 'group_invitation': return UserPlus;
+      case 'invitation_accepted': 
+      case 'achievement': return CheckCircle;
+      case 'invitation_declined': return X;
       case 'group': return Users;
       case 'reminder': return Calendar;
       case 'alert': return AlertTriangle;
-      case 'achievement': return CheckCircle;
       default: return Bell;
     }
   };
 
   const getNotificationColor = (type: string) => {
-    switch (type) {
+     switch (type) {
+      case 'expense_owed': return 'text-red-600'; 
+      case 'settlement': 
+      case 'settlement_received': return 'text-green-600'; 
       case 'expense': return 'text-blue-600';
-      case 'settlement': return 'text-green-600';
+      case 'group_invitation': return 'text-purple-600';
+      case 'invitation_accepted': return 'text-green-600';
+      case 'invitation_declined': return 'text-red-600';
       case 'group': return 'text-purple-600';
       case 'reminder': return 'text-amber-600';
       case 'alert': return 'text-red-600';
@@ -131,31 +200,122 @@ export function Notifications() {
     }
   };
 
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
+    // Optimistic UI update
     setNotificationList(prev =>
       prev.map(notification =>
         notification.id === id ? { ...notification, read: true } : notification
       )
     );
+    
+    // Update backend
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', id);
+      
+    if (error) {
+      toast.error('Failed to mark as read');
+      fetchNotifications(); // Re-sync with db
+    }
+    
+    refreshUnreadCount();
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    if (!user) return;
+    // Optimistic UI update
     setNotificationList(prev =>
       prev.map(notification => ({ ...notification, read: true }))
     );
+    
+    // Update backend
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', user.id)
+      .eq('read', false);
+      
+    if (error) {
+      toast.error('Failed to mark all as read');
+      fetchNotifications();
+    }
+    
+    refreshUnreadCount();
   };
 
-  const deleteNotification = (id: string) => {
+  const deleteNotification = async (id: string) => {
+    // Optimistic UI update
     setNotificationList(prev =>
       prev.filter(notification => notification.id !== id)
     );
+    
+    // Update backend
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', id);
+      
+    if (error) {
+      toast.error('Failed to delete notification');
+      fetchNotifications();
+    }
+
+    refreshUnreadCount();
   };
 
-  const handleAction = (notification: Notification, action: 'accept' | 'decline') => {
-    // Handle notification actions (mock implementation)
-    if (action === 'accept') {
+  // This is the main function for invitation logic
+  const handleAction = async (notification: Notification, action: 'accept' | 'decline', e: React.MouseEvent) => {
+    e.stopPropagation(); // Stop the click from bubbling to the card
+    const invitation_id = notification.data?.invitation_id;
+    if (notification.type !== 'group_invitation' || !invitation_id) {
+      return;
+    }
+
+    const toastId = toast.loading(`Sending your response...`);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No active session");
+    
+      const response = await fetch(`http://localhost:8000/api/invitations/${invitation_id}/respond`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action })
+      });
+      
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to respond to invitation');
+      }
+
+      // Success! The backend logic will delete the notification, 
+      // but we optimistically remove it here too for faster UI updates.
+      setNotificationList(prev =>
+        prev.filter(n => n.id !== notification.id)
+      );
+      toast.success(`Invitation ${action}ed!`, { id: toastId });
+      
+      refreshUnreadCount();
+
+    } catch (error: any) {
+      toast.error(error.message, { id: toastId });
+    }
+  };
+
+  // Handles clicking on the card itself for navigation
+  const handleNotificationClick = (notification: Notification) => {
+    // We explicitly mark as read here. The Action Required logic is decoupled.
+    if (!notification.read) {
       markAsRead(notification.id);
-      // Here you would typically make an API call
+    }
+
+    // Check for navigation for debt-related types
+    if ((notification.type === 'expense_owed' || notification.type === 'settlement' || notification.type === 'expense') && notification.data?.group_id) {
+      navigate(`/groups/${notification.data.group_id}?tab=balances`); // Redirect to the Balances tab
     }
   };
 
@@ -164,7 +324,8 @@ export function Notifications() {
       case 'unread':
         return notificationList.filter(n => !n.read);
       case 'actionable':
-        return notificationList.filter(n => n.actionable);
+        // MODIFIED: Show all actionable notifications, regardless of read status
+        return notificationList.filter(n => n.actionable); 
       default:
         return notificationList;
     }
@@ -172,6 +333,9 @@ export function Notifications() {
 
   const filteredNotifications = filterNotifications(activeTab);
   const unreadCount = notificationList.filter(n => !n.read).length;
+  
+  // === MODIFIED: CALCULATE ACTION REQUIRED COUNT (show total actionable, regardless of read status) ===
+  const totalActionableCount = notificationList.filter(n => n.actionable).length;
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -180,6 +344,7 @@ export function Notifications() {
         <div className="flex items-center gap-3">
           <div className="relative">
             <Bell className="h-6 w-6" />
+            {/* Display the total unread count on the Bell Icon */}
             {unreadCount > 0 && (
               <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
                 {unreadCount}
@@ -212,6 +377,7 @@ export function Notifications() {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="all" className="relative">
             All
+             {/* Display total notification count if any */}
             {notificationList.length > 0 && (
               <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
                 {notificationList.length}
@@ -220,6 +386,7 @@ export function Notifications() {
           </TabsTrigger>
           <TabsTrigger value="unread" className="relative">
             Unread
+            {/* Display unread count */}
             {unreadCount > 0 && (
               <Badge variant="destructive" className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
                 {unreadCount}
@@ -228,221 +395,323 @@ export function Notifications() {
           </TabsTrigger>
           <TabsTrigger value="actionable">
             Action Required
+            {/* MODIFIED: Display total ACTIONABLE count */}
+            {totalActionableCount > 0 && (
+              <Badge variant="destructive" className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                {totalActionableCount}
+              </Badge>
+            )}
           </TabsTrigger>
         </TabsList>
+        
+        {/* Loading State */}
+        {loading && (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
+              <p className="text-muted-foreground">Loading notifications...</p>
+            </CardContent>
+          </Card>
+        )}
 
-        <TabsContent value="all" className="space-y-4">
-          {filteredNotifications.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="text-lg font-medium mb-2">No notifications</h3>
-                <p className="text-muted-foreground">You're all caught up! New notifications will appear here.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredNotifications.map((notification) => {
-              const Icon = getNotificationIcon(notification.type);
-              const iconColor = getNotificationColor(notification.type);
+        {/* All Tabs Content (handles empty state too) */}
+        {!loading && (
+          <>
+            <TabsContent value="all" className="space-y-4">
+              {filteredNotifications.length === 0 ? (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <h3 className="text-lg font-medium mb-2">No notifications</h3>
+                    <p className="text-muted-foreground">You're all caught up! New notifications will appear here.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                filteredNotifications.map((notification) => {
+                  const Icon = getNotificationIcon(notification.type);
+                  const iconColor = getNotificationColor(notification.type);
+                  // Determine if the entire card should be clickable for navigation
+                  const isNavigable = (notification.type === 'expense_owed' || notification.type === 'settlement' || notification.type === 'expense') && notification.data?.group_id;
 
-              return (
-                <Card key={notification.id} className={`transition-all ${!notification.read ? 'bg-muted/30 border-primary/20' : ''}`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0 ${!notification.read ? 'bg-primary/10' : ''}`}>
-                        <Icon className={`h-4 w-4 ${iconColor}`} />
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className={`font-medium ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                {notification.title}
-                              </h3>
-                              {!notification.read && (
-                                <div className="w-2 h-2 bg-primary rounded-full" />
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-2">
-                              {notification.message}
-                            </p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>{formatDistanceToNow(notification.timestamp, { addSuffix: true })}</span>
-                              <Badge variant="outline" className="text-xs">
-                                {notification.type}
-                              </Badge>
-                            </div>
+                  return (
+                    <Card 
+                      key={notification.id} 
+                      className={`transition-all ${!notification.read ? 'bg-muted/30 border-primary/20' : ''} ${isNavigable ? 'cursor-pointer hover:shadow-md' : ''}`}
+                      onClick={() => handleNotificationClick(notification)} // Make the card clickable
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0 ${!notification.read ? 'bg-primary/10' : ''}`}>
+                            <Icon className={`h-4 w-4 ${iconColor}`} />
                           </div>
                           
-                          <div className="flex items-center gap-1">
-                            {!notification.read && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => markAsRead(notification.id)}
-                                className="h-6 w-6"
-                              >
-                                <Check className="h-3 w-3" />
-                              </Button>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className={`font-medium ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                    {notification.title}
+                                  </h3>
+                                  {!notification.read && (
+                                    <div className="w-2 h-2 bg-primary rounded-full" />
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  {notification.message}
+                                </p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span>{formatDistanceToNow(notification.timestamp, { addSuffix: true })}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {notification.type.replace('_', ' ')}
+                                  </Badge>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-1">
+                                {/* The "Mark as Read" button should remain for *unread* notifications */}
+                                {!notification.read && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation(); // Stop click from bubbling to the card
+                                      markAsRead(notification.id);
+                                    }}
+                                    className="h-6 w-6"
+                                    title="Mark as read"
+                                  >
+                                    <Check className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Stop click from bubbling to the card
+                                    deleteNotification(notification.id);
+                                  }}
+                                  className="h-6 w-6"
+                                  title="Delete notification"
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            {/* This block is now displayed for ALL actionable notifications, regardless of read status */}
+                            {notification.actionable && (
+                              <div className="flex gap-2 mt-3">
+                                {/* MODIFIED: Group debt/expense button */}
+                                {notification.type === 'expense_owed' && (
+                                  <Button size="sm" onClick={(e) => {
+                                    e.stopPropagation(); // Stop click from bubbling to the card
+                                    handleNotificationClick(notification);
+                                  }}>
+                                    Pay ${notification.data?.amount_owed?.toFixed(2) || 'Settle Up'} 
+                                  </Button>
+                                )}
+
+                                {notification.type === 'group_invitation' && (
+                                  <>
+                                    <Button size="sm" onClick={(e) => handleAction(notification, 'accept', e)}>
+                                      <Check className="h-4 w-4 mr-2" />
+                                      Accept
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={(e) => handleAction(notification, 'decline', e)}>
+                                      <X className="h-4 w-4 mr-2" />
+                                      Decline
+                                    </Button>
+                                  </>
+                                )}
+
+                                {/* Other actionable types can be added here */}
+                              </div>
                             )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => deleteNotification(notification.id)}
-                              className="h-6 w-6"
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
                           </div>
                         </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
+            </TabsContent>
 
-                        {/* Action Buttons */}
-                        {notification.actionable && !notification.read && (
-                          <div className="flex gap-2 mt-3">
-                            {notification.type === 'settlement' && (
-                              <>
-                                <Button size="sm" onClick={() => handleAction(notification, 'accept')}>
-                                  Pay ${notification.data?.amount}
+            <TabsContent value="unread" className="space-y-4">
+              {filterNotifications('unread').length === 0 ? (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                    <h3 className="text-lg font-medium mb-2">All caught up!</h3>
+                    <p className="text-muted-foreground">You have no unread notifications.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                filterNotifications('unread').map((notification) => {
+                  const Icon = getNotificationIcon(notification.type);
+                  const iconColor = getNotificationColor(notification.type);
+                  const isNavigable = (notification.type === 'expense_owed' || notification.type === 'settlement' || notification.type === 'expense') && notification.data?.group_id;
+
+                  return (
+                    <Card 
+                      key={notification.id} 
+                      className={`transition-all bg-muted/30 border-primary/20 ${isNavigable ? 'cursor-pointer hover:shadow-md' : ''}`}
+                      onClick={() => handleNotificationClick(notification)} // Make the card clickable
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <Icon className={`h-4 w-4 ${iconColor}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-medium">{notification.title}</h3>
+                                  <div className="w-2 h-2 bg-primary rounded-full" />
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span>{formatDistanceToNow(notification.timestamp, { addSuffix: true })}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {notification.type.replace('_', ' ')}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    markAsRead(notification.id);
+                                  }}
+                                  className="h-6 w-6"
+                                  title="Mark as read"
+                                >
+                                  <Check className="h-3 w-3" />
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleAction(notification, 'decline')}>
-                                  Dispute
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteNotification(notification.id);
+                                  }}
+                                  className="h-6 w-6"
+                                  title="Delete notification"
+                                >
+                                  <X className="h-3 w-3" />
                                 </Button>
-                              </>
-                            )}
-                            {notification.type === 'group' && (
-                              <>
-                                <Button size="sm" onClick={() => handleAction(notification, 'accept')}>
-                                  Accept
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleAction(notification, 'decline')}>
-                                  Decline
-                                </Button>
-                              </>
-                            )}
-                            {notification.type === 'reminder' && (
-                              <Button size="sm" onClick={() => handleAction(notification, 'accept')}>
-                                Settle Up
-                              </Button>
+                              </div>
+                            </div>
+                            {/* This block is displayed since it's filtered to be unread, and implicitly actionable/not is handled by the buttons inside */}
+                            {notification.actionable && (
+                              <div className="flex gap-2 mt-3">
+                                {/* MODIFIED: Group debt/expense button */}
+                                {notification.type === 'expense_owed' && (
+                                  <Button size="sm" onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleNotificationClick(notification);
+                                  }}>
+                                    Pay ${notification.data?.amount_owed?.toFixed(2) || 'Settle Up'}
+                                  </Button>
+                                )}
+
+                                {notification.type === 'group_invitation' && (
+                                  <>
+                                    <Button size="sm" onClick={(e) => handleAction(notification, 'accept', e)}>
+                                      <Check className="h-4 w-4 mr-2" />
+                                      Accept
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={(e) => handleAction(notification, 'decline', e)}>
+                                      <X className="h-4 w-4 mr-2" />
+                                      Decline
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </TabsContent>
-
-        <TabsContent value="unread" className="space-y-4">
-          {filterNotifications('unread').length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
-                <h3 className="text-lg font-medium mb-2">All caught up!</h3>
-                <p className="text-muted-foreground">You have no unread notifications.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            filterNotifications('unread').map((notification) => {
-              const Icon = getNotificationIcon(notification.type);
-              const iconColor = getNotificationColor(notification.type);
-
-              return (
-                <Card key={notification.id} className="bg-muted/30 border-primary/20">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Icon className={`h-4 w-4 ${iconColor}`} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-medium">{notification.title}</h3>
-                          <div className="w-2 h-2 bg-primary rounded-full" />
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(notification.timestamp, { addSuffix: true })}
-                        </span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => markAsRead(notification.id)}
-                        className="h-6 w-6"
-                      >
-                        <Check className="h-3 w-3" />
-                      </Button>
-                    </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
+            </TabsContent>
+
+            <TabsContent value="actionable" className="space-y-4">
+              {filteredNotifications.length === 0 ? (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <Info className="h-12 w-12 mx-auto mb-4 text-blue-500" />
+                    <h3 className="text-lg font-medium mb-2">No actions required</h3>
+                    <p className="text-muted-foreground">No pending actions for you right now.</p>
                   </CardContent>
                 </Card>
-              );
-            })
-          )}
-        </TabsContent>
+              ) : (
+                // This list now contains ALL actionable items, regardless of read status
+                filteredNotifications.map((notification) => {
+                  const Icon = getNotificationIcon(notification.type);
+                  const iconColor = getNotificationColor(notification.type);
+                  const isNavigable = (notification.type === 'expense_owed' || notification.type === 'settlement' || notification.type === 'expense') && notification.data?.group_id;
 
-        <TabsContent value="actionable" className="space-y-4">
-          {filterNotifications('actionable').length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Info className="h-12 w-12 mx-auto mb-4 text-blue-500" />
-                <h3 className="text-lg font-medium mb-2">No actions required</h3>
-                <p className="text-muted-foreground">All your notifications are informational. No action is needed right now.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            filterNotifications('actionable').map((notification) => {
-              const Icon = getNotificationIcon(notification.type);
-              const iconColor = getNotificationColor(notification.type);
+                  return (
+                    <Card 
+                      key={notification.id} 
+                      // Highlight if still unread, but allow to be read
+                      className={`transition-all ${!notification.read ? 'bg-muted/30 border-primary/20' : ''} ${isNavigable ? 'cursor-pointer hover:shadow-md' : ''}`}
+                      onClick={() => handleNotificationClick(notification)} // Mark as read/Navigate
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          {/* Indicator for unread status */}
+                          <div className={`w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center flex-shrink-0 ${!notification.read ? 'bg-primary/10' : ''}`}>
+                            <Icon className={`h-4 w-4 ${iconColor}`} />
+                          </div>
+                          
+                          <div className="flex-1">
+                            <h3 className="font-medium mb-1">{notification.title}</h3>
+                            <p className="text-sm text-muted-foreground mb-3">{notification.message}</p>
+                            
+                            <div className="flex gap-2">
+                              {/* MODIFIED: Group debt/expense button */}
+                              {notification.type === 'expense_owed' && (
+                                <Button size="sm" onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleNotificationClick(notification);
+                                }}>
+                                  Pay ${notification.data?.amount_owed?.toFixed(2) || 'Settle Up'}
+                                </Button>
+                              )}
 
-              return (
-                <Card key={notification.id} className="border-amber-200 dark:border-amber-800">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center flex-shrink-0">
-                        <Icon className={`h-4 w-4 ${iconColor}`} />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium mb-1">{notification.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-3">{notification.message}</p>
-                        
-                        <div className="flex gap-2">
-                          {notification.type === 'settlement' && (
-                            <>
-                              <Button size="sm" onClick={() => handleAction(notification, 'accept')}>
-                                Pay ${notification.data?.amount}
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => handleAction(notification, 'decline')}>
-                                Dispute
-                              </Button>
-                            </>
-                          )}
-                          {notification.type === 'group' && (
-                            <>
-                              <Button size="sm" onClick={() => handleAction(notification, 'accept')}>
-                                Accept Invitation
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={() => handleAction(notification, 'decline')}>
-                                Decline
-                              </Button>
-                            </>
-                          )}
-                          {notification.type === 'reminder' && (
-                            <Button size="sm" onClick={() => handleAction(notification, 'accept')}>
-                              Settle Up Now
-                            </Button>
-                          )}
+                              {notification.type === 'group_invitation' && (
+                                <>
+                                  <Button size="sm" onClick={(e) => handleAction(notification, 'accept', e)}>
+                                    <Check className="h-4 w-4 mr-2" />
+                                    Accept
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={(e) => handleAction(notification, 'decline', e)}>
+                                    <X className="h-4 w-4 mr-2" />
+                                    Decline
+                                  </Button>
+                                </>
+                              )}
+                              
+                              {/* Add 'Mark as Read' button if it is NOT an actionable button (like for a reminder type) */}
+                              {/* Omitted here as most actionable items have direct buttons, and card click marks as read anyway. */}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })
-          )}
-        </TabsContent>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
+            </TabsContent>
+          </>
+        )}
       </Tabs>
     </div>
   );
