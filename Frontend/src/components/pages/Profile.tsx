@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../App';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../../App";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../ui/card';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Badge } from '../ui/badge';
+} from "../ui/card";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Badge } from "../ui/badge";
 import {
   User,
   Mail,
@@ -22,8 +22,8 @@ import {
   X,
   Lock,
   Monitor,
-} from 'lucide-react';
-import { toast } from 'sonner';
+} from "lucide-react";
+import { toast } from "sonner";
 
 type ProfileData = {
   name: string;
@@ -35,7 +35,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
 const PHONE_RE = /^(\+)?[0-9\s\-()]{7,30}$/;
 
 function validateName(name: string) {
-  const trimmed = (name || '').trim();
+  const trimmed = (name || "").trim();
   if (!trimmed) return "Please enter your name";
   if (trimmed.length < 2) return "Name's too short";
   if (trimmed.length > 100) return "Name's too long";
@@ -43,23 +43,24 @@ function validateName(name: string) {
 }
 
 function validateEmail(email: string) {
-  const v = (email || '').trim();
+  const v = (email || "").trim();
   if (!v) return "Email is required";
   if (!EMAIL_RE.test(v)) return "That doesn't look like a valid email";
   return null;
 }
 
 function validatePhone(phone: string) {
-  if (!phone) return null; 
+  if (!phone) return null;
   const v = phone.trim();
   if (!PHONE_RE.test(v)) return "Phone number format doesn't look right";
-  const digits = v.replace(/\D/g, '');
-  if (digits.length < 7 || digits.length > 15) return "Phone number seems too short or too long";
+  const digits = v.replace(/\D/g, "");
+  if (digits.length < 7 || digits.length > 15)
+    return "Phone number seems too short or too long";
   return null;
 }
 
 function sanitizeInput(s: string) {
-  return (s || '').replace(/[\u0000-\u001F\u007F]/g, '').trim();
+  return (s || "").replace(/[\u0000-\u001F\u007F]/g, "").trim();
 }
 
 export function Profile() {
@@ -69,18 +70,22 @@ export function Profile() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [initialProfile, setInitialProfile] = useState<ProfileData>({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: '',
+    name: user?.name || "",
+    email: user?.email || "",
+    phone: "",
   });
 
   const [profileData, setProfileData] = useState<ProfileData>(initialProfile);
 
-  const [errors, setErrors] = useState<Partial<Record<keyof ProfileData, string>>>({});
-  const [touched, setTouched] = useState<Partial<Record<keyof ProfileData, boolean>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof ProfileData, string>>
+  >({});
+  const [touched, setTouched] = useState<
+    Partial<Record<keyof ProfileData, boolean>>
+  >({});
 
   const [securityData, setSecurityData] = useState({
-    lastPasswordChange: '30 days ago',
+    lastPasswordChange: "30 days ago",
   });
   const [openPasswordModal, setOpenPasswordModal] = useState(false);
   const [openSessionsModal, setOpenSessionsModal] = useState(false);
@@ -91,7 +96,7 @@ export function Profile() {
   const [stats, setStats] = useState({
     expense_count: 0,
     group_count: 0,
-    member_since: null
+    member_since: null,
   });
 
   useEffect(() => {
@@ -100,24 +105,24 @@ export function Profile() {
       if (!user) return;
       try {
         const { data, error } = await supabase
-          .from('users') // Your table name
-          .select('name, email, phone_number, avatar_url') // Columns from your images
-          .eq('id', user.id)
+          .from("users") // Your table name
+          .select("name, email, phone_number, avatar_url") // Columns from your images
+          .eq("id", user.id)
           .single();
 
         if (error) throw error;
 
         if (data) {
           const fullProfile: ProfileData = {
-            name: data.name || '',
-            email: data.email || '',
-            phone: data.phone_number || '', // Use 'phone_number' from DB
+            name: data.name || "",
+            email: data.email || "",
+            phone: data.phone_number || "", // Use 'phone_number' from DB
           };
           setInitialProfile(fullProfile);
           setProfileData(fullProfile);
         }
       } catch (error: any) {
-        toast.error(error.message || 'Failed to load your profile.');
+        toast.error(error.message || "Failed to load your profile.");
       } finally {
         setIsLoading(false);
       }
@@ -126,7 +131,7 @@ export function Profile() {
     async function fetchStats() {
       if (!user) return;
       try {
-        const { data, error } = await supabase.rpc('get_user_stats');
+        const { data, error } = await supabase.rpc("get_user_stats");
         if (error) throw error;
         setStats(data);
       } catch (error: any) {
@@ -137,7 +142,7 @@ export function Profile() {
     fetchProfileData();
     fetchStats();
   }, [user]);
-  
+
   function validateAll(data: ProfileData) {
     const newErrors: Partial<Record<keyof ProfileData, string>> = {};
     const nameErr = validateName(data.name);
@@ -151,7 +156,7 @@ export function Profile() {
 
     return newErrors;
   }
-  
+
   useEffect(() => {
     setErrors(validateAll(profileData));
   }, [profileData]);
@@ -168,7 +173,7 @@ export function Profile() {
     setTouched({ name: true, email: true, phone: true });
 
     if (Object.keys(finalErrors).length > 0) {
-      toast.error('Please fix the errors in the form.');
+      toast.error("Please fix the errors in the form.");
       return;
     }
 
@@ -178,25 +183,28 @@ export function Profile() {
       phone_number: profileData.phone.trim(), // Correct column name
     };
 
-    const toastId = toast.loading('Saving profile...');
+    const toastId = toast.loading("Saving profile...");
     try {
       if (supabase) {
         if (payload.email !== user.email) {
-          const { error: authError } = await supabase.auth.updateUser({ email: payload.email });
-          if (authError) throw new Error(`Email update failed: ${authError.message}`);
+          const { error: authError } = await supabase.auth.updateUser({
+            email: payload.email,
+          });
+          if (authError)
+            throw new Error(`Email update failed: ${authError.message}`);
         }
 
         const { error } = await supabase
-          .from('users')
+          .from("users")
           .update({
             name: payload.name,
-            phone_number: payload.phone_number
+            phone_number: payload.phone_number,
           })
-          .eq('id', user.id);
-          
+          .eq("id", user.id);
+
         if (error) throw error;
       } else {
-        console.log('Mock save payload:', payload);
+        console.log("Mock save payload:", payload);
       }
 
       setInitialProfile({
@@ -205,10 +213,12 @@ export function Profile() {
         phone: payload.phone_number,
       });
       setIsEditing(false);
-      toast.success('Profile saved successfully!', { id: toastId });
+      toast.success("Profile saved successfully!", { id: toastId });
     } catch (err: any) {
       console.error(err);
-      toast.error(`Couldn't save your profile: ${err?.message || err}`, { id: toastId });
+      toast.error(`Couldn't save your profile: ${err?.message || err}`, {
+        id: toastId,
+      });
     }
   };
 
@@ -219,7 +229,9 @@ export function Profile() {
     setIsEditing(false);
   };
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     if (!user) {
       toast.error("You must be logged in.");
       return;
@@ -227,54 +239,75 @@ export function Profile() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const fileExt = file.name.split('.').pop();
+    const ALLOWED_TYPES = ["image/png", "image/jpeg"];
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast.error("Invalid file type. Please upload a PNG or JPEG.");
+      event.target.value = ""; // Clear the input
+      return; // Stop the function
+    }
+
+    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB in bytes
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("File is too large! The maximum size is 2MB.");
+      event.target.value = ""; // Clear the input
+      return; // Stop the function
+    }
+
+    const fileExt = file.name.split(".").pop();
     const filePath = `${user.id}.${fileExt}`;
-    const toastId = toast.loading('Uploading avatar...');
+    const toastId = toast.loading("Uploading avatar...");
 
     try {
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
+        .from("avatars")
         .upload(filePath, file, {
-          cacheControl: '3600',
+          cacheControl: "3600",
           upsert: true,
         });
       if (uploadError) throw uploadError;
 
-      const { data } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+      const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
       if (!data.publicUrl) throw new Error("Could not get public URL.");
-      
-      const publicUrlWithCacheBust = `${data.publicUrl}?t=${new Date().getTime()}`;
+
+      const publicUrlWithCacheBust = `${
+        data.publicUrl
+      }?t=${new Date().getTime()}`;
 
       const { error: updateAuthError } = await supabase.auth.updateUser({
-        data: { avatar_url: publicUrlWithCacheBust }
+        data: { avatar_url: publicUrlWithCacheBust },
       });
       if (updateAuthError) throw updateAuthError;
 
       const { error: updateProfileError } = await supabase
-        .from('users')
+        .from("users")
         .update({ avatar_url: publicUrlWithCacheBust })
-        .eq('id', user.id);
+        .eq("id", user.id);
       if (updateProfileError) throw updateProfileError;
 
-      toast.success('Avatar updated successfully!', { id: toastId });
-      window.location.reload(); 
-      
+      toast.success("Avatar updated successfully!", { id: toastId });
+      window.location.reload();
     } catch (error: any) {
-      console.error('Error uploading avatar:', error);
-      toast.error(error.message || 'Failed to upload avatar.', { id: toastId });
+      console.error("Error uploading avatar:", error);
+      toast.error(error.message || "Failed to upload avatar.", { id: toastId });
     }
   };
 
   const handleChangePassword = () => setOpenPasswordModal(true);
   const handleViewSessions = async () => setOpenSessionsModal(true);
-  async function loadSessions() { /* ... (your existing code) ... */ }
-  async function revokeSession(sessionId: string) { /* ... (your existing code) ... */ }
-  async function signOutCurrent() { /* ... (your existing code) ... */ }
+  async function loadSessions() {
+    /* ... (your existing code) ... */
+  }
+  async function revokeSession(sessionId: string) {
+    /* ... (your existing code) ... */
+  }
+  async function signOutCurrent() {
+    /* ... (your existing code) ... */
+  }
 
   const hasErrors = Object.keys(errors).length > 0;
-  const isDirty = JSON.stringify(profileData) !== JSON.stringify(initialProfile);
+  const isDirty =
+    JSON.stringify(profileData) !== JSON.stringify(initialProfile);
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
@@ -319,24 +352,26 @@ export function Profile() {
                   <Avatar className="h-32 w-32">
                     <AvatarImage src={user?.avatar} alt={user?.name} />
                     <AvatarFallback className="bg-[#8B4513] text-white text-3xl">
-                      {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                      {user?.name?.charAt(0)?.toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
 
                   {isEditing && (
                     <>
-                      <input 
-                        type="file" 
+                      <input
+                        type="file"
                         id="avatar-upload"
                         accept="image/png, image/jpeg"
                         onChange={handleAvatarUpload}
-                        style={{ display: 'none' }}
+                        style={{ display: "none" }}
                       />
                       <Button
                         size="icon"
                         className="absolute bottom-0 right-0 h-10 w-10 rounded-full shadow-lg"
                         variant="secondary"
-                        onClick={() => document.getElementById('avatar-upload')?.click()}
+                        onClick={() =>
+                          document.getElementById("avatar-upload")?.click()
+                        }
                       >
                         <Camera className="h-5 w-5" />
                       </Button>
@@ -363,9 +398,7 @@ export function Profile() {
           <Card>
             <CardHeader>
               <CardTitle>Personal Info</CardTitle>
-              <CardDescription>
-                Your basic details
-              </CardDescription>
+              <CardDescription>Your basic details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
@@ -376,7 +409,7 @@ export function Profile() {
                       <Input
                         id="name"
                         value={profileData.name}
-                        onChange={(e) => updateField('name', e.target.value)}
+                        onChange={(e) => updateField("name", e.target.value)}
                         onBlur={() =>
                           setErrors((s) => ({
                             ...(s || {}),
@@ -387,13 +420,15 @@ export function Profile() {
                         aria-invalid={!!errors.name}
                       />
                       {errors.name && touched.name && (
-                        <div className="text-sm text-red-600 mt-1">{errors.name}</div>
+                        <div className="text-sm text-red-600 mt-1">
+                          {errors.name}
+                        </div>
                       )}
                     </>
                   ) : (
                     <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                       <User className="h-4 w-4 text-muted-foreground" />
-                      <span>{profileData.name || 'Not set'}</span>
+                      <span>{profileData.name || "Not set"}</span>
                     </div>
                   )}
                 </div>
@@ -406,24 +441,27 @@ export function Profile() {
                         id="email"
                         type="email"
                         value={profileData.email}
-                        onChange={(e) => updateField('email', e.target.value)}
+                        onChange={(e) => updateField("email", e.target.value)}
                         onBlur={() =>
                           setErrors((s) => ({
                             ...(s || {}),
-                            email: validateEmail(profileData.email) || undefined,
+                            email:
+                              validateEmail(profileData.email) || undefined,
                           }))
                         }
                         placeholder="Your email"
                         aria-invalid={!!errors.email}
                       />
                       {errors.email && touched.email && (
-                        <div className="text-sm text-red-600 mt-1">{errors.email}</div>
+                        <div className="text-sm text-red-600 mt-1">
+                          {errors.email}
+                        </div>
                       )}
                     </>
                   ) : (
                     <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                       <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{profileData.email || 'Not set'}</span>
+                      <span>{profileData.email || "Not set"}</span>
                     </div>
                   )}
                 </div>
@@ -436,24 +474,27 @@ export function Profile() {
                         id="phone"
                         type="tel"
                         value={profileData.phone}
-                        onChange={(e) => updateField('phone', e.target.value)}
+                        onChange={(e) => updateField("phone", e.target.value)}
                         onBlur={() =>
                           setErrors((s) => ({
                             ...(s || {}),
-                            phone: validatePhone(profileData.phone) || undefined,
+                            phone:
+                              validatePhone(profileData.phone) || undefined,
                           }))
                         }
                         placeholder="Your phone number"
                         aria-invalid={!!errors.phone}
                       />
                       {errors.phone && touched.phone && (
-                        <div className="text-sm text-red-600 mt-1">{errors.phone}</div>
+                        <div className="text-sm text-red-600 mt-1">
+                          {errors.phone}
+                        </div>
                       )}
                     </>
                   ) : (
                     <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
                       <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{profileData.phone || 'Not set'}</span>
+                      <span>{profileData.phone || "Not set"}</span>
                     </div>
                   )}
                 </div>
@@ -469,14 +510,18 @@ export function Profile() {
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="text-center p-4 bg-muted rounded-lg">
-                  <div className="text-3xl font-bold text-[#8B4513]">{stats.expense_count}</div>
+                  <div className="text-3xl font-bold text-[#8B4513]">
+                    {stats.expense_count}
+                  </div>
                   <div className="text-sm text-muted-foreground mt-1">
                     Expenses
                   </div>
                 </div>
 
                 <div className="text-center p-4 bg-muted rounded-lg">
-                  <div className="text-3xl font-bold text-[#8B4513]">{stats.group_count}</div>
+                  <div className="text-3xl font-bold text-[#8B4513]">
+                    {stats.group_count}
+                  </div>
                   <div className="text-sm text-muted-foreground mt-1">
                     Groups
                   </div>
@@ -484,7 +529,13 @@ export function Profile() {
 
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <div className="text-3xl font-bold text-[#8B4513]">
-                    {stats.member_since ? Math.max(1, new Date().getMonth() - new Date(stats.member_since).getMonth()) : 0}
+                    {stats.member_since
+                      ? Math.max(
+                          1,
+                          new Date().getMonth() -
+                            new Date(stats.member_since).getMonth()
+                        )
+                      : 0}
                   </div>
                   <div className="text-sm text-muted-foreground mt-1">
                     Months
@@ -497,9 +548,7 @@ export function Profile() {
           <Card>
             <CardHeader>
               <CardTitle>Security</CardTitle>
-              <CardDescription>
-                Keep your account safe
-              </CardDescription>
+              <CardDescription>Keep your account safe</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
@@ -545,7 +594,7 @@ export function Profile() {
           onClose={() => setOpenPasswordModal(false)}
           supabase={supabase}
           onSuccess={() =>
-            setSecurityData((s) => ({ ...s, lastPasswordChange: 'just now' }))
+            setSecurityData((s) => ({ ...s, lastPasswordChange: "just now" }))
           }
         />
       )}
@@ -575,9 +624,9 @@ function PasswordModal({
   onSuccess?: () => void;
 }) {
   const { user } = useAuth() as any;
-  const [current, setCurrent] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
+  const [current, setCurrent] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -614,12 +663,14 @@ function PasswordModal({
   const allRulesSatisfied = Object.values(ruleState).every(Boolean);
 
   function validateConfirmPassword(pw: string, c: string) {
-    if (!c) return 'Please confirm your password';
+    if (!c) return "Please confirm your password";
     if (pw !== c) return "Passwords don't match";
     return null;
   }
 
-  const confirmError = touched.confirm ? validateConfirmPassword(newPassword, confirm) : undefined;
+  const confirmError = touched.confirm
+    ? validateConfirmPassword(newPassword, confirm)
+    : undefined;
   const isFormValid = allRulesSatisfied && !confirmError;
   const showRules = touched.newPassword || newPassword.length > 0;
 
@@ -631,7 +682,7 @@ function PasswordModal({
     setTouched({ current: true, newPassword: true, confirm: true });
 
     if (!current || current.trim().length === 0) {
-      setError('Enter your current password');
+      setError("Enter your current password");
       currentRef.current?.focus();
       return;
     }
@@ -646,8 +697,8 @@ function PasswordModal({
     setLoading(true);
     try {
       if (!supabase) {
-        console.warn('No supabase available');
-        setSuccess('Password updated (mock mode)');
+        console.warn("No supabase available");
+        setSuccess("Password updated (mock mode)");
         if (onSuccess) onSuccess();
         setLoading(false);
         return;
@@ -655,7 +706,7 @@ function PasswordModal({
 
       const email = user?.email;
       if (!email) {
-        throw new Error('No user email available to verify current password');
+        throw new Error("No user email available to verify current password");
       }
       const { error: signErr } = await supabase.auth.signInWithPassword({
         email,
@@ -665,22 +716,26 @@ function PasswordModal({
         throw signErr;
       }
 
-      if (typeof supabase.auth.updateUser === 'function') {
-        const { error: supaErr } = await supabase.auth.updateUser({ password: newPassword });
+      if (typeof supabase.auth.updateUser === "function") {
+        const { error: supaErr } = await supabase.auth.updateUser({
+          password: newPassword,
+        });
         if (supaErr) throw supaErr;
-      } else if (typeof supabase.auth.update === 'function') {
-        const { error: supaErr } = await supabase.auth.update({ password: newPassword });
+      } else if (typeof supabase.auth.update === "function") {
+        const { error: supaErr } = await supabase.auth.update({
+          password: newPassword,
+        });
         if (supaErr) throw supaErr;
       } else {
-        throw new Error('Cannot update password with this Supabase version');
+        throw new Error("Cannot update password with this Supabase version");
       }
 
-      setSuccess('Password updated!');
+      setSuccess("Password updated!");
       if (onSuccess) onSuccess();
       setTimeout(() => onClose(), 1000);
     } catch (err: any) {
       console.error(err);
-      toast.error(err?.message || 'Could not update password');
+      toast.error(err?.message || "Could not update password");
     } finally {
       setLoading(false);
     }
@@ -724,13 +779,15 @@ function PasswordModal({
               <div className="relative">
                 <Input
                   ref={newRef}
-                  type={showNew ? 'text' : 'password'}
+                  type={showNew ? "text" : "password"}
                   value={newPassword}
                   onChange={(e) => {
                     setNewPassword(e.target.value);
                     setTouched((t) => ({ ...t, newPassword: true }));
                   }}
-                  onBlur={() => setTouched((t) => ({ ...t, newPassword: true }))}
+                  onBlur={() =>
+                    setTouched((t) => ({ ...t, newPassword: true }))
+                  }
                   placeholder="Pick a strong password"
                   aria-invalid={showRules && !allRulesSatisfied}
                 />
@@ -739,26 +796,46 @@ function PasswordModal({
                   onClick={() => setShowNew((s) => !s)}
                   className="absolute right-2 top-2 text-sm px-2 py-1"
                 >
-                  {showNew ? 'Hide' : 'Show'}
+                  {showNew ? "Hide" : "Show"}
                 </button>
               </div>
 
               {showRules && (
                 <ul className="mt-2 ml-4 text-sm space-y-1">
-                  <li className={ruleState.minLen ? 'text-green-600' : 'text-red-600'}>
-                    {ruleState.minLen ? '✓' : '•'} At least 8 characters
+                  <li
+                    className={
+                      ruleState.minLen ? "text-green-600" : "text-red-600"
+                    }
+                  >
+                    {ruleState.minLen ? "✓" : "•"} At least 8 characters
                   </li>
-                  <li className={ruleState.upper ? 'text-green-600' : 'text-red-600'}>
-                    {ruleState.upper ? '✓' : '•'} One uppercase letter
+                  <li
+                    className={
+                      ruleState.upper ? "text-green-600" : "text-red-600"
+                    }
+                  >
+                    {ruleState.upper ? "✓" : "•"} One uppercase letter
                   </li>
-                  <li className={ruleState.lower ? 'text-green-600' : 'text-red-600'}>
-                    {ruleState.lower ? '✓' : '•'} One lowercase letter
+                  <li
+                    className={
+                      ruleState.lower ? "text-green-600" : "text-red-600"
+                    }
+                  >
+                    {ruleState.lower ? "✓" : "•"} One lowercase letter
                   </li>
-                  <li className={ruleState.digit ? 'text-green-600' : 'text-red-600'}>
-                    {ruleState.digit ? '✓' : '•'} One number
+                  <li
+                    className={
+                      ruleState.digit ? "text-green-600" : "text-red-600"
+                    }
+                  >
+                    {ruleState.digit ? "✓" : "•"} One number
                   </li>
-                  <li className={ruleState.special ? 'text-green-600' : 'text-red-600'}>
-                    {ruleState.special ? '✓' : '•'} One special character
+                  <li
+                    className={
+                      ruleState.special ? "text-green-600" : "text-red-600"
+                    }
+                  >
+                    {ruleState.special ? "✓" : "•"} One special character
                   </li>
                 </ul>
               )}
@@ -769,7 +846,7 @@ function PasswordModal({
               <div className="relative">
                 <Input
                   ref={confirmRef}
-                  type={showConfirm ? 'text' : 'password'}
+                  type={showConfirm ? "text" : "password"}
                   value={confirm}
                   onChange={(e) => {
                     setConfirm(e.target.value);
@@ -783,7 +860,7 @@ function PasswordModal({
                   onClick={() => setShowConfirm((s) => !s)}
                   className="absolute right-2 top-2 text-sm px-2 py-1"
                 >
-                  {showConfirm ? 'Hide' : 'Show'}
+                  {showConfirm ? "Hide" : "Show"}
                 </button>
               </div>
               {touched.confirm && confirmError && (
@@ -797,11 +874,14 @@ function PasswordModal({
                   type="button"
                   className="text-sm text-muted-foreground underline"
                   onClick={() => {
-                    if (supabase && typeof supabase.auth.resetPasswordForEmail === 'function') {
-                      supabase.auth.resetPasswordForEmail(user?.email || '');
-                      toast.success('Check your email for password reset link');
+                    if (
+                      supabase &&
+                      typeof supabase.auth.resetPasswordForEmail === "function"
+                    ) {
+                      supabase.auth.resetPasswordForEmail(user?.email || "");
+                      toast.success("Check your email for password reset link");
                     } else {
-                      toast.error('Password reset not configured yet');
+                      toast.error("Password reset not configured yet");
                     }
                   }}
                 >
@@ -813,7 +893,7 @@ function PasswordModal({
                   Cancel
                 </Button>
                 <Button type="submit" disabled={loading || !isFormValid}>
-                  {loading ? 'Updating...' : 'Update'}
+                  {loading ? "Updating..." : "Update"}
                 </Button>
               </div>
             </div>
@@ -874,7 +954,10 @@ function SessionsModal({
                 >
                   <div>
                     <div className="font-medium">
-                      {s.device || s.user_agent || s.browser || 'Unknown device'}
+                      {s.device ||
+                        s.user_agent ||
+                        s.browser ||
+                        "Unknown device"}
                       {s.current && (
                         <span className="ml-2 text-xs px-2 py-1 bg-green-100 rounded text-green-800">
                           Current
@@ -882,8 +965,11 @@ function SessionsModal({
                       )}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {s.ip || s.location || 'Unknown location'} • Active{' '}
-                      {s.last_active || s.updated_at || s.created_at || 'recently'}
+                      {s.ip || s.location || "Unknown location"} • Active{" "}
+                      {s.last_active ||
+                        s.updated_at ||
+                        s.created_at ||
+                        "recently"}
                     </div>
                   </div>
 
@@ -898,7 +984,11 @@ function SessionsModal({
                       </Button>
                     )}
                     {s.current && (
-                      <Button size="sm" variant="secondary" onClick={signOutCurrent}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={signOutCurrent}
+                      >
                         Sign out
                       </Button>
                     )}
@@ -910,11 +1000,15 @@ function SessionsModal({
 
           {!loading && !error && sessions.length === 0 && (
             <div className="p-3 text-sm text-muted-foreground border rounded">
-              To see and manage sessions, you'll need a backend endpoint that talks to Supabase Admin API.
+              To see and manage sessions, you'll need a backend endpoint that
+              talks to Supabase Admin API.
               <div className="mt-2">
                 <strong>Here's how:</strong>
                 <ol className="list-decimal ml-5 mt-1">
-                  <li>Set up an endpoint that lists sessions using Supabase service role key</li>
+                  <li>
+                    Set up an endpoint that lists sessions using Supabase
+                    service role key
+                  </li>
                   <li>Return the sessions as JSON</li>
                   <li>Add a DELETE endpoint to revoke sessions</li>
                 </ol>
