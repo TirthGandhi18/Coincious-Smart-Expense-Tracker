@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 type AppUser = SupabaseUser & {
   user_metadata?: {
@@ -51,6 +52,8 @@ export function Groups() {
   // State for delete confirmation
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<any | null>(null);
+
+  const navigate = useNavigate();
 
   // Function to handle the delete button click
   const handleDeleteClick = (group: any) => {
@@ -277,6 +280,25 @@ export function Groups() {
         description: 'Please check your connection and try again.'
       });
     }
+  };
+
+  // Add edit handler
+  const handleEditGroupExpense = (expense: any) => {
+    navigate('/add-expense', {
+      state: {
+        isEdit: true,
+        expenseData: {
+          id: expense.id,
+          title: expense.description,
+          amount: expense.amount,
+          category: expense.category,
+          date: expense.date,
+          type: 'group',
+          group_id: expense.group_id,
+          payer_id: expense.payer_id
+        }
+      }
+    });
   };
 
   return (

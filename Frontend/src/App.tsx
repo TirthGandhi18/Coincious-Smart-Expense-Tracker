@@ -20,7 +20,7 @@ import { Support } from './components/pages/Support';
 import { Notifications } from './components/pages/Notifications';
 import { Chatbot } from './components/pages/Chatbot';
 import { Settings } from './components/pages/Settings';
-
+import { ExpenseCalendar } from './components/pages/ExpenseCalendar'; // Changed back to named import
 
 // Simple Public Route Component
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -127,6 +127,15 @@ function AppRoutes() {
                   </Layout>
                 </ProtectedRoute>
               } />
+        
+        <Route path="/calendar" element={
+          <ProtectedRoute>
+            <Layout>
+              <ExpenseCalendar />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

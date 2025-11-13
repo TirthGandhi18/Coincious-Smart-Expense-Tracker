@@ -37,9 +37,10 @@ import {
   LineChart,
   Line
 } from 'recharts';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Calendar } from '../ui/calendar';
 import { format } from 'date-fns';
+import { Pencil, Trash2 } from 'lucide-react';
 
 const DEFAULT_COLORS = [
   '#ECAABA',
@@ -124,7 +125,20 @@ const insights = [
   }
 ];
 
+const DUMMY_EXPENSES = [
+  { id: 1, date: '2025-11-06', description: 'Grocery Shopping', amount: 125.50, category: 'Food', type: 'personal' },
+  { id: 2, date: '2025-11-06', description: 'Gas Station', amount: 45.00, category: 'Transportation', type: 'personal' },
+  { id: 3, date: '2025-11-07', description: 'Team Lunch', amount: 280.00, category: 'Food', type: 'group' },
+  { id: 4, date: '2025-11-07', description: 'Coffee Shop', amount: 15.75, category: 'Food', type: 'personal' },
+  { id: 5, date: '2025-11-08', description: 'Movie Night', amount: 65.00, category: 'Entertainment', type: 'group' },
+  { id: 6, date: '2025-11-08', description: 'Uber Ride', amount: 22.50, category: 'Transportation', type: 'personal' },
+  { id: 7, date: '2025-11-08', description: 'Amazon Order', amount: 89.99, category: 'Shopping', type: 'personal' },
+  { id: 8, date: '2025-11-09', description: 'Dinner Party', amount: 450.00, category: 'Food', type: 'group' },
+  { id: 9, date: '2025-11-09', description: 'Gym Membership', amount: 49.99, category: 'Health', type: 'personal' },
+];
+
 export function Dashboard() {
+  const navigate = useNavigate();
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [categoryData, setCategoryData] = useState<{ name: string; value: number; color: string }[]>([]);
   const [categoryLoading, setCategoryLoading] = useState(true);
@@ -318,6 +332,33 @@ export function Dashboard() {
 
   const displayAmount = dateRange.from ? filteredExpenses : totalSpending;
 
+  // ✅ ADD THIS HANDLER RIGHT AFTER navigate declaration (around line 80):
+  const handleEditExpense = (expense: any) => {
+    console.log('🔧 EDIT CLICKED:', expense);
+    navigate('/add-expense', {
+      state: {
+        isEdit: true,
+        expenseData: expense
+      }
+    });
+  };
+
+  // Add handler for deleting expense
+  const handleDeleteExpense = (expenseId: number) => {
+    if (!confirm('Are you sure you want to delete this expense?')) return;
+
+    // Remove from dummy data (in real app, call API)
+    const updatedExpenses = dailyExpenses.filter(exp => exp.id !== expenseId);
+    setDailyExpenses(updatedExpenses);
+    
+    // Recalculate total
+    const total = updatedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+    setFilteredExpenses(total);
+    
+    // Show success message
+    alert('Expense deleted successfully!');
+  };
+
   const handleDateSelect = (date: Date) => {
     // Don't allow selection during drag
     if (dragState.isDragging) return;
@@ -388,6 +429,12 @@ export function Dashboard() {
       const isToday = currentDate.getTime() === today.getTime();
       const isFuture = currentDate > today;
       
+      // Get expenses for this date
+      const dateStr = format(currentDate, 'yyyy-MM-dd');
+      const dayExpenses = DUMMY_EXPENSES.filter(exp => exp.date === dateStr);
+      const hasExpenses = dayExpenses.length > 0;
+      const totalAmount = dayExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+      
       // Enhanced selection logic
       const isStartDate = dateRange.from && currentDate.getTime() === dateRange.from.getTime();
       const isEndDate = dateRange.to && currentDate.getTime() === dateRange.to.getTime();
@@ -395,85 +442,91 @@ export function Dashboard() {
       const isInRange = dateRange.from && dateRange.to &&
                        currentDate > dateRange.from && currentDate < dateRange.to;
       
-      // Drag preview logic
-      const isDragHover = dragState.isDragging && 
-        ((dragState.dragType === 'start' && dateRange.to && currentDate < dateRange.to) ||
-         (dragState.dragType === 'end' && dateRange.from && currentDate > dateRange.from));
-      
-      // Better styling with distinct colors and drag states
+      // Better styling with drag support
       let buttonClasses = `
-        aspect-square p-2 text-sm font-medium rounded-lg transition-all duration-200 relative border-2 select-none
+        aspect-square p-2 text-sm font-medium rounded-xl transition-all duration-200 relative border-2 select-none
         ${!isCurrentMonth ? 'text-gray-400 dark:text-gray-600 opacity-60' : ''}
         ${isFuture ? 'text-gray-300 cursor-not-allowed opacity-40 border-transparent' : 'cursor-pointer border-transparent'}
         ${isToday && !isSelected ? 'bg-blue-100 text-blue-800 font-bold border-blue-400 ring-2 ring-blue-200' : ''}
-        ${dragState.isDragging ? 'pointer-events-auto' : ''}
       `;
 
-      // Start date styling with drag handle
+      // Add expense indicator styling
+      if (hasExpenses && !isSelected && !isInRange) {
+        buttonClasses += ' bg-purple-50 dark:bg-purple-900/20 border-purple-200';
+      }
+
       if (isStartDate) {
-        buttonClasses += ` bg-purple-600 text-white shadow-lg scale-110 border-purple-700 font-bold ring-2 ring-purple-300
-          ${dragState.isDragging && dragState.dragType === 'start' ? 'scale-125 shadow-2xl' : 'hover:scale-115'}
-        `;
-      }
-      // End date styling with drag handle
-      else if (isEndDate) {
-        buttonClasses += ` bg-pink-600 text-white shadow-lg scale-110 border-pink-700 font-bold ring-2 ring-pink-300
-          ${dragState.isDragging && dragState.dragType === 'end' ? 'scale-125 shadow-2xl' : 'hover:scale-115'}
-        `;
-      }
-      // In-range styling
-      else if (isInRange) {
+        buttonClasses += ` bg-purple-600 text-white shadow-lg scale-110 border-purple-700 font-bold ring-2 ring-purple-300`;
+      } else if (isEndDate) {
+        buttonClasses += ` bg-pink-600 text-white shadow-lg scale-110 border-pink-700 font-bold ring-2 ring-pink-300`;
+      } else if (isInRange) {
         buttonClasses += ' bg-purple-200 text-purple-900 border-purple-300 font-semibold';
-      }
-      // Drag hover preview
-      else if (isDragHover) {
-        buttonClasses += ' bg-gray-300 text-gray-700 border-gray-400 scale-105';
-      }
-      // Default hover state
-      else if (!isFuture && isCurrentMonth && !dragState.isDragging) {
+      } else if (!isFuture && isCurrentMonth) {
         buttonClasses += ' hover:bg-purple-100 hover:text-purple-700 hover:scale-105';
       }
 
       days.push(
         <button
           key={i}
-          onClick={() => handleDateSelect(currentDate)}
+          onClick={() => !isFuture && handleDateSelect(currentDate)}
           onMouseDown={() => {
-            if (isStartDate) handleDragStart(currentDate, 'start');
-            else if (isEndDate) handleDragStart(currentDate, 'end');
+            if (isFuture) return;
+            if (isStartDate || isEndDate) {
+              setDragState({
+                isDragging: true,
+                dragType: isStartDate ? 'start' : 'end',
+                originalRange: { ...dateRange }
+              });
+            }
           }}
-          onMouseEnter={() => handleDragOver(currentDate)}
-          onMouseUp={handleDragEnd}
+          onMouseEnter={() => {
+            if (dragState.isDragging) {
+              if (dragState.dragType === 'start' && dateRange.to && currentDate <= dateRange.to) {
+                setDateRange({ from: currentDate, to: dateRange.to });
+              } else if (dragState.dragType === 'end' && dateRange.from && currentDate >= dateRange.from) {
+                setDateRange({ from: dateRange.from, to: currentDate });
+              }
+            }
+          }}
+          onMouseUp={() => {
+            if (dragState.isDragging) {
+              setDragState({
+                isDragging: false,
+                dragType: null,
+                originalRange: { from: undefined, to: undefined }
+              });
+            }
+          }}
           disabled={isFuture}
           className={buttonClasses}
           draggable={false}
         >
           <div className="flex flex-col items-center justify-center h-full relative">
-            <span className="text-sm font-semibold">{currentDate.getDate()}</span>
+            <span className="text-sm font-semibold mb-1">{currentDate.getDate()}</span>
             
-            {/* Enhanced visual indicators with drag handles */}
-            {isStartDate && (
-              <div className="absolute -top-1 -left-1 bg-white rounded-full p-0.5 shadow-md border border-purple-300">
-                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+            {/* Show expense indicators */}
+            {hasExpenses && (
+              <div className="flex flex-col items-center gap-0.5">
+                <div className="flex gap-0.5">
+                  {dayExpenses.slice(0, 3).map((exp, idx) => {
+                    const emoji = exp.category === 'Food' ? '🍔' : 
+                                 exp.category === 'Transportation' ? '🚗' :
+                                 exp.category === 'Entertainment' ? '🎉' :
+                                 exp.category === 'Shopping' ? '🛍️' :
+                                 exp.category === 'Health' ? '⚕️' : '💳';
+                    return <span key={idx} className="text-xs">{emoji}</span>;
+                  })}
+                </div>
+                <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                  ${totalAmount.toFixed(0)}
+                </span>
               </div>
             )}
             
-            {isEndDate && (
-              <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-md border border-pink-300">
-                <div className="w-2 h-2 bg-pink-600 rounded-full"></div>
-              </div>
-            )}
-
-            {/* Drag handles for better UX */}
-            {isStartDate && (
-              <div className="absolute inset-0 cursor-move flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+            {/* Drag handles */}
+            {(isStartDate || isEndDate) && (
+              <div className="absolute inset-0 cursor-grab active:cursor-grabbing flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                 <div className="text-white text-xs font-bold">⟲</div>
-              </div>
-            )}
-
-            {isEndDate && (
-              <div className="absolute inset-0 cursor-move flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                <div className="text-white text-xs font-bold">⟳</div>
               </div>
             )}
             
@@ -498,6 +551,45 @@ export function Dashboard() {
     document.addEventListener('mouseup', handleGlobalMouseUp);
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
   }, [dragState.isDragging]);
+
+  // Replace your expense fetching logic with this:
+  useEffect(() => {
+    const loadExpenses = () => {
+      setLoading(true);
+      
+      try {
+        // Filter dummy expenses by date range
+        const filtered = DUMMY_EXPENSES.filter(expense => {
+          const expenseDate = new Date(expense.date);
+          expenseDate.setHours(0, 0, 0, 0);
+          
+          const fromDate = dateRange.from ? new Date(dateRange.from) : null;
+          if (fromDate) fromDate.setHours(0, 0, 0, 0);
+          
+          const toDate = dateRange.to ? new Date(dateRange.to) : fromDate; // If no end date, use start date
+          if (toDate) toDate.setHours(0, 0, 0, 0);
+          
+          if (fromDate && toDate) {
+            // Check if expense date is within range (inclusive)
+            return expenseDate >= fromDate && expenseDate <= toDate;
+          }
+          return false;
+        });
+        
+        setDailyExpenses(filtered);
+        
+        // Calculate total
+        const total = filtered.reduce((sum, exp) => sum + exp.amount, 0);
+        setFilteredExpenses(total);
+      } catch (error) {
+        console.error('Error loading expenses:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadExpenses();
+  }, [dateRange]);
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -542,13 +634,13 @@ export function Dashboard() {
                     onClick={() => setShowDatePicker(false)}
                   />
                   
-                  {/* Hotel Booking Style Calendar */}
+                  {/* Enhanced Calendar Modal - LARGER SIZE */}
                   <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl animate-in zoom-in duration-300">
+                    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto animate-in zoom-in duration-300">
                       {/* Header */}
                       <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Select Date Range</h3>
+                          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Select Date Range</h3>
                           
                           {/* Enhanced date display */}
                           <div className="mt-2 space-y-1">
@@ -572,11 +664,6 @@ export function Dashboard() {
                                   <div className="w-3 h-3 bg-pink-600 rounded-full"></div>
                                   <span className="text-sm font-medium text-pink-700">To: {format(dateRange.to, "dd MMM yyyy")}</span>
                                 </div>
-                                <div className="flex items-center gap-2 mt-2 p-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
-                                  <span className="text-sm font-semibold text-gray-700">
-                                    {Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1} day{Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) !== 0 ? 's' : ''} selected
-                                  </span>
-                                </div>
                               </div>
                             )}
                           </div>
@@ -592,9 +679,9 @@ export function Dashboard() {
                         </button>
                       </div>
 
-                      <div className="grid md:grid-cols-2 gap-6 p-6">
-                        {/* Calendar Section */}
-                        <div>
+                      <div className="grid md:grid-cols-3 gap-6 p-6">
+                        {/* Calendar Section - WIDER */}
+                        <div className="md:col-span-2">
                           {/* Month Navigation */}
                           <div className="flex items-center justify-between mb-6">
                             <button
@@ -609,7 +696,7 @@ export function Dashboard() {
                               </svg>
                             </button>
                             
-                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            <h4 className="text-xl font-semibold text-gray-900 dark:text-white">
                               {format(currentMonth, "MMMM yyyy")}
                             </h4>
                             
@@ -627,27 +714,39 @@ export function Dashboard() {
                           </div>
 
                           {/* Days Header */}
-                          <div className="grid grid-cols-7 gap-1 mb-2">
-                            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                              <div key={day} className="text-center text-sm font-medium text-gray-500 p-2">
+                          <div className="grid grid-cols-7 gap-2 mb-2">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                              <div key={day} className="text-center text-sm font-semibold text-gray-600 p-2">
                                 {day}
                               </div>
                             ))}
                           </div>
 
-                          {/* Calendar Grid */}
-                          <div className="grid grid-cols-7 gap-1">
+                          {/* Calendar Grid - LARGER CELLS */}
+                          <div className="grid grid-cols-7 gap-2">
                             {renderCalendarDays()}
+                          </div>
+
+                          {/* Legend */}
+                          <div className="mt-4 flex items-center justify-center gap-4 text-xs text-gray-600">
+                            <div className="flex items-center gap-1">
+                              <div className="w-3 h-3 bg-purple-50 border border-purple-200 rounded"></div>
+                              <span>Has expenses</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-3 h-3 bg-blue-100 border border-blue-400 rounded"></div>
+                              <span>Today</span>
+                            </div>
                           </div>
                         </div>
 
-                        {/* Expenses Section */}
+                        {/* Expenses Section - WITH EDIT/DELETE ICONS */}
                         <div className="border-l border-gray-200 dark:border-gray-700 pl-6">
                           <div className="flex items-center justify-between mb-4">
                             <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
                               {dateRange.from ? 
                                 (dateRange.to ? 'Expenses in Range' : 'Expenses on Date') : 
-                                'Select dates to view expenses'}
+                                'Select dates'}
                             </h4>
                             
                             {dailyExpenses.length > 0 && (
@@ -658,22 +757,67 @@ export function Dashboard() {
                             )}
                           </div>
                           
-                          <div className="space-y-3 max-h-64 overflow-y-auto">
+                          <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
                             {dailyExpenses.length > 0 ? (
                               dailyExpenses.map((expense, index) => (
-                                <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                                  <div className="flex justify-between items-start">
-                                    <div>
-                                      <h5 className="font-medium text-gray-900 dark:text-white text-sm">
-                                        {expense.title}
+                                <div key={index} className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-3 hover:shadow-lg transition-all border border-purple-200 dark:border-purple-800 group">
+                                  <div className="flex justify-between items-start gap-3">
+                                    <div className="flex-1 min-w-0">
+                                      <h5 className="font-semibold text-gray-900 dark:text-white text-sm truncate">
+                                        {expense.description}
                                       </h5>
-                                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                                        {expense.category} • {format(new Date(expense.date), "MMM dd")}
-                                      </p>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                                          {expense.category}
+                                        </p>
+                                        <span className="text-xs text-gray-400">•</span>
+                                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                                          {format(new Date(expense.date), "MMM dd")}
+                                        </p>
+                                      </div>
+                                      <div className="mt-2">
+                                        <Badge 
+                                          variant={expense.type === 'group' ? 'secondary' : 'outline'} 
+                                          className="text-xs"
+                                        >
+                                          {expense.type}
+                                        </Badge>
+                                      </div>
                                     </div>
-                                    <span className="text-sm font-bold text-red-600">
-                                      ${expense.amount.toFixed(2)}
-                                    </span>
+                                    
+                                    <div className="flex flex-col items-end gap-2">
+                                      <span className="text-sm font-bold text-red-600 whitespace-nowrap">
+                                        ${expense.amount.toFixed(2)}
+                                      </span>
+                                      
+                                      {/* Edit and Delete Icons */}
+                                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleEditExpense(expense);
+                                          }}
+                                          className="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                                          title="Edit expense"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleDeleteExpense(expense.id);
+                                          }}
+                                          className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                                          title="Delete expense"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                                        </button>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               ))
@@ -682,32 +826,30 @@ export function Dashboard() {
                                 <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h6a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
-                                <p className="text-sm">No expenses found for selected date{dateRange.to ? 's' : ''}</p>
+                                <p className="text-sm font-medium">No expenses found</p>
+                                <p className="text-xs text-gray-400 mt-1">Try selecting a different date range</p>
                               </div>
                             ) : (
                               <div className="text-center py-8 text-gray-500">
                                 <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
-                                <p className="text-sm">Click on dates to view expenses</p>
+                                <p className="text-sm font-medium">Click on dates to view expenses</p>
+                                <p className="text-xs text-gray-400 mt-1">You can drag to select a range</p>
                               </div>
                             )}
                           </div>
 
-                          {dailyExpenses.length > 0 && (
-                            <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
-                              <div className="flex justify-between items-center">
-                                <span className="font-medium text-gray-700 dark:text-gray-300">Total:</span>
-                                <span className="text-lg font-bold text-purple-600">
-                                  ${filteredExpenses.toFixed(2)}
-                                </span>
-                              </div>
+                          {/* Drag instruction hint */}
+                          {dateRange.from && !dateRange.to && (
+                            <div className="mt-4 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs text-blue-700 dark:text-blue-300 text-center">
+                              💡 Drag the selected date or click another date to create a range
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {/* Quick Actions */}
+                      {/* Actions */}
                       <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
                         <button
                           onClick={() => {
@@ -790,7 +932,7 @@ export function Dashboard() {
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : `${monthlySavings.toFixed(2)}`}</div>
+            <div className="text-2xl font-bold">{loading ? '...' : `$${monthlySavings.toFixed(2)}`}</div>
             <Progress value={savingsProgress} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-1">{savingsProgress.toFixed(0)}% of ${savingsGoal} goal</p>
           </CardContent>

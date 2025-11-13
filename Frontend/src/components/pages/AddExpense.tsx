@@ -24,7 +24,7 @@ import {
   Zap, // Icon for AI button
   Upload // Icon for Receipt Upload
 } from 'lucide-react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
   Select,
   SelectContent,
@@ -44,20 +44,29 @@ interface GroupMember {
 
 export function AddExpense() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const preselectedGroup = searchParams.get('group');
+  const location = useLocation();
+  const [searchParams] = useSearchParams(); // Add this line - it was missing!
+  
+  // Get expense data from navigation state
+  const expenseData = location.state?.expenseData;
+  const isEdit = location.state?.isEdit || false;
+
   const { user } = useAuth(); // Your custom hook to get the logged-in user
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   // Expense type state
-  const [expenseType, setExpenseType] = useState<'personal' | 'group'>(preselectedGroup ? 'group' : 'personal');
+  const [expenseType, setExpenseType] = useState<'personal' | 'group'>(
+    searchParams.get('group') ? 'group' : 'personal'
+  );
 
   // Form state
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState(preselectedGroup || '');
+  const [selectedGroup, setSelectedGroup] = useState(
+    searchParams.get('group') || ''
+  );
   const [paidBy, setPaidBy] = useState(user?.id || ''); // Correctly defaults to logged-in user
   const [splitMethod, setSplitMethod] = useState<'equal' | 'unequal'>('equal');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([user?.id || '']);
@@ -76,14 +85,62 @@ export function AddExpense() {
   const [isParsingReceipt, setIsParsingReceipt] = useState(false); // For Receipt Upload
   const [expenseDate, setExpenseDate] = useState(''); // For storing the expense date
 
+  // Add edit mode state
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+
   // Format today's date as DD/MM/YYYY
   useEffect(() => {
     const today = new Date();
     const day = String(today.getDate()).padStart(2, '0');
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const year = today.getFullYear();
-    setExpenseDate(`${day}/${month}/${year}`);
+    setExpenseDate(`${year}-${month}-${day}`);
   }, []);
+
+  // NEW useEffect to handle edit mode - PRE-FILL ALL FIELDS
+  useEffect(() => {
+    if (isEdit && expenseData) {
+      console.log('📝 EDIT MODE ACTIVATED! Pre-filling data:', expenseData);
+      
+      setIsEditMode(true);
+      setEditingExpenseId(expenseData.id?.toString() || null);
+      
+      // Pre-fill ALL form fields
+      setTitle(expenseData.description || '');
+      setAmount(expenseData.amount?.toString() || '');
+      
+      // ✅ FIX: Set category AFTER ensuring it's in the list
+      if (expenseData.category) {
+        // Add category to list if not present
+        if (!availableCategories.includes(expenseData.category)) {
+          setAvailableCategories(prev => [...prev, expenseData.category]);
+        }
+        // Now set it (delayed to ensure dropdown is ready)
+        setTimeout(() => setCategory(expenseData.category), 100);
+      }
+      
+      setExpenseType(expenseData.type || 'personal');
+      
+      if (expenseData.date) {
+        try {
+          const date = new Date(expenseData.date);
+          if (!isNaN(date.getTime())) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const formattedDate = `${year}-${month}-${day}`;
+            console.log('📅 Setting date to:', formattedDate);
+            setExpenseDate(formattedDate);
+          }
+        } catch (error) {
+          console.error('❌ Error parsing date:', error);
+        }
+      }
+      
+      console.log('✅ All fields pre-filled successfully!');
+    }
+  }, [isEdit, expenseData, availableCategories]);
 
   // ----------------------------------------------------------------
   // DATA FETCHING (Replaces Dummy Data)
@@ -103,14 +160,14 @@ export function AddExpense() {
       } else {
         setGroups(data || []);
         // If a group was preselected (e.g., coming from a group page), set it
-        if (preselectedGroup && data.find((g: any) => g.id === preselectedGroup)) {
-          setSelectedGroup(preselectedGroup);
+        if (searchParams.get('group') && data.find((g: any) => g.id === searchParams.get('group'))) {
+          setSelectedGroup(searchParams.get('group'));
         }
       }
     };
 
     fetchGroups();
-  }, [user, preselectedGroup]);
+  }, [user, searchParams]);
 
   // Fetch members whenever the selected group changes
   useEffect(() => {
@@ -176,24 +233,68 @@ export function AddExpense() {
   // This useEffect will run once and fetch all available categories
   useEffect(() => {
     const fetchCategories = async () => {
-      if (!user) return; // Wait for the user to be loaded
+      if (!user) return;
 
-      // Call the database function
       const { data, error } = await supabase.rpc('get_all_user_categories');
 
       if (error) {
         console.error('Error fetching categories:', error);
         toast.error('Could not load your categories.');
       } else {
-        // Use a Set to automatically remove any duplicates, then save to state
         const uniqueCategories = [...new Set(data as string[])];
         setAvailableCategories(uniqueCategories);
+        
+        // ✅ If we're in edit mode and have category data, set it NOW
+        if (isEdit && expenseData?.category) {
+          // Add the expense's category if it's not in the list
+          if (!uniqueCategories.includes(expenseData.category)) {
+            setAvailableCategories([...uniqueCategories, expenseData.category]);
+          }
+          // Set the category after categories are loaded
+          setCategory(expenseData.category);
+          console.log('✅ Category set to:', expenseData.category);
+        }
       }
     };
 
     fetchCategories();
-  }, [user]); // Run this whenever the user object is available
+  }, [user, isEdit, expenseData?.category]);
 
+  // MODIFIED: Simplified edit mode useEffect - remove category setting from here
+  useEffect(() => {
+    if (isEdit && expenseData) {
+      console.log('📝 EDIT MODE ACTIVATED! Pre-filling data:', expenseData);
+      
+      setIsEditMode(true);
+      setEditingExpenseId(expenseData.id?.toString() || null);
+      
+      // Pre-fill basic fields
+      setTitle(expenseData.description || '');
+      setAmount(expenseData.amount?.toString() || '');
+      setExpenseType(expenseData.type || 'personal');
+      
+      // Category is now handled in fetchCategories useEffect above
+      
+      // Format date
+      if (expenseData.date) {
+        try {
+          const date = new Date(expenseData.date);
+          if (!isNaN(date.getTime())) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const formattedDate = `${year}-${month}-${day}`;
+            console.log('📅 Setting date to:', formattedDate);
+            setExpenseDate(formattedDate);
+          }
+        } catch (error) {
+          console.error('❌ Error parsing date:', error);
+        }
+      }
+      
+      console.log('✅ All fields pre-filled successfully!');
+    }
+  }, [isEdit, expenseData]);
 
   // ----------------------------------------------------------------
   // AI/FEATURE HANDLERS
@@ -414,114 +515,124 @@ export function AddExpense() {
       return;
     }
 
-    // --- 2. GET SUPABASE SESSION ---
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token || !user) {
-      toast.error('Please log in to add an expense');
+      toast.error('Please log in');
       setLoading(false);
       return;
     }
 
     try {
-      // --- 3. "LEARNING" CALL TO PYTHON SERVER (Fire-and-Forget) ---
-      // This tells the AI backend what the user manually chose, so it can learn.
+      // AI Learning call (fire-and-forget)
       const learningFormData = new FormData();
       learningFormData.append('description', title);
       learningFormData.append('amount', String(finalAmount));
-      learningFormData.append('category', category); // Pass the final category label
-
-      fetch('http://localhost:8000/api/categorize', { // Make sure this port is correct!
+      learningFormData.append('category', category);
+      fetch('http://localhost:8000/api/categorize', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session.access_token}` },
         body: learningFormData,
-      }).catch(err => {
-        // Log the error but don't stop the user from saving their expense
-        console.error("AI Learning call failed (this is non-critical):", err)
-      });
+      }).catch(err => console.error("AI Learning call failed:", err));
 
+      if (isEditMode && editingExpenseId) {
+        // **UPDATE MODE**
+        console.log('✏️ UPDATING expense:', editingExpenseId);
+        
+        if (expenseType === 'personal') {
+          // Update personal expense in Supabase
+          const { error: updateError } = await supabase
+            .from('expenses')
+            .update({
+              description: title,
+              amount: finalAmount,
+              category: category,
+              date: new Date(expenseDate).toISOString()
+            })
+            .eq('id', editingExpenseId);
 
-      // --- 4. SAVE THE EXPENSE TO SUPABASE DATABASE ---
-      if (expenseType === 'personal') {
-
-        // --- Save a Personal Expense ---
-        const { error: expenseError } = await supabase
-          .from('expenses')
-          .insert({
-            description: title,
-            amount: finalAmount,
-            category: category, // Save the category label directly
-            payer_id: user.id,
-            group_id: null, // This is what makes it a personal expense
-            date: new Date().toISOString()
-          });
-
-        if (expenseError) throw expenseError;
-
-        toast.success('Personal expense added successfully!');
-        navigate('/dashboard'); // Go back to the dashboard
-
+          if (updateError) throw updateError;
+          
+          toast.success('✅ Expense updated successfully!');
+          setTimeout(() => navigate('/dashboard'), 1000);
+          
+        } else if (expenseType === 'group') {
+          // Update group expense
+          toast.info('Group expense update - implement based on your needs');
+          // You may need to update both expenses table and splits table
+        }
+        
       } else {
+        // **CREATE MODE**
+        if (expenseType === 'personal') {
+          const { error: expenseError } = await supabase
+            .from('expenses')
+            .insert({
+              description: title,
+              amount: finalAmount,
+              category: category,
+              payer_id: user.id,
+              group_id: null,
+              date: new Date(expenseDate).toISOString()
+            });
 
-        // --- Save a Group Expense ---
+          if (expenseError) throw expenseError;
+          toast.success('Personal expense added!');
+          navigate('/dashboard');
 
-        // Group-specific validation
-        if (!selectedGroup) {
-          toast.error('Please select a group');
-          setLoading(false);
-          return;
-        }
-        if (selectedMembers.length === 0) {
-          toast.error('Please select at least one person to split with');
-          setLoading(false);
-          return;
-        }
-
-        // Calculate final splits
-        const finalSplits: { user_id: string, amount_owed: number }[] = [];
-
-        if (splitMethod === 'equal') {
-          const equalAmount = finalAmount / selectedMembers.length;
-          selectedMembers.forEach(memberId => {
-            finalSplits.push({ user_id: memberId, amount_owed: equalAmount });
-          });
-        } else { // Unequal split
-          // Check if the amounts add up
-          if (Math.abs(totalSplit - finalAmount) > 0.01) {
-            toast.error(`Unequal amounts must add up to the total expense ($${finalAmount.toFixed(2)})`);
+        } else {
+          // Group expense creation
+          if (!selectedGroup) {
+            toast.error('Please select a group');
             setLoading(false);
             return;
           }
-          currentMembers.forEach(member => {
-            finalSplits.push({
-              user_id: member.id,
-              amount_owed: parseFloat(unequalAmounts[member.id] || '0')
+          if (selectedMembers.length === 0) {
+            toast.error('Please select at least one person');
+            setLoading(false);
+            return;
+          }
+
+          const finalSplits: { user_id: string, amount_owed: number }[] = [];
+
+          if (splitMethod === 'equal') {
+            const equalAmount = finalAmount / selectedMembers.length;
+            selectedMembers.forEach(memberId => {
+              finalSplits.push({ user_id: memberId, amount_owed: equalAmount });
             });
+          } else {
+            if (Math.abs(totalSplit - finalAmount) > 0.01) {
+              toast.error(`Amounts must add up to $${finalAmount.toFixed(2)}`);
+              setLoading(false);
+              return;
+            }
+            currentMembers.forEach(member => {
+              finalSplits.push({
+                user_id: member.id,
+                amount_owed: parseFloat(unequalAmounts[member.id] || '0')
+              });
+            });
+          }
+
+          const { error: rpcError } = await supabase.rpc('create_group_expense_and_splits', {
+            expense_data: {
+              description: title,
+              amount: finalAmount,
+              category: category,
+              payer_id: paidBy,
+              group_id: selectedGroup,
+            },
+            splits_data: finalSplits
           });
+
+          if (rpcError) throw rpcError;
+          toast.success('Group expense added!');
+          navigate('/groups/' + selectedGroup);
         }
-
-        // Call the Supabase Database Function to save everything at once
-        const { error: rpcError } = await supabase.rpc('create_group_expense_and_splits', {
-          expense_data: {
-            description: title,
-            amount: finalAmount,
-            category: category,
-            payer_id: paidBy,
-            group_id: selectedGroup,
-          },
-          splits_data: finalSplits
-        });
-
-        if (rpcError) throw rpcError;
-
-        toast.success('Group expense added successfully!');
-        navigate('/groups/' + selectedGroup); // Go to the group page
       }
     } catch (error: any) {
-      // This will catch errors from either the Supabase insert or the RPC call
-      console.error('Error adding expense:', error);
-      toast.error(error.message || 'Failed to add expense');
+      console.error('Error:', error);
+      toast.error(error.message || 'Failed to save expense');
     } finally {
-      // No matter what, stop the loading spinner
       setLoading(false);
     }
   };
@@ -531,7 +642,7 @@ export function AddExpense() {
   // ----------------------------------------------------------------
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto">
-      {/* Header */}
+      {/* Header with back button */}
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/dashboard">
@@ -539,21 +650,58 @@ export function AddExpense() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Add Expense</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">
+            {isEditMode ? '✏️ Edit Expense' : 'Add Expense'}
+          </h1>
           <p className="text-muted-foreground">
-            {expenseType === 'personal' ? 'Track your personal expense' : 'Split a new expense with your group'}
+            {isEditMode 
+              ? 'Update your expense details below' 
+              : expenseType === 'personal' 
+                ? 'Track your personal expense' 
+                : 'Split a new expense with your group'}
           </p>
         </div>
       </div>
 
-      {/* Expense Type Navigation */}
-      <Tabs value={expenseType} onValueChange={(value) => setExpenseType(value as 'personal' | 'group')} className="mb-6">
+      {/* Edit Mode Indicator */}
+      {isEditMode && (
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-700 rounded-xl">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
+              <span className="text-2xl">✏️</span>
+            </div>
+            <div>
+              <p className="font-semibold text-blue-900 dark:text-blue-100">Edit Mode Active</p>
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                You are editing: <span className="font-bold">{title || 'Unnamed expense'}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expense Type Tabs - Updated with dark mode styling */}
+      <Tabs 
+        value={expenseType} 
+        onValueChange={(value) => {
+          if (!isEditMode) {
+            setExpenseType(value as 'personal' | 'group');
+          }
+        }} 
+        className="mb-6"
+      >
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="personal" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="personal"
+            className="flex items-center gap-2 dark:data-[state=active]:text-green-500"
+          >
             <User className="h-4 w-4" />
             Personal
           </TabsTrigger>
-          <TabsTrigger value="group" className="flex items-center gap-2">
+          <TabsTrigger 
+            value="group"
+            className="flex items-center gap-2 dark:data-[state=active]:text-green-500"
+          >
             <Users className="h-4 w-4" />
             Group
           </TabsTrigger>
@@ -561,7 +709,7 @@ export function AddExpense() {
       </Tabs>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Information - Always shown */}
+        {/* Expense Details Card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -571,7 +719,7 @@ export function AddExpense() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
+              <Label htmlFor="title">Title *</Label>
               <Input
                 id="title"
                 placeholder="e.g., Dinner at Italian Restaurant"
@@ -582,7 +730,7 @@ export function AddExpense() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount</Label>
+              <Label htmlFor="amount">Amount *</Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -599,28 +747,23 @@ export function AddExpense() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
+              <Label htmlFor="date">Date *</Label>
               <Input
                 id="date"
                 type="date"
-                value={expenseDate.split('/').reverse().join('-')}
-                onChange={(e) => {
-                  const [year, month, day] = e.target.value.split('-');
-                  setExpenseDate(`${day}/${month}/${year}`);
-                }}
+                value={expenseDate}
+                onChange={(e) => setExpenseDate(e.target.value)}
                 required
-                className="w-full"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
+              <Label htmlFor="category">Category *</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* This makes sure the list is always up-to-date */}
                   {[...new Set(availableCategories.concat(category ? [category] : []))]
                     .map((categoryName) => (
                       <SelectItem key={categoryName} value={categoryName}>
@@ -629,14 +772,13 @@ export function AddExpense() {
                     ))}
                 </SelectContent>
               </Select>
-              {/* AI Categorize Button */}
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={handleAICategorize}
                 disabled={isCategorizing || !title.trim()}
-                className="w-full flex items-center gap-2"
+                className="w-full flex items-center gap-2 mt-2"
               >
                 <Zap className="h-4 w-4" />
                 {isCategorizing ? 'Asking AI...' : 'Auto-Categorize with AI'}
@@ -656,7 +798,7 @@ export function AddExpense() {
           </CardContent>
         </Card>
 
-        {/* Group Selection - Only shown for group expenses */}
+        {/* Group Selection - Only show for group expenses */}
         {expenseType === 'group' && (
           <Card>
             <CardHeader>
@@ -946,11 +1088,26 @@ export function AddExpense() {
           <Button type="button" variant="outline" className="flex-1" asChild>
             <Link to="/dashboard">Cancel</Link>
           </Button>
-          <Button type="submit" className="flex-1" disabled={loading || isCategorizing || isParsingReceipt}>
-            {loading ? 'Adding Expense...' : 'Add Expense'}
+          <Button 
+            type="submit" 
+            className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700" 
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                {isEditMode ? 'Updating...' : 'Adding...'}
+              </>
+            ) : (
+              <>
+                {isEditMode ? '✅ Update Expense' : '✅ Add Expense'}
+              </>
+            )}
           </Button>
         </div>
       </form>
     </div>
   );
 }
+
+export default AddExpense;
