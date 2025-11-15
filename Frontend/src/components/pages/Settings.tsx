@@ -1,28 +1,25 @@
-import React, { useState } from 'react';
-import { useTheme } from '../ui/ThemeContext';
+import { useState } from 'react';
+import { useTheme } from '../../App';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Separator } from '../ui/separator';
-import { Badge } from '../ui/badge';
-import {
-  Settings as SettingsIcon,
+import { DateRangeExportModal } from './DateRangeExportModal';
+import { 
   Bell,
   Moon,
   Sun,
-  Globe,
   Smartphone,
   Download,
   AlertTriangle,
-  Save
+  Save,
+  Shield
 } from 'lucide-react';
 
 export function Settings() {
-  const { theme, toggleTheme } = useTheme();
-    const isDark = theme === 'dark';
+  const { isDark, toggleTheme } = useTheme();
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [notifications, setNotifications] = useState({
     email: true,
     expense: true,
@@ -35,6 +32,11 @@ export function Settings() {
     timezone: 'UTC'
   });
 
+  const [privacy, setPrivacy] = useState({
+    analytics: false,
+    dataSharing: false
+  });
+
   const handleNotificationChange = (key: string, value: boolean) => {
     setNotifications(prev => ({
       ...prev,
@@ -42,8 +44,8 @@ export function Settings() {
     }));
   };
 
-  const handlePreferenceChange = (key: string, value: string) => {
-    setPreferences(prev => ({
+  const handlePrivacyChange = (key: string, value: boolean) => {
+    setPrivacy(prev => ({
       ...prev,
       [key]: value
     }));
@@ -51,7 +53,7 @@ export function Settings() {
 
   const handleSaveSettings = () => {
     // Here you would typically save settings to your backend
-    console.log('Saving settings:', { notifications, preferences });
+    console.log('Saving settings:', { notifications, preferences, privacy });
   };
 
   return (
@@ -91,7 +93,6 @@ export function Settings() {
                 <Switch
                   checked={isDark}
                   onCheckedChange={toggleTheme}
-
                 />
                 <Moon className="h-4 w-4" />
               </div>
@@ -125,7 +126,7 @@ export function Settings() {
 
               <div className="space-y-3">
                 <h4 className="font-medium">Notification Types</h4>
-
+                
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label>Expense Updates</Label>
@@ -163,49 +164,42 @@ export function Settings() {
           </CardContent>
         </Card>
 
-        {/* General Preferences */}
+        {/* Privacy & Security */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              General Preferences
+              <Shield className="h-5 w-5" />
+              Privacy & Security
             </CardTitle>
-            <CardDescription>Set your regional and display preferences</CardDescription>
+            <CardDescription>Control your data privacy and security settings</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Default Currency</Label>
-                <Select value={preferences.currency} onValueChange={(value) => handlePreferenceChange('currency', value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">USD - US Dollar</SelectItem>
-                    <SelectItem value="EUR">EUR - Euro</SelectItem>
-                    <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                    <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
-                    <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
-                    <SelectItem value="INR">INR - Indian Rupee</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Analytics Tracking</Label>
+                <p className="text-sm text-muted-foreground">
+                  Help us improve by sharing anonymous usage data
+                </p>
               </div>
+              <Switch
+                checked={privacy.analytics}
+                onCheckedChange={(checked) => handlePrivacyChange('analytics', checked)}
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label>Timezone</Label>
-                <Select value={preferences.timezone} onValueChange={(value) => handlePreferenceChange('timezone', value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="UTC">UTC</SelectItem>
-                    <SelectItem value="EST">Eastern Time</SelectItem>
-                    <SelectItem value="PST">Pacific Time</SelectItem>
-                    <SelectItem value="CST">Central Time</SelectItem>
-                    <SelectItem value="MST">Mountain Time</SelectItem>
-                  </SelectContent>
-                </Select>
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Data Sharing</Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow sharing data with trusted third-party services
+                </p>
               </div>
+              <Switch
+                checked={privacy.dataSharing}
+                onCheckedChange={(checked) => handlePrivacyChange('dataSharing', checked)}
+              />
             </div>
           </CardContent>
         </Card>
@@ -225,7 +219,7 @@ export function Settings() {
                 <Label>Export Data</Label>
                 <p className="text-sm text-muted-foreground">Download all your expense data</p>
               </div>
-              <Button variant="outline">
+              <Button variant="outline" onClick={() => setExportModalOpen(true)}>
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </Button>
@@ -284,6 +278,9 @@ export function Settings() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Date Range Export Modal */}
+      <DateRangeExportModal open={exportModalOpen} onOpenChange={setExportModalOpen} />
     </div>
   );
 }
