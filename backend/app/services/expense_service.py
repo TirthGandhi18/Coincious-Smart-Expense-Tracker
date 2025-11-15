@@ -19,8 +19,9 @@ def get_group_expenses(group_id, user_id):
         if not member_check.data:
             return {'error': 'You are not a member of this group'}, 403
 
+        # MODIFICATION 1: Request 'total_amount' from the database
         response = supabase.table('expenses') \
-            .select('*') \
+            .select('*, total_amount') \
             .eq('group_id', group_id) \
             .order('created_at', desc=True) \
             .execute()
@@ -77,10 +78,14 @@ def get_group_expenses(group_id, user_id):
             except Exception as e:
                 print(f"Error fetching splits for expense {expense.get('id')}: {str(e)}")
             
+            # MODIFICATION 2: Use 'total_amount' for display, falling back to 'amount'
+            display_amount = expense.get('total_amount')
+            
             expense_data = {
                 'id': expense.get('id'),
                 'description': expense.get('description', 'No description'),
-                'amount': float(expense.get('amount', 0)),
+                # CRITICAL CHANGE: Use total_amount for the displayed amount
+                'amount': float(display_amount) if display_amount is not None else float(expense.get('amount', 0)),
                 'category': expense.get('category', 'Other'),
                 'date': expense.get('created_at'),
                 'paid_by': {
@@ -115,6 +120,7 @@ def _month_window(year: int, month: int):
     return start, end
 
 def _fetch_expenses(supabase_client, user_id, start, end):
+    # This function intentionally uses 'amount' as it is for personal analytics
     q = (
         supabase_client.table(EXP_TABLE)
         .select("amount,date,category,payer_id")

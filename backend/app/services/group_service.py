@@ -31,9 +31,9 @@ def get_user_groups(user_id):
                 .eq('group_id', group_id) \
                 .execute()
             
-            # Get total expenses (excluding settlements)
+            # Get total expenses (excluding settlements) for total expense summary
             expenses_resp = supabase.table('expenses') \
-                .select('amount') \
+                .select('total_amount') \
                 .eq('group_id', group_id) \
                 .neq('category', 'Settlement') \
                 .execute()
@@ -41,17 +41,19 @@ def get_user_groups(user_id):
             # Calculate user's balance in this group
             user_balance = 0.0
             
-            # Get all expenses where user is the payer
+            # Get all expenses where user is the payer (Payer's CREDIT)
             user_paid_expenses = supabase.table('expenses') \
-                .select('amount') \
+                .select('total_amount') \
                 .eq('group_id', group_id) \
                 .eq('payer_id', user_id) \
                 .execute()
             
-            # Add amounts user paid
+            # Add amounts user paid (CREDIT)
             if user_paid_expenses and hasattr(user_paid_expenses, 'data'):
              for exp in (user_paid_expenses.data or []):
-                user_balance += float(exp.get('amount', 0))
+                # FIX 1: Use total_amount for Payer's Credit (money paid out)
+                total_amount_paid = exp.get('total_amount')
+                user_balance += float(total_amount_paid) if total_amount_paid is not None else 0.0
             
             # Get all expense splits where user is involved
             expense_ids_resp = supabase.table('expenses') \
@@ -62,20 +64,30 @@ def get_user_groups(user_id):
             if expense_ids_resp and hasattr(expense_ids_resp, 'data') and expense_ids_resp.data:
                 expense_id_list = [exp['id'] for exp in expense_ids_resp.data]
                 
-                # Get all splits where user owes money
+                # Get all splits where user owes money (DEBIT)
                 user_owed_splits = supabase.table('expense_split') \
                     .select('amount_owed') \
                     .in_('expense_id', expense_id_list) \
                     .eq('user_id', user_id) \
                     .execute()
                 
-                # Subtract amounts user owes
+                # Subtract amounts user owes (DEBIT)
                 if user_owed_splits and hasattr(user_owed_splits, 'data'):
                  for split in (user_owed_splits.data or []):
-                    user_balance -= float(split.get('amount_owed', 0))
+                    # FIX 2: Safely convert fetched amount_owed (which can be None) to float
+                    amount_owed = split.get('amount_owed')
+                    user_balance -= float(amount_owed) if amount_owed is not None else 0.0
             
             group['member_count'] = member_count_resp.count if member_count_resp else 0
-            group['total_expenses'] = sum(float(exp.get('amount', 0)) for exp in (expenses_resp.data or [])) if expenses_resp and hasattr(expenses_resp, 'data') else 0
+            
+            # FIX 3: Safely calculate total expenses using 'total_amount'
+            total_expenses_sum = 0.0
+            if expenses_resp and hasattr(expenses_resp, 'data'):
+                for exp in (expenses_resp.data or []):
+                    total_amount = exp.get('total_amount')
+                    total_expenses_sum += float(total_amount) if total_amount is not None else 0.0
+            
+            group['total_expenses'] = total_expenses_sum
             group['your_balance'] = round(user_balance, 2)
             
             enriched_groups.append(group)
@@ -86,7 +98,9 @@ def get_user_groups(user_id):
         
     except Exception as e:
         print(f"Unexpected error in get_user_groups: {str(e)}")
-        return {'error': 'Internal server error', 'details': str(e)}, 500
+        # It's better to show the full traceback for a 500 error
+        traceback.print_exc()
+        return {'error': 'Internal server error', 'details': str(e), 'trace': error_trace}, 500
 
 # --- POST /groups ---
 def create_new_group(user_id, group_name):
@@ -160,7 +174,7 @@ def get_group_members(group_id, user_id):
             .execute()
         
         if not members_result or not hasattr(members_result, 'data'):
-            print(f"Error getting members for group {group_id}: {getattr(members_result, 'error', 'No data returned')}")
+            print(f"Error getting members for group {group_id}: {getattr(members_result, 'error', 'Unknown')}")
             return {'error': 'Failed to fetch group members'}, 500
 
         members = []
@@ -224,12 +238,19 @@ def get_group_detail(group_id, user_id):
             .execute()
         
         expenses_result = supabase.table('expenses') \
-            .select('amount') \
+            .select('total_amount') \
             .eq('group_id', group_id) \
             .neq('category', 'Settlement') \
             .execute()
         
-        total_expenses = sum(float(exp.get('amount', 0)) for exp in (expenses_result.data or [])) if expenses_result and hasattr(expenses_result, 'data') else 0
+        # FIX 4: Safely calculate total expenses using 'total_amount'
+        total_expenses_sum = 0.0
+        if expenses_result and hasattr(expenses_result, 'data'):
+            for exp in (expenses_result.data or []):
+                total_amount = exp.get('total_amount')
+                total_expenses_sum += float(total_amount) if total_amount is not None else 0.0
+        
+        total_expenses = total_expenses_sum
         member_count = members_result.count if members_result else 0
         
         return {
@@ -311,7 +332,7 @@ def delete_group(group_id, user_id):
             .execute()
 
         if not delete_result or not hasattr(delete_result, 'data') or not delete_result.data:
-            print(f"Delete failed: {getattr(delete_result, 'error', 'Unknown error')}")
+            print(f"Delete failed: {getattr(delete_result, 'error', 'Unknown')}")
             return {'error': 'Failed to delete group'}, 500
 
         print(f"Group {group_id} and all related data deleted successfully.")
@@ -518,8 +539,9 @@ def get_group_balances(group_id, user_id):
         balances = {uid: 0.0 for uid in members.keys()}
 
         # Step 5: Fetch all group expenses
+        # CRITICAL FIX: Ensure total_amount is selected for credit calculation
         expenses_resp = supabase.table('expenses') \
-            .select('id, payer_id, amount') \
+            .select('id, payer_id, amount, total_amount') \
             .eq('group_id', group_id) \
             .execute()
 
@@ -541,23 +563,27 @@ def get_group_balances(group_id, user_id):
                             splits_by_expense[exp_id] = []
                         splits_by_expense[exp_id].append(split)
 
-                # Step 7: Update balances
+                # Step 7: Update balances (CRITICAL FIX APPLIED HERE)
                 for expense in expenses_resp.data:
                     payer_id = str(expense['payer_id'])
-                    amount = float(expense.get('amount', 0))
-
+                    
+                    # 1. ADD CREDIT: Credit the payer with the TOTAL money paid out (from total_amount)
+                    total_amount_paid = expense.get('total_amount')
                     if payer_id in balances:
-                        balances[payer_id] += amount  # Paid -> positive
+                        balances[payer_id] += float(total_amount_paid) if total_amount_paid is not None else 0.0
 
+                    # 2. SUBTRACT DEBIT: Subtract all splits (debt) from all members
                     splits = splits_by_expense.get(expense['id'], [])
                     for split in splits:
                         owed_user_id = str(split['user_id'])
-                        amount_owed = float(split.get('amount_owed', 0))
+                        
+                        amount_owed = split.get('amount_owed')
                         if owed_user_id in balances:
-                            balances[owed_user_id] -= amount_owed  # Owes -> negative
+                            balances[owed_user_id] -= float(amount_owed) if amount_owed is not None else 0.0
 
         # Step 8: Compute settlements
         settlements = []
+        # The balance tolerance must be checked to handle float errors, hence the 0.01 threshold
         creditors = {uid: b for uid, b in balances.items() if b > 0.01}
         debtors = {uid: b for uid, b in balances.items() if b < -0.01}
 
@@ -637,7 +663,7 @@ def settle_group_balance(group_id, user_id, data):
         except ValueError:
             return {'error': 'Invalid amount'}, 400
         
-        # --- Authorization: Check if user is a member of this group ---
+        # --- Authorization, etc. (unchanged) ---
         member_check = supabase.table('group_members') \
             .select('user_id') \
             .eq('group_id', group_id) \
@@ -648,7 +674,7 @@ def settle_group_balance(group_id, user_id, data):
         if not member_check or not hasattr(member_check, 'data') or not member_check.data:
             return {'error': 'You are not a member of this group'}, 403
         
-        # --- Fetch User Names for Settlement Description ---
+        # --- Fetch User Names for Settlement Description (unchanged) ---
         from_user_name = "Unknown"
         to_user_name = "Unknown"
         try:
@@ -665,12 +691,13 @@ def settle_group_balance(group_id, user_id, data):
         except Exception as e:
             print(f"Error fetching user names for settlement: {e}")
 
-        # --- Create the Settlement Expense ---
+        # --- Create the Settlement Expense (Compensatory Credit to Debtor) ---
         expense_desc = f"Settlement: {from_user_name} paid {to_user_name}"
 
         expense_payload = {
             'description': expense_desc,
             'amount': amount_float,
+            'total_amount': amount_float, # CRITICAL FIX: Ensure credit is recorded here
             'category': 'Settlement',
             'payer_id': from_id,
             'group_id': group_id,
@@ -685,11 +712,13 @@ def settle_group_balance(group_id, user_id, data):
         
         new_expense_id = expense_result.data[0]['id']
 
-        # --- Create the Split ---
+        # --- Create the Split (Compensatory Debit to Creditor) ---
+        # FIX: The 'status' field is REMOVED from the split payload to ensure balance clears.
         split_payload = {
             'expense_id': new_expense_id,
             'user_id': to_id,
-            'amount_owed': amount_float
+            'amount_owed': amount_float,
+            'status':'settled'
         }
 
         split_result = supabase.table('expense_split').insert([split_payload]).execute()

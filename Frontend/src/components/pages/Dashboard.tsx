@@ -164,6 +164,65 @@ export function Dashboard() {
     originalRange: { from: undefined, to: undefined }
   });
 
+  // STATE VARIABLES FOR BALANCES
+  const [youOwe, setYouOwe] = useState<number | null>(null);
+  const [youAreOwed, setYouAreOwed] = useState<number | null>(null);
+  const [balancesLoading, setBalancesLoading] = useState(true);
+
+  // 👇 CORRECTED FUNCTION TO FETCH BALANCES WITH PARSEFLOAT
+  const fetchBalances = async () => {
+    if (!user?.id) return;
+    setBalancesLoading(true);
+
+    console.log(`-- STARTING BALANCE FETCH for User ID: ${user.id} --`);
+
+    try {
+      // 1. Fetch You Owe (get_user_owe_amount)
+      const { data: oweData, error: oweError } = await supabase.rpc('get_user_owe_amount', {
+        p_user_id: user.id,
+      });
+
+      if (oweError) {
+        console.error('❌ Error fetching YOU OWE (get_user_owe_amount):', oweError);
+        setYouOwe(0); 
+      } else {
+        // FIX: Use parseFloat(String(...)) for robust conversion from database return type
+        const owedAmount = parseFloat(String(oweData)) || 0; 
+        
+        // Set the state directly to the parsed amount
+        setYouOwe(owedAmount > 0 ? owedAmount : 0); 
+        console.log(`✅ OWE Result (get_user_owe_amount): ${owedAmount} (Set state to: ${owedAmount > 0 ? owedAmount : 0})`);
+      }
+
+      // 2. Fetch You Are Owed (calculate_you_owed)
+      const { data: owedData, error: owedError } = await supabase.rpc('calculate_you_owed',
+        { p_user_id: user.id }
+        );
+
+      if (owedError) {
+        console.error('❌ Error fetching YOU ARE OWED (calculate_you_owed):', owedError);
+        setYouAreOwed(0);
+      } else {
+        const owedToUserAmount = parseFloat(String(owedData)) || 0;
+        setYouAreOwed(owedToUserAmount > 0 ? owedToUserAmount : 0);
+        console.log(`✅ OWED Result (calculate_you_owed): ${owedToUserAmount} (Set state to: ${owedToUserAmount > 0 ? owedToUserAmount : 0})`);
+      }
+
+    } catch (error) {
+      console.error('General error fetching balances:', error);
+    } finally {
+      setBalancesLoading(false);
+      console.log(`-- BALANCE FETCH COMPLETE --`);
+    }
+  };
+
+  // USE EFFECT HOOK FOR BALANCE FETCHING
+  useEffect(() => {
+    fetchBalances();
+  }, [user]); 
+
+  // --- (EXISTING USE EFFECTS) ---
+
   useEffect(() => {
     const fetchAnalytics = async () => {
       if (!user) return;
@@ -324,6 +383,8 @@ export function Dashboard() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showDatePicker]);
+  
+  // --- (END EXISTING USE EFFECTS) ---
 
   const totalSpending = analyticsData?.total_spending || 0;
   const savingsGoal = 1000;
@@ -590,6 +651,26 @@ export function Dashboard() {
 
     loadExpenses();
   }, [dateRange]);
+
+  
+  // Helper function for display
+  const formatBalance = (amount: number | null) => {
+    // Show '...' only when loading is true AND amount is null
+    if (balancesLoading && amount === null) return '...'; 
+    
+    // If loading is done, display the numeric value (even if 0)
+    if (amount !== null) return `$${amount.toFixed(2)}`;
+    
+    // Fallback if loading is done but amount is still null
+    return '$0.00';
+  };
+  
+  // Determine message for You Owe
+  const youOweMessage = youOwe !== null && youOwe > 0 ? `Settlement needed` : 'All settled up!';
+
+  // Determine message for You Are Owed
+  const youAreOwedMessage = youAreOwed !== null && youAreOwed > 0 ? `Awaiting repayment` : 'All settled up!';
+
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -904,25 +985,29 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
+        {/* YOU OWE CARD - Uses get_user_owe_amount */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">You Owe</CardTitle>
             <ArrowUpRight className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">$0.00</div>
-            <p className="text-xs text-muted-foreground">All settled up!</p>
+            {/* Display amount using formatBalance helper */}
+            <div className="text-2xl font-bold text-red-600">{formatBalance(youOwe)}</div>
+            <p className="text-xs text-muted-foreground">{youOweMessage}</p>
           </CardContent>
         </Card>
 
+        {/* YOU ARE OWED CARD - Uses calculate_you_owed */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">You Are Owed</CardTitle>
-            <ArrowDownRight className="h-4 w-4 text-[#ac1852]" />
+            <ArrowDownRight className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">$0.00</div>
-            <p className="text-xs text-muted-foreground">All settled up!</p>
+            {/* Display amount using formatBalance helper */}
+            <div className="text-2xl font-bold text-green-600">{formatBalance(youAreOwed)}</div>
+            <p className="text-xs text-muted-foreground">{youAreOwedMessage}</p>
           </CardContent>
         </Card>
 
