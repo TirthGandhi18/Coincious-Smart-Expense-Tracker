@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { supabase } from '../../utils/supabase/client';
 import { projectId } from '../../lib/info';
 import { useAuth } from '../../App';
-import { 
+import {
   Send,
   Brain,
   User,
@@ -83,31 +83,31 @@ export function Chatbot() {
 
   const generateBotResponse = (userMessage: string): string => {
     const message = userMessage.toLowerCase();
-    
+
     if (message.includes('food') || message.includes('dining')) {
       return "Based on your recent expenses, you spent $680 on food and dining this month. That's 15% more than last month. Your most frequent food expenses are lunch orders ($340) and dinner restaurants ($240). Consider meal prepping to reduce lunch costs!";
     }
-    
+
     if (message.includes('trend') || message.includes('spending')) {
       return "Your spending trends show:\n• January: $2,000\n• February: $1,850\n• March: $2,100\n\nYou're spending 12% more this month, mainly due to increased dining and entertainment expenses. Your transportation costs have decreased by 8%.";
     }
-    
+
     if (message.includes('budget')) {
       return "You're currently at 78% of your $2,500 monthly budget with 8 days remaining. You're on track to stay within budget! Your largest categories are Food (27%) and Transportation (18%). Consider reducing entertainment spending for the rest of the month.";
     }
-    
+
     if (message.includes('group') || message.includes('split')) {
       return "Your group expense summary:\n• Weekend Trip: You owe $45.20\n• Roommates: You are owed $125.80\n• Work Lunch Group: You owe $12.30\n\nNet balance: +$68.30 in your favor. Don't forget to collect from your roommates!";
     }
-    
+
     if (message.includes('save') || message.includes('tip')) {
       return "Here are personalized savings tips based on your spending:\n• Set up automatic transfers to savings on payday\n• Use the 24-hour rule for purchases over $50\n• Try cooking at home 2 more times per week\n• Consider carpooling to reduce transportation costs\n• Set spending alerts for your highest categories";
     }
-    
+
     if (message.includes('category') || message.includes('biggest')) {
       return "Your biggest expense categories this month:\n1. Food & Dining: $680 (27%)\n2. Transportation: $450 (18%)\n3. Shopping: $390 (16%)\n4. Entertainment: $320 (13%)\n5. Utilities: $280 (11%)";
     }
-    
+
     return "I understand you're asking about your finances. I can help you with spending analysis, budget tracking, expense categorization, and financial insights. Try asking about your spending trends, budget status, or specific expense categories!";
   };
 
@@ -121,6 +121,7 @@ export function Chatbot() {
       timestamp: new Date()
     };
 
+    // Optimistically update UI
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsTyping(true);
@@ -132,13 +133,24 @@ export function Chatbot() {
         return;
       }
 
-      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-7f88878c/ai/chat`, {
+      // --- NEW: Prepare History ---
+      // Convert current messages to format expected by AI (role: 'user' | 'assistant')
+      // We take the last 6 messages to give context without overloading the token limit
+      const history = messages.slice(-6).map(msg => ({
+        role: msg.type === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      }));
+
+      const response = await fetch('http://localhost:8000/api/ai/chat', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: content }),
+        body: JSON.stringify({
+          message: content,
+          history: history // Send history to backend
+        }),
       });
 
       let botResponseContent = generateBotResponse(content); // Fallback
@@ -167,7 +179,7 @@ export function Chatbot() {
       setMessages(prev => [...prev, botResponse]);
     } catch (error) {
       console.error('Error sending message to AI:', error);
-      
+
       // Fallback to local response
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
@@ -204,7 +216,7 @@ export function Chatbot() {
               <p className="text-muted-foreground">Your smart financial companion</p>
             </div>
           </div>
-          
+
           {/* Quick Actions */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
             {quickActions.map((action, index) => {
@@ -238,19 +250,17 @@ export function Chatbot() {
                         </AvatarFallback>
                       </Avatar>
                     )}
-                    
+
                     <div className={`max-w-[80%] ${message.type === 'user' ? 'order-last' : ''}`}>
-                      <div className={`p-3 rounded-lg ${
-                        message.type === 'user' 
-                          ? 'bg-primary text-primary-foreground ml-auto' 
-                          : 'bg-muted'
-                      }`}>
+                      <div className={`p-3 rounded-lg ${message.type === 'user'
+                        ? 'bg-primary text-primary-foreground ml-auto'
+                        : 'bg-muted'
+                        }`}>
                         <p className="whitespace-pre-line">{message.content}</p>
                       </div>
-                      
-                      <div className={`flex items-center gap-2 mt-1 text-xs text-muted-foreground ${
-                        message.type === 'user' ? 'justify-end' : 'justify-start'
-                      }`}>
+
+                      <div className={`flex items-center gap-2 mt-1 text-xs text-muted-foreground ${message.type === 'user' ? 'justify-end' : 'justify-start'
+                        }`}>
                         <span>{message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
 
@@ -299,7 +309,7 @@ export function Chatbot() {
                     </div>
                   </div>
                 )}
-                
+
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
@@ -307,7 +317,7 @@ export function Chatbot() {
 
           {/* Input */}
           <div className="border-t p-4">
-            <form 
+            <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSendMessage(inputValue);
@@ -325,7 +335,7 @@ export function Chatbot() {
                 <Send className="h-4 w-4" />
               </Button>
             </form>
-            
+
             <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
               <Lightbulb className="h-3 w-3" />
               <span>Try asking about spending trends, budget analysis, or savings tips</span>
