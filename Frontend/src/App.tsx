@@ -20,7 +20,8 @@ import { Support } from './components/pages/Support';
 import { Notifications } from './components/pages/Notifications';
 import { Chatbot } from './components/pages/Chatbot';
 import { Settings } from './components/pages/Settings';
-import { ExpenseCalendar } from './components/pages/ExpenseCalendar'; // Changed back to named import
+import ExpenseCalendar from './components/pages/ExpenseCalendar'; // default export
+import { ThemeProvider } from './components/ui/ThemeContext';
 
 // Simple Public Route Component
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -164,16 +165,8 @@ interface AuthContextType {
   supabaseAdminEndpoint?: string;
 }
 
-interface ThemeContextType {
-  isDark: boolean;
-  toggleTheme: () => void;
-}
-
 // Auth Context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Theme Context
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 // Auth Provider
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -275,36 +268,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Theme Provider
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const themeState = useState(false);
-  const isDark = themeState[0];
-  const setIsDark = themeState[1];
 
-  const toggleTheme = () => {
-    setIsDark(!isDark);
-    document.documentElement.classList.toggle('dark', !isDark);
-  };
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const shouldBeDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
-
-    setIsDark(shouldBeDark);
-    document.documentElement.classList.toggle('dark', shouldBeDark);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
-
-  return (
-    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
-}
 
 // Custom hooks
 export function useAuth() {
@@ -315,13 +279,7 @@ export function useAuth() {
   return context;
 }
 
-export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
-}
+// (Theme handled by shared ThemeProvider in components/ui/ThemeContext)
 
 // App with all providers
 export default function App() {

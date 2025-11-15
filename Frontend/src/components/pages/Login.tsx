@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { Logo } from "../ui/logo";
+
 import {
   Card,
   CardContent,
@@ -12,7 +14,8 @@ import {
 } from "../ui/card";
 
 import { Badge } from "../ui/badge";
-import { useAuth, useTheme } from "../../App";
+import { useAuth } from "../../App";
+import { useTheme } from "../ui/ThemeContext";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Eye,
@@ -38,7 +41,8 @@ export function Login() {
   const setShowPassword = showPasswordState[1];
 
   const { login, isLoading, signInWithProvider } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === 'dark';
   const navigate = useNavigate();
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -101,14 +105,11 @@ export function Login() {
       <div className="relative w-full max-w-md">
         {/* App header */}
         <div className="text-center mb-8">
-          <Link
+         <Link
             to="/"
             className="inline-flex items-center gap-2 mb-4"
           >
-            <h1 className="text-2xl font-bold text-primary">
-              Smart Expense
-            </h1>
-            <Badge variant="secondary">PWA</Badge>
+          <Logo size="md" />
           </Link>
           <p className="text-muted-foreground">
             Welcome back to smarter expense management

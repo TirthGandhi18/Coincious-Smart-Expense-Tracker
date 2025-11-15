@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTheme } from '../../App';
+import { useTheme } from '../ui/ThemeContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -8,7 +8,7 @@ import { Switch } from '../ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Separator } from '../ui/separator';
 import { Badge } from '../ui/badge';
-import { 
+import {
   Settings as SettingsIcon,
   Bell,
   Moon,
@@ -21,7 +21,8 @@ import {
 } from 'lucide-react';
 
 export function Settings() {
-  const { isDark, toggleTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
+    const isDark = theme === 'dark';
   const [notifications, setNotifications] = useState({
     email: true,
     expense: true,
@@ -90,6 +91,7 @@ export function Settings() {
                 <Switch
                   checked={isDark}
                   onCheckedChange={toggleTheme}
+
                 />
                 <Moon className="h-4 w-4" />
               </div>
@@ -123,7 +125,7 @@ export function Settings() {
 
               <div className="space-y-3">
                 <h4 className="font-medium">Notification Types</h4>
-                
+
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label>Expense Updates</Label>

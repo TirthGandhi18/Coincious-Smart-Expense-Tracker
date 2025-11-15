@@ -1,8 +1,11 @@
-import React, { useState, useEffect }  from 'react';
-import { useAuth, useTheme } from '../App';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../App';
+import { useTheme } from './ui/ThemeContext';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Badge } from './ui/badge';
+import { Logo } from './ui/logo';
+
 import {
   Home,
   Users,
@@ -16,9 +19,11 @@ import {
   Baby,
   Settings
 } from 'lucide-react';
+
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
-import { supabase } from '../utils/supabase/client'; 
+
+import { supabase } from '../utils/supabase/client';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -28,64 +33,55 @@ type NavItem = { href: string; label: string; icon: React.ComponentType<any>; ba
 
 export function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === 'dark';
+
   const location = useLocation();
   const navigate = useNavigate();
 
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // === FUNCTION TO FETCH UNREAD COUNT ===
+  // === FETCH UNREAD COUNT ===
   const fetchUnreadCount = async () => {
     if (!user) return;
 
     try {
       const { count, error } = await supabase
         .from('notifications')
-        .select('*', { count: 'exact', head: true }) // This just gets the count
+        .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('read', false);
 
-      if (error) {
-        throw error;
-      }
-
+      if (error) throw error;
       setUnreadCount(count ?? 0);
-
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }
   };
 
-  // === EFFECT TO FETCH COUNT ON LOAD ===
+  // === ON LOAD FETCH ===
   useEffect(() => {
-    if (user) {
-      fetchUnreadCount();
-    }
+    if (user) fetchUnreadCount();
   }, [user]);
 
-  // === EFFECT TO LISTEN FOR REALTIME CHANGES ===
+  // === REALTIME LISTENER ===
   useEffect(() => {
     if (!user) return;
 
-    // Listen to all changes on the 'notifications' table for this user
     const channel = supabase
       .channel(`notifications_count_user_${user.id}`)
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to INSERT, UPDATE, DELETE
+          event: '*',
           schema: 'public',
           table: 'notifications',
           filter: `user_id=eq.${user.id}`,
         },
-        (payload) => {
-          // When any change happens, just re-fetch the count
-          fetchUnreadCount();
-        }
+        () => fetchUnreadCount()
       )
       .subscribe();
 
-    // Cleanup subscription
     return () => {
       supabase.removeChannel(channel);
     };
@@ -95,12 +91,7 @@ export function Layout({ children }: LayoutProps) {
     { href: '/dashboard', label: 'Dashboard', icon: Home },
     { href: '/groups', label: 'Groups', icon: Users },
     { href: '/chatbot', label: 'AI Assistant', icon: MessageCircle },
-    { 
-      href: '/notifications', 
-      label: 'Notifications', 
-      icon: Bell, 
-      badge: unreadCount 
-    },
+    { href: '/notifications', label: 'Notifications', icon: Bell, badge: unreadCount },
   ];
 
   if (user?.isParent) {
@@ -108,7 +99,8 @@ export function Layout({ children }: LayoutProps) {
   }
 
   const supportNavItem: NavItem = { href: '/support', label: 'Support', icon: HelpCircle };
-  const SupportIcon = supportNavItem.icon; // <-- extracted icon component (fixes render issue)
+  const SupportIcon = supportNavItem.icon;
+
   const navItems = [...mainNavItems, supportNavItem];
 
   const handleLogout = () => {
@@ -118,29 +110,22 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Desktop Header */}
+      
+      {/* DESKTOP HEADER */}
       <header className="hidden md:flex items-center justify-between px-6 py-4 border-b bg-card">
-        <div className="flex items-center gap-4">
-          <button // for making clickable to LOGO button i use navigate hook
-            onClick={() => navigate("/dashboard")}
-            className="text-2xl font-bold text-primary hover:opacity-80 transition cursor-pointer"
-            aria-label="Go to dashboard"
-          >
-            Smart Expense
-          </button>
-          <Badge variant="secondary" className="hidden sm:inline-flex">PWA</Badge>
-        </div>
+        <Link to="/dashboard" className="flex items-center gap-4">
+          <Logo size="md" />
+        </Link>
 
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
 
-          {/* PROFILE BUTTON - Top Right Corner Only */}
           <Link to="/profile" aria-label="Profile">
             <Button
               variant="ghost"
-              className="relative h-10 w-10 rounded-full border-2 border-transparent hover:border-primary hover:bg-accent transition-all duration-200 focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="relative h-10 w-10 rounded-full border-2 hover:border-primary hover:bg-accent transition-all duration-200"
               title="View Profile"
             >
               <Avatar className="h-8 w-8">
@@ -154,14 +139,15 @@ export function Layout({ children }: LayoutProps) {
         </div>
       </header>
 
-      {/* Mobile Header */}
+      {/* MOBILE HEADER */}
       <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-card">
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Open menu">
+            <Button variant="ghost" size="icon">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
+
           <SheetContent side="left" className="w-64">
             <div className="flex flex-col h-full">
               <div className="flex items-center gap-2 px-2 py-4">
@@ -186,7 +172,8 @@ export function Layout({ children }: LayoutProps) {
                     >
                       <Icon className="h-4 w-4" />
                       <span>{item.label}</span>
-                      {item.badge && (
+
+                      {item.badge !== undefined && item.badge > 0 && (
                         <Badge variant="destructive" className="ml-auto h-5 w-5 p-0 flex items-center justify-center text-xs">
                           {item.badge}
                         </Badge>
@@ -196,11 +183,10 @@ export function Layout({ children }: LayoutProps) {
                 })}
               </nav>
 
-              {/* Bottom options */}
               <div className="border-t pt-4 space-y-2">
+
                 <Link
                   to={supportNavItem.href}
-                  aria-current={location.pathname === supportNavItem.href ? 'page' : undefined}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                     location.pathname === supportNavItem.href
                       ? 'bg-primary text-primary-foreground'
@@ -211,20 +197,24 @@ export function Layout({ children }: LayoutProps) {
                   <span>{supportNavItem.label}</span>
                 </Link>
 
-                <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground hover:bg-accent" asChild>
+                <Button variant="ghost" className="w-full justify-start gap-3" asChild>
                   <Link to="/settings">
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>
                   </Link>
                 </Button>
 
-                <Button variant="ghost" className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 text-destructive hover:bg-destructive/10"
+                  onClick={handleLogout}
+                >
                   <LogOut className="h-4 w-4" />
                   <span>Sign out</span>
                 </Button>
 
                 <div className="pt-2 border-t">
-                  <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground hover:bg-accent" onClick={toggleTheme}>
+                  <Button variant="ghost" className="w-full justify-start gap-3" onClick={toggleTheme}>
                     {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                     {isDark ? 'Light Mode' : 'Dark Mode'}
                   </Button>
@@ -236,26 +226,22 @@ export function Layout({ children }: LayoutProps) {
 
         <h1 className="text-lg font-bold">Smart Expense</h1>
 
-        {/* PROFILE BUTTON - Top Right Mobile */}
-        <Link to="/profile" aria-label="Profile">
-          <Button
-            variant="ghost"
-            className="relative h-10 w-10 rounded-full border-2 border-transparent hover:border-primary hover:bg-accent transition-all duration-200"
-            title="View Profile"
-          >
+        <Link to="/profile">
+          <Button variant="ghost" className="h-10 w-10 rounded-full">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={user?.avatar} alt={user?.name} />
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {user?.name?.charAt(0)?.toUpperCase()}
-              </AvatarFallback>
+              <AvatarImage src={user?.avatar} />
+              <AvatarFallback>{user?.name?.charAt(0)?.toUpperCase()}</AvatarFallback>
             </Avatar>
           </Button>
         </Link>
       </header>
 
+      {/* MAIN LAYOUT */}
       <div className="flex h-[calc(100vh-73px)] md:h-[calc(100vh-81px)]">
-        {/* Desktop Sidebar - NO PROFILE LINK */}
+        
+        {/* DESKTOP SIDEBAR */}
         <aside className="hidden md:flex w-64 flex-col border-r bg-card">
+
           <nav className="flex-1 space-y-2 p-4">
             {mainNavItems.map((item) => {
               const Icon = item.icon;
@@ -265,16 +251,14 @@ export function Layout({ children }: LayoutProps) {
                 <Link
                   key={item.href}
                   to={item.href}
-                  aria-current={isActive ? 'page' : undefined}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                    isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
                   <span>{item.label}</span>
-                  {item.badge && (
+
+                  {item.badge !== undefined && item.badge > 0 && (
                     <Badge variant="destructive" className="ml-auto h-5 w-5 p-0 flex items-center justify-center text-xs">
                       {item.badge}
                     </Badge>
@@ -284,41 +268,41 @@ export function Layout({ children }: LayoutProps) {
             })}
           </nav>
 
-          {/* Bottom options */}
           <div className="border-t p-4 space-y-2">
             <Link
               to={supportNavItem.href}
-              aria-current={location.pathname === supportNavItem.href ? 'page' : undefined}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                 location.pathname === supportNavItem.href
                   ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  : 'text-muted-foreground hover:bg-accent'
               }`}
             >
               <SupportIcon className="h-4 w-4" />
               <span>{supportNavItem.label}</span>
             </Link>
 
-            <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground hover:bg-accent" asChild>
+            <Button variant="ghost" className="w-full justify-start gap-3" asChild>
               <Link to="/settings">
                 <Settings className="h-4 w-4" />
                 <span>Settings</span>
               </Link>
             </Button>
 
-            <Button variant="ghost" className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleLogout}>
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-3 text-destructive hover:bg-destructive/10"
+              onClick={handleLogout}
+            >
               <LogOut className="h-4 w-4" />
               <span>Sign out</span>
             </Button>
           </div>
         </aside>
 
-        <main className="flex-1 overflow-auto">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto">{children}</main>
       </div>
 
-      {/* Mobile Bottom Navigation */}
+      {/* MOBILE BOTTOM NAV */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t px-4 py-2">
         <div className="flex items-center justify-around">
           {navItems.slice(0, 4).map((item) => {
@@ -329,15 +313,15 @@ export function Layout({ children }: LayoutProps) {
               <Link
                 key={item.href}
                 to={item.href}
-                aria-current={isActive ? 'page' : undefined}
-                className={`flex flex-col items-center gap-1 px-2 py-1 relative ${
+                className={`flex flex-col items-center gap-1 relative ${
                   isActive ? 'text-primary' : 'text-muted-foreground'
                 }`}
               >
                 <Icon className="h-5 w-5" />
                 <span className="text-xs">{item.label}</span>
-                {item.badge && (
-                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
+
+                {item.badge !== undefined && item.badge > 0 && (
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 text-xs flex items-center justify-center p-0">
                     {item.badge}
                   </Badge>
                 )}

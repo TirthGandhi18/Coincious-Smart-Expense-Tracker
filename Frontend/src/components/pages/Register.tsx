@@ -6,10 +6,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 
 import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
-import { useAuth, useTheme } from '../../App';
+import { useAuth } from '../../App';
+import { ThemeProvider, useTheme } from '../ui/ThemeContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Sun, Moon, Mail, Lock, User } from 'lucide-react';
 import { toast } from 'sonner';
+import { Logo } from '../ui/logo';
+
 
 export function Register() {
   // Simple state for all form fields
@@ -37,7 +40,7 @@ export function Register() {
   const setAcceptTerms = termsAccepted[1];
 
   const { register, isLoading, signInWithProvider } = useAuth();
-  const { isDark, toggleTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   // Simple validation function
@@ -108,15 +111,15 @@ export function Register() {
         className="absolute top-4 right-4 z-10"
         onClick={toggleTheme}
       >
-        {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        {theme ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
       </Button>
 
       <div className="relative w-full max-w-md">
         {/* App header */}
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-4">
-            <h1 className="text-2xl font-bold text-primary">Smart Expense</h1>
-            <Badge variant="secondary">PWA</Badge>
+         <Link to="/" className="inline-flex items-center gap-2 mb-4">
+             <Logo size="md" />
+            {/* <Badge variant="secondary">PWA</Badge> */}
           </Link>
           <p className="text-muted-foreground">Start your journey to smarter expense management</p>
         </div>

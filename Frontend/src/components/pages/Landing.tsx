@@ -1,201 +1,566 @@
-import { Button } from '../ui/button';
-import { Card, CardContent } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { useTheme } from '../../App';
 import { Link } from 'react-router-dom';
-import { 
-  Sun, 
-  Moon, 
-  Smartphone, 
-  Shield, 
-  Brain, 
-  Users, 
-  PieChart, 
-  Zap 
+import { Button } from '../ui/button';
+import {
+  Wallet,
+  Users,
+  TrendingUp,
+  Shield,
+  Sparkles,
+  ArrowRight,
+  CheckCircle,
+  Moon,
+  Sun,
+  Menu,
+  Star,
+  CircleDollarSign,
+  BarChart3,
+  MessageSquare,
+  Globe,
+  Lock,
+  Zap,
+  PiggyBank,
+  Receipt,
+  Phone
 } from 'lucide-react';
+import { useTheme } from '../ui/ThemeContext';
+import { motion } from 'motion/react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { Logo } from '../ui/logo';
 
-export function Landing() {
-  const { isDark, toggleTheme } = useTheme();
-
-  const features = [
-    {
-      icon: Users,
-      title: 'Smart Group Splitting',
-      description: 'Easily split expenses with friends, family, or colleagues. Multiple split methods available.'
-    },
-    {
-      icon: Brain,
-      title: 'AI-Powered Insights',
-      description: 'Get intelligent spending analysis and personalized financial recommendations.'
-    },
-    {
-      icon: Shield,
-      title: 'Parental Controls',
-      description: 'Monitor and guide your children\'s spending habits with comprehensive parental tools.'
-    },
-    {
-      icon: PieChart,
-      title: 'Detailed Analytics',
-      description: 'Beautiful charts and reports to understand your spending patterns.'
-    },
-    {
-      icon: Smartphone,
-      title: 'Mobile-First Design',
-      description: 'Responsive PWA that works seamlessly across all your devices.'
-    },
-    {
-      icon: Zap,
-      title: 'Real-time Updates',
-      description: 'Instant notifications and live expense tracking with your groups.'
-    }
-  ];
+export const Landing = () => {
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-primary">Smart Expense</h1>
-            <Badge variant="secondary" className="hidden sm:inline-flex">PWA</Badge>
-          </div>
-          
-          <nav className="hidden md:flex items-center gap-6">
-            <Link to="#features" className="text-muted-foreground hover:text-foreground transition-colors">
-              Features
-            </Link>
-            <Link to="#about" className="text-muted-foreground hover:text-foreground transition-colors">
-              About
-            </Link>
-            <Link to="#contact" className="text-muted-foreground hover:text-foreground transition-colors">
-              Contact
-            </Link>
-          </nav>
-          
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
-              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to="/login">Login</Link>
-            </Button>
-            <Button asChild>
-              <Link to="/register">Get Started</Link>
-            </Button>
+    <div className="min-h-screen bg-[#F5E6D3] dark:bg-[#1A2332]">
+      {/* Modern Navbar */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#293548]/80 backdrop-blur-xl border-b border-[#D7CCC8]/20 dark:border-[#374151]/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-20">
+            <Logo></Logo>
+            {/* Desktop Menu */}
+            <div className="hidden md:flex items-center gap-8">
+              <a href="#features" className="text-[#5D4037] dark:text-[#E5E7EB] hover:text-[#8B5A3C] dark:hover:text-[#10B981] transition-colors">Features</a>
+              <a href="#how-it-works" className="text-[#5D4037] dark:text-[#E5E7EB] hover:text-[#8B5A3C] dark:hover:text-[#10B981] transition-colors">About</a>
+              <a href="#Contact" className="text-[#5D4037] dark:text-[#E5E7EB] hover:text-[#8B5A3C] dark:hover:text-[#10B981] transition-colors">Contact</a>
+            </div>
+
+            {/* Right Side Actions */}
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleTheme}
+                className="rounded-xl text-[#5D4037] dark:text-[#E5E7EB] "
+              >
+                {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+              </Button>
+              <Link to="/login" >
+                <Button variant="ghost" className="text-[#5D4037]  dark:text-[#E5E7EB] hover:text-[#8B5A3C] dark:hover:text-[#10B981]">
+                  Login
+                </Button>
+              </Link>
+              <Link to="/register">
+                <Button className="bg-gradient-to-r from-[#8B5A3C] to-[#6D452E] dark:from-[#10B981] dark:to-[#059669] text-white rounded-xl px-6 shadow-lg hover:shadow-xl transition-all">
+                  Get Started
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
-      </header>
+      </nav>
 
       {/* Hero Section */}
-      <section className="py-20 md:py-32">
-        <div className="container mx-auto px-4 text-center">
-          <Badge variant="secondary" className="mb-4">
-            ✨ AI-Powered Expense Management
-          </Badge>
-          
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-            Manage your money, smarter
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            Split expenses effortlessly, track spending intelligently, and get AI-powered insights 
-            to make better financial decisions together.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Button size="lg" className="text-lg px-8 py-3" asChild>
-              <Link to="/register">Start Free Trial</Link>
-            </Button>
-            <Button size="lg" variant="outline" className="text-lg px-8 py-3" asChild>
-              <Link to="/login">Sign In</Link>
-            </Button>
-          </div>
-          
-          {/* Dashboard Preview */}
-          <div className="relative max-w-4xl mx-auto">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-green-500/20 blur-3xl rounded-3xl" />
-            <Card className="relative overflow-hidden">
-              <CardContent className="p-0">
-                <ImageWithFallback
-                  src=""
-                  alt="Smart Expense Dashboard Preview"
-                  className="w-full h-auto rounded-lg"
+      <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        {/* Background Gradients */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-20 -left-20 w-96 h-96 bg-[#8B5A3C]/10 dark:bg-[#10B981]/10 rounded-full blur-3xl"></div>
+          <div className="absolute top-40 -right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Left Content */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#EFE8DD] dark:bg-[#374151] border border-[#D7CCC8] dark:border-[#10B981]/20 mb-6">
+                <Sparkles className="w-4 h-4 text-[#8B5A3C] dark:text-[#10B981]" />
+                <span className="text-sm text-[#5D4037] dark:text-[#E5E7EB]">AI-Powered Expense Management</span>
+              </div>
+
+              <h1 className="text-5xl md:text-6xl lg:text-7xl text-[#8b6458] dark:text-white mb-6 leading-tight">
+                Manage your money,
+                <br />
+                <span className="bg-gradient-to-r from-[#5B6FD8] via-[#95a1d7] to-[#5B6FD8] bg-clip-text text-transparent">
+                  smarter
+                </span>
+              </h1>
+
+              <p className="text-xl text-[#8D6E63] dark:text-[#B8C5D6] mb-8 leading-relaxed">
+                Split expenses effortlessly, track spending intelligently, and get AI-powered insights to make better financial decisions together.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-4 mb-10">
+                <Link to="/register">
+                  <Button className="bg-gradient-to-r from-[#8B5A3C] to-[#6D452E] dark:from-[#10B981] dark:to-[#059669] text-white rounded-xl px-8 py-7 text-lg shadow-2xl hover:shadow-xl transition-all group">
+                    Create Account Now
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
+                <Link to="/login">
+                  <Button variant="outline" className="border-2 border-[#8B5A3C] dark:border-[#10B981] text-[#5D4037] dark:text-[#E5E7EB] rounded-xl px-8 py-7 text-lg hover:bg-[#EFE8DD] dark:hover:bg-[#374151]">
+                    Watch Demo
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Trust Indicators */}
+              <div className="flex flex-wrap items-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-[#8B5A3C] dark:text-[#10B981]" />
+                  <span className="text-[#8D6E63] dark:text-[#9CA3AF]">Free Forever</span>
+                </div>
+                {/* <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-[#8B5A3C] dark:text-[#10B981]" />
+                  <span className="text-[#8D6E63] dark:text-[#9CA3AF]">No Credit Card</span>
+                </div> */}
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-[#8B5A3C] dark:text-[#10B981]" />
+                  <span className="text-[#8D6E63] dark:text-[#9CA3AF]">10K+ Users</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Right Image */}
+            <motion.div
+              className="relative"
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl">
+
+                {/* Gradient Blur Border Layer */}
+                <div
+                  className="
+                  absolute inset-0
+                  rounded-3xl
+                  pointer-events-none
+                  blur-xl
+                  opacity-60
+                  bg-gradient-to-br
+                from-[#ffecd2] to-[#fcb69f]
+                dark:from-[#00ffa3]/40 dark:via-[#00ccff]/40 dark:to-[#0066ff]/40"
                 />
-              </CardContent>
-            </Card>
+                <ImageWithFallback
+                  src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1115&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                  alt="Smart Expense App"
+                  className="relative w-full h-auto rounded-3xl"
+                />
+              </div>
+
+
+              {/* Decorative Gradient */}
+              <div className="absolute -bottom-6 -right-6 w-72 h-72 bg-gradient-to-br from-[#8B5A3C]/20 to-blue-500/20 dark:from-[#10B981]/20 dark:to-blue-500/20 rounded-full blur-3xl -z-10"></div>
+            </motion.div>
           </div>
         </div>
       </section>
+
+
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
+      <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 bg-[#F5E6D3] dark:bg-[#1A2332]">
+        <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <Badge variant="secondary" className="mb-4">Features</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Everything you need to manage expenses
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Powerful features designed to make expense tracking and splitting as simple as possible.
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <Card key={index} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                      <Icon className="h-6 w-6 text-primary" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                    <p className="text-muted-foreground">{feature.description}</p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 text-center">
-          <Card className="max-w-2xl mx-auto">
-            <CardContent className="p-8 md:p-12">
-              <h2 className="text-3xl font-bold mb-4">
-                Ready to take control of your expenses?
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="inline-flex items-center gap-4 px-4 py-2 rounded-full bg-[#EFE8DD] dark:bg-[#374151] border border-[#D7CCC8] dark:border-[#10B981]/20 mb-4">
+                <Zap className="w-4 h-4 text-[#8B5A3C] dark:text-[#10B981]" />
+                <span className="text-sm text-[#5D4037] dark:text-[#E5E7EB]">Powerful Features</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl text-[#5D4037] dark:text-white mb-4">
+                Everything You Need to
+                <br />
+                <span className="text-[#8B5A3C] dark:text-[#10B981]">Manage Money Better</span>
               </h2>
-              <p className="text-muted-foreground mb-6">
-                Join thousands of users who are already managing their finances smarter with AI assistance.
+              <p className="text-lg text-[#8D6E63] dark:text-[#9CA3AF] max-w-2xl mx-auto">
+                Packed with smart features that make expense tracking effortless and fun.
               </p>
-              <Button size="lg" className="w-full sm:w-auto" asChild>
-                <Link to="/register">Get Started for Free</Link>
-              </Button>
-            </CardContent>
-          </Card>
+            </motion.div>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                icon: Users,
+                title: 'Smart Split Bills',
+                description: 'Split expenses equally, by percentage, or custom amounts. Perfect for roommates and groups.',
+                // blue -> cyan
+                start: '#3B82F6',
+                end: '#06B6D4'
+              },
+              {
+                icon: BarChart3,
+                title: 'Visual Analytics',
+                description: 'Beautiful charts and graphs to understand your spending patterns at a glance.',
+                // purple -> pink
+                start: '#8B5CF6',
+                end: '#EC4899'
+              },
+              {
+                icon: MessageSquare,
+                title: 'AI Assistant',
+                description: 'Chat with our AI to get instant answers about your expenses and financial insights.',
+                // green -> emerald
+                start: '#10B981',
+                end: '#059669'
+              },
+
+              {
+                icon: Receipt,
+                title: 'Receipt Scanner',
+                description: 'Snap photos of receipts and let AI extract all the details automatically.',
+                // yellow -> orange
+                start: '#F59E0B',
+                end: '#F97316'
+              },
+
+            ].map((feature, index) => (
+              <motion.div
+                key={feature.title}
+                className="group block bg-white dark:bg-[#293548] rounded-2xl p-8 border border-[#D7CCC8] dark:border-[#374151] hover:shadow-2xl transition-all hover:scale-105"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <div
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform`}
+                  style={{ background: `linear-gradient(135deg, ${feature.start}, ${feature.end})` }}
+                >
+                  <feature.icon className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-xl text-[#5D4037] dark:text-white mb-3">{feature.title}</h3>
+                <p className="text-[#8D6E63] dark:text-[#9CA3AF] leading-relaxed">{feature.description}</p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t bg-card/50 py-8">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-primary">Smart Expense</h3>
-              <Badge variant="outline">v1.0</Badge>
+      {/* How It Works Section */}
+      <section id="how-it-works" className="py-24 px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#293548]">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Left - Image */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl ">
+                <ImageWithFallback
+                  src="https://images.unsplash.com/photo-1672833634993-a7ce02f7adbc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmcmllbmRzJTIwc3BsaXR0aW5nJTIwYmlsbCUyMHJlc3RhdXJhbnR8ZW58MXx8fHwxNzYyOTUyMDYxfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
+                  alt="Friends splitting bills together"
+                  className="w-full h-auto rounded-3xl"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#8B5A3C]/20 to-transparent dark:from-[#10B981]/20"></div>
+              </div>
+            </motion.div>
+
+            {/* Right - Steps */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#EFE8DD] dark:bg-[#374151] border border-[#D7CCC8] dark:border-[#10B981]/20 mb-6">
+                <Sparkles className="w-4 h-4 text-[#8B5A3C] dark:text-[#10B981]" />
+                <span className="text-sm text-[#5D4037] dark:text-[#E5E7EB]">Simple Process</span>
+              </div>
+
+              <h2 className="text-4xl text-[#5D4037] dark:text-white mb-6">
+                Get Started in
+                <br />
+                <span className="text-[#8B5A3C] dark:text-[#10B981]">4 Easy Steps</span>
+              </h2>
+
+              <p className="text-lg text-[#8D6E63] dark:text-[#9CA3AF] mb-10">
+                From signup to tracking expenses in less than 2 minutes.
+              </p>
+
+              <div className="space-y-6 " >
+                {[
+                  { step: '01', title: 'Create Account', desc: 'Sign up with email or social login' },
+                  { step: '02', title: 'Create or Join Group', desc: 'Invite friends or join existing groups' },
+                  { step: '03', title: 'Add Expenses', desc: 'Log expenses and split automatically' },
+                  { step: '04', title: 'Track & Settle', desc: 'View insights and settle balances easily' }
+                ].map((item) => {
+                  const isDark = theme === 'dark';
+                  const stepGradient = isDark
+                    ? 'linear-gradient(135deg, #10B981, #34D399)'
+                    : 'linear-gradient(135deg, #8B5A3C, #D7A86E)';
+
+                  return (
+                    <div key={item.step} className="flex gap-4">
+                      <div className="flex-shrink-0">
+                        <div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center text-white"
+                          style={{ background: stepGradient }}
+                        >
+                          {item.step}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-lg text-[#5D4037] dark:text-white mb-1">{item.title}</h4>
+                        <p className="text-[#8D6E63] dark:text-[#9CA3AF]">{item.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-[#F5E6D3] dark:bg-[#1A2332]">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#EFE8DD] dark:bg-[#374151] border border-[#D7CCC8] dark:border-[#10B981]/20 mb-4">
+                <Star className="w-4 h-4 text-[#8B5A3C] dark:text-[#10B981]" />
+                <span className="text-sm text-[#5D4037] dark:text-[#E5E7EB]">Testimonials</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl text-[#5D4037] dark:text-white mb-4">
+                Loved by Users
+                <br />
+                <span className="text-[#8B5A3C] dark:text-[#10B981]">Worldwide</span>
+              </h2>
+            </motion.div>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                name: 'Rahul Sharma',
+                role: 'Software Engineer',
+                text: 'This app helped me track my expenses easily. Loved the UI!',
+                image: 'https://img.freepik.com/free-photo/portrait-young-indian-businessman-student-sitting-with-pen_1262-17490.jpg?w=740&q=80'
+              }
+              ,
+              {
+                name: 'Mohit Patel',
+                role: 'Student',
+                text: "Splitting expenses with friends used to be messy. Now everything is clear and automatic!",
+                image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop'
+
+              }
+              ,
+              {
+                name: 'Radhika Modi',
+                role: 'Freelancer',
+                text: 'Analytics dashboard helps me understand where my money goes. Game changer!',
+                image: 'https://img.freepik.com/free-photo/portrait-happy-indian-woman-standing-isolated_1303-27653.jpg?w=740&q=80'
+              }
+            ].map((testimonial, index) => (
+              <motion.div
+                key={index}
+                className="bg-white dark:bg-[#293548] rounded-2xl p-8 border border-[#D7CCC8] dark:border-[#374151] hover:shadow-xl transition-all"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <div className="flex gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-[#8B5A3C] dark:fill-[#10B981] text-[#8B5A3C] dark:text-[#10B981]" />
+                  ))}
+                </div>
+                <p className="text-[#5D4037] dark:text-[#E5E7EB] mb-6 leading-relaxed">
+                  "{testimonial.text}"
+                </p>
+                <div className="flex items-center gap-3">
+                  <ImageWithFallback
+                    src={testimonial.image}
+                    alt={testimonial.name}
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                  <div>
+                    <div className="text-[#5D4037] dark:text-white">{testimonial.name}</div>
+                    <div className="text-sm text-[#8D6E63] dark:text-[#9CA3AF]">{testimonial.role}</div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section
+      <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#293548]">
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#EFE8DD] dark:bg-[#374151] border border-[#D7CCC8] dark:border-[#10B981]/20 mb-6">
+              <PiggyBank className="w-4 h-4 text-[#8B5A3C] dark:text-[#10B981]" />
+              <span className="text-sm text-[#5D4037] dark:text-[#E5E7EB]">Simple Pricing</span>
             </div>
-            
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <Link to="#" className="hover:text-foreground transition-colors">Privacy</Link>
-              <Link to="#" className="hover:text-foreground transition-colors">Terms</Link>
-              <Link to="#" className="hover:text-foreground transition-colors">Support</Link>
+
+            <h2 className="text-4xl md:text-5xl text-[#5D4037] dark:text-white mb-4">
+              100% Free
+              <br />
+              <span className="text-[#8B5A3C] dark:text-[#10B981]">Forever</span>
+            </h2>
+
+            <p className="text-lg text-[#8D6E63] dark:text-[#9CA3AF] mb-12">
+              No hidden fees. No credit card required. All features included.
+            </p>
+
+            <div className="bg-gradient-to-br from-[#8B5A3C] to-[#6D452E] dark:from-[#10B981] dark:to-[#059669] rounded-3xl p-12 text-white">
+              <div className="text-6xl mb-4">$0</div>
+              <div className="text-xl mb-8 opacity-90">Free Forever</div>
+
+              <div className="space-y-4 mb-10 text-left max-w-md mx-auto">
+                {[
+                  'Unlimited expense tracking',
+                  'Unlimited groups & members',
+                  'AI-powered insights',
+                  'Multi-currency support',
+                  'Parental monitoring',
+                  'Export reports (PDF/Excel)',
+                  'Priority support',
+                  'PWA - works offline'
+                ].map((feature, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                    <span>{feature}</span>
+                  </div>
+                ))}
+              </div>
+
+              <Link to="/register">
+                <Button className="bg-white text-[#8B5A3C] dark:text-[#10B981] hover:bg-gray-100 px-10 py-7 text-lg rounded-xl shadow-xl">
+                  Get Started Now
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section> */}
+
+      {/* Final CTA */}
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#F5E6D3] to-[#EFE8DD] dark:from-[#1A2332] dark:to-[#293548]">
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-4xl md:text-5xl text-[#5D4037] dark:text-white mb-6">
+              Ready to Take Control of
+              <br />
+              <span className="text-[#8B5A3C] dark:text-[#10B981]">Your Finances?</span>
+            </h2>
+
+            <p className="text-xl text-[#8D6E63] dark:text-[#9CA3AF] mb-10">
+              Join thousands of users managing their expenses smarter.
+            </p>
+
+            <Link to="/register">
+              <Button className="bg-gradient-to-r from-[#8B5A3C] to-[#6D452E] dark:from-[#10B981] dark:to-[#059669] text-white px-12 py-8 text-xl rounded-2xl shadow-2xl hover:shadow-xl transition-all group">
+                Start Your Journey
+                <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+
+            <p className="mt-6 text-sm text-[#8D6E63] dark:text-[#9CA3AF]">
+              • Setup in 2 minutes • Free forever
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+
+      <footer className="bg-[#5D4037] dark:bg-[#0F1419] text-white py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-12 mb-12">
+            {/* Brand */}
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8B5A3C] to-[#D7A86E] dark:from-[#10B981] dark:to-[#34D399] flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <div className="text-white">Smart Expense</div>
+                </div>
+              </div>
+              <p className="text-white/70 text-sm">
+                Making expense management simple, smart, and collaborative.
+              </p>
+            </div>
+
+            {/* Product */}
+            <div>
+              <h4 className="mb-4">Benefits</h4>
+              <ul className="space-y-3 text-sm text-white/70">
+                <li><a href="#features" className="hover:text-white transition-colors">Clear Spending Insights</a></li>
+                <li><a href="#pricing" className="hover:text-white transition-colors">Split Group Expenses</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Compare tricount</a></li>
+                {/* <li><a href="#" className="hover:text-white transition-colors">Roadmap</a></li> */}
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="mb-4">Use Cases</h4>
+              <ul className="space-y-3 text-sm text-white/70">
+                <li><a href="#" className="hover:text-white transition-colors">For Couples</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">For Group Holidays</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">For Roommates</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">For Restaurant Bills</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">For Freelancers
+                </a></li>
+              </ul>
+            </div>
+
+
+            {/* Support */}
+            <div>
+              <h4 className="mb-4">Support</h4>
+              <ul className="space-y-3 text-sm text-white/70">
+                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Terms</a></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-white/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-white/60 text-sm">
+              &copy; 2025 Coincious. 
+            </p>
+            <div className="flex gap-6 text-sm text-white/60">
+              <a href="#" className="hover:text-white transition-colors">Youtube</a>
+
             </div>
           </div>
         </div>
       </footer>
     </div>
   );
-}
+};
