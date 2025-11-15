@@ -195,6 +195,7 @@ export function Dashboard() {
       }
 
       // 2. Fetch You Are Owed (calculate_you_owed)
+      // NOTE: This call is retained, but your logic might replace it with 'get_user_net_group_balance' if needed
       const { data: owedData, error: owedError } = await supabase.rpc('calculate_you_owed',
         { p_user_id: user.id }
         );
@@ -231,7 +232,8 @@ export function Dashboard() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) return;
 
-        const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-7f88878c/analytics/spending`, {
+        // 🚨 FIX: Proxy the request through the Flask server (http://localhost:8000)
+        const response = await fetch(`http://localhost:8000/api/supabase/proxy/analytics/spending`, {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
@@ -241,9 +243,13 @@ export function Dashboard() {
         if (response.ok) {
           const data = await response.json();
           setAnalyticsData(data);
+        } else {
+          // Log the response status if the proxy fails
+          console.error(`Proxy request failed with status: ${response.status}`);
         }
       } catch (error) {
-        console.error('Error fetching analytics:', error);
+        // Log the network error
+        console.error('Error fetching analytics via proxy:', error);
       } finally {
         setLoading(false);
       }
