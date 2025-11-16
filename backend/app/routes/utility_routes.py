@@ -5,7 +5,7 @@ import os
 from app.config import Config
 from app.auth.decorators import auth_required
 
-util_bp = Blueprint('utility_api', _name_)
+util_bp = Blueprint('utility_api', __name__)
 
 @util_bp.route('/health', methods=['GET'])
 def health_check():
