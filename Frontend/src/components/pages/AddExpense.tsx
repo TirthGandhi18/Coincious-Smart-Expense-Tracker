@@ -350,80 +350,112 @@ export function AddExpense() {
   };
 
   const handleReceiptUpload = async (file: File) => {
-    if (!file) return;
+  if (!file) return;
 
-    setReceiptFile(file);
-    setIsParsingReceipt(true);
-    const toastId = toast.loading('Parsing receipt...');
+  // Basic client-side checks
+  const maxMB = 8;
+  if (file.size > maxMB * 1024 * 1024) {
+    toast.error(`File too large. Please upload < ${maxMB}MB.`);
+    return;
+  }
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        toast.error('Please log in to upload receipts', { id: toastId });
-        return;
-      }
+  // Optional: allow only certain mime types
+  const allowed = ['image/jpeg','image/png','image/jpg','application/pdf'];
+  if (!allowed.includes(file.type)) {
+    // allow empty type for some browsers — be permissive if you want
+    toast.error('Unsupported file type. Use JPG/PNG/PDF.');
+    return;
+  }
 
-      const formData = new FormData();
-      formData.append('image', file);
+  setReceiptFile(file);
+  setIsParsingReceipt(true);
+  const toastId = toast.loading('Parsing receipt...');
 
-      const response = await fetch('http://localhost:8000/api/parse-bill', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to parse receipt');
-      }
-
-      const { parsed } = await response.json();
-
-      if (parsed.vendor_name) setTitle(parsed.vendor_name);
-      if (parsed.total) setAmount(parsed.total.toString());
-      if (parsed.issue_date) {
-        const date = new Date(parsed.issue_date);
-        if (!isNaN(date.getTime())) {
-          const formattedDate = date.toISOString().split('T')[0];
-          setDescription(currentDesc => `Date: ${formattedDate}\n${parsed.notes || ''}`.trim());
-        }
-      } else if (parsed.notes) {
-        setDescription(parsed.notes);
-      }
-
-      if (parsed.category_guess) {
-        const normalizedGuess = parsed.category_guess.toLowerCase().trim();
-        let matchedCategory = availableCategories.find(
-          cat => cat.toLowerCase() === normalizedGuess
-        );
-
-        if (!matchedCategory) {
-          matchedCategory = availableCategories.find(cat =>
-            cat.toLowerCase().includes(normalizedGuess) ||
-            normalizedGuess.includes(cat.toLowerCase())
-          );
-        }
-
-        if (matchedCategory) {
-          setCategory(matchedCategory);
-        } else {
-          const capitalizedGuess = parsed.category_guess.charAt(0).toUpperCase() + parsed.category_guess.slice(1);
-          if (!availableCategories.includes(capitalizedGuess)) {
-            setAvailableCategories(prev => [...prev, capitalizedGuess]);
-          }
-          setCategory(capitalizedGuess);
-        }
-      }
-
-      toast.success('Receipt processed successfully!', { id: toastId });
-    } catch (error) {
-      console.error('Error processing receipt:', error);
-      toast.error('Failed to process receipt. Please enter details manually.', { id: toastId });
-    } finally {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      toast.error('Please log in to upload receipts', { id: toastId });
       setIsParsingReceipt(false);
+      return;
     }
-  };
+
+    const formData = new FormData();
+    formData.append('image', file); 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60_000); 
+
+    const response = await fetch('http://localhost:8000/api/parse-bill', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        // DO NOT set Content-Type: browser will set multipart boundary
+      },
+      body: formData,
+      signal: controller.signal
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      // try read JSON error if possible
+      let errText = `Request failed (${response.status})`;
+      try {
+        const errJson = await response.json();
+        if (errJson?.error) errText = errJson.error;
+        else if (errJson?.message) errText = errJson.message;
+      } catch (_) {
+        errText = await response.text().catch(() => errText);
+      }
+      throw new Error(errText);
+    }
+
+    // parse JSON; handle invalid JSON safely
+    let json;
+    try {
+      json = await response.json();
+    } catch (err) {
+      throw new Error('Invalid JSON from server');
+    }
+
+    const parsed = json?.parsed ?? json; // support either { parsed: {...}} or {...}
+    if (!parsed) throw new Error('No parsed result returned');
+
+    if (parsed.vendor_name) setTitle(parsed.vendor_name);
+    if (parsed.total != null) setAmount(String(parsed.total));
+    if (parsed.issue_date) {
+      const date = new Date(parsed.issue_date);
+      if (!isNaN(date.getTime())) {
+        const formattedDate = date.toISOString().split('T')[0];
+        setDescription(curr => `Date: ${formattedDate}\n${parsed.notes || ''}`.trim());
+      }
+    } else if (parsed.notes) {
+      setDescription(parsed.notes);
+    }
+
+    if (parsed.category_guess) {
+      const guess = parsed.category_guess;
+      const normalizedGuess = typeof guess === 'string' ? guess.trim() : String(guess);
+      // Keep existing category insertion logic
+      const capitalizedGuess = normalizedGuess.charAt(0).toUpperCase() + normalizedGuess.slice(1);
+      if (!availableCategories.includes(capitalizedGuess)) {
+        setAvailableCategories(prev => [...prev, capitalizedGuess]);
+      }
+      setCategory(capitalizedGuess);
+    }
+
+    toast.success('Receipt processed successfully!', { id: toastId });
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      toast.error('Receipt parsing timed out. Try again.', { id: toastId });
+    } else {
+      console.error('Error processing receipt:', err);
+      toast.error(err.message || 'Failed to process receipt. Please enter details manually.', { id: toastId });
+    }
+  } finally {
+    setIsParsingReceipt(false);
+  }
+};
+
 
   // Split logic helpers
   const handleMemberToggle = (memberId: string) => {
@@ -627,7 +659,7 @@ export function AddExpense() {
         </Button>
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">
-            {isEditMode ? '✏️ Edit Expense' : 'Add Expense'}
+            {isEditMode ? 'Edit Expense' : 'Add Expense'}
           </h1>
           <p className="text-muted-foreground">
             {isEditMode
@@ -1091,7 +1123,7 @@ export function AddExpense() {
               </>
             ) : (
               <>
-                {isEditMode ? '✅ Update Expense' : '✅ Add Expense'}
+                {isEditMode ? 'Update Expense' : 'Add Expense'}
               </>
             )}
           </Button>
