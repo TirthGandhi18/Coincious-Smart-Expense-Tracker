@@ -1166,19 +1166,23 @@ export function Dashboard() {
               </div>
             ) : (
               <div className="space-y-2">
-                <label className="text-xs text-gray-600">Enter monthly budget</label>
+                {/* --- CHANGE 1 --- */}
+                <label className="text-xs text-gray-600 dark:text-gray-400">Enter monthly budget</label>
                 <div className="flex gap-2">
-                  <div className="flex items-center px-3 rounded-md border border-gray-200 bg-white">
-                    <span className="text-sm">$</span>
+                  {/* --- CHANGE 2 --- */}
+                  <div className="flex items-center px-3 rounded-md border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">$</span>
                   </div>
+                  {/* --- CHANGE 3 --- */}
                   <input
                     value={budgetInput}
                     onChange={(e) => setBudgetInput(e.target.value)}
                     placeholder="e.g. 2000"
-                    className="flex-1 px-3 py-2 rounded-md border border-gray-200 bg-white text-sm focus:outline-none"
+                    className="flex-1 px-3 py-2 rounded-md border border-gray-200 bg-white text-sm focus:outline-none dark:bg-gray-800 dark:text-gray-100"
                   />
                 </div>
-                <div className="text-xs text-gray-500">Saved to your user settings when signed in. If you want it local-only, sign out first (dev-friendly).</div>
+                {/* --- CHANGE 4 --- */}
+                <div className="text-xs text-gray-500 dark:text-gray-400">Saved to your user settings when signed in. If you want it local-only, sign out first (dev-friendly).</div>
               </div>
             )}
           </CardContent>
