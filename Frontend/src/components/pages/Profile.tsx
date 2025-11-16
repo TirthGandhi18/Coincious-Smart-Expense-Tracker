@@ -582,19 +582,16 @@ export function Profile() {
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="text-center p-4 bg-muted rounded-lg">
-                  {/* --- CHANGE HERE --- */}
                   <div className="text-3xl font-bold text-[#8B4513] dark:text-gray-100">{stats.expense_count}</div>
                   <div className="text-sm text-muted-foreground mt-1">Expenses</div>
                 </div>
 
                 <div className="text-center p-4 bg-muted rounded-lg">
-                  {/* --- CHANGE HERE --- */}
                   <div className="text-3xl font-bold text-[#8B4513] dark:text-gray-100">{stats.group_count}</div>
                   <div className="text-sm text-muted-foreground mt-1">Groups</div>
                 </div>
 
                 <div className="text-center p-4 bg-muted rounded-lg">
-                  {/* --- CHANGE HERE --- */}
                   <div className="text-3xl font-bold text-[#8B4513] dark:text-gray-100">
                     {stats.member_since ? Math.max(1, new Date().getMonth() - new Date(stats.member_since).getMonth()) : 0}
                   </div>
@@ -750,7 +747,8 @@ function PasswordModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={() => !loading && onClose()} />
-      <div className="relative z-10 w-full max-w-md p-6 bg-white rounded-lg shadow-lg">
+      {/* --- CHANGE 1 HERE --- */}
+      <div className="relative z-10 w-full max-w-md p-6 bg-card rounded-lg shadow-lg">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Change Password</h3>
           <Button variant="ghost" onClick={() => !loading && onClose()}>
@@ -828,7 +826,8 @@ function SessionsModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={() => onClose()} />
-      <div className="relative z-10 w-full max-w-3xl p-6 bg-white rounded-lg shadow-lg">
+      {/* --- CHANGE 2 HERE --- */}
+      <div className="relative z-10 w-full max-w-3xl p-6 bg-card rounded-lg shadow-lg">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Your Sessions</h3>
           <div className="flex items-center gap-2">
