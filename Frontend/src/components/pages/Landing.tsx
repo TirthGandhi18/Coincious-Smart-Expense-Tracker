@@ -20,15 +20,56 @@ import {
   Zap,
   PiggyBank,
   Receipt,
-  Phone
+  Phone,
+  Mail,
+  Send
 } from 'lucide-react';
 import { useTheme } from '../ui/ThemeContext';
 import { motion } from 'motion/react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { useState } from 'react';
+import { toast } from 'sonner';
 import { Logo } from '../ui/logo';
 
 export const Landing = () => {
   const { theme, toggleTheme } = useTheme();
+  const [supportDialogOpen, setSupportDialogOpen] = useState(false);
+  const [supportType, setSupportType] = useState<'help' | 'contact'>('help');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
+
+  const handleSupportClick = (type: 'help' | 'contact') => {
+    setSupportType(type);
+    setSupportDialogOpen(true);
+  };
+
+  const handleSubmitSupport = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Simulate form submission
+    toast.success('Support request sent!', {
+      description: 'We\'ll get back to you within 24 hours.'
+    });
+
+    // Reset form
+    setFormData({
+      name: '',
+      email: '',
+      subject: '',
+      message: ''
+    });
+
+    setSupportDialogOpen(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#F5E6D3] dark:bg-[#1A2332]">
@@ -36,13 +77,31 @@ export const Landing = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#293548]/80 backdrop-blur-xl border-b border-[#D7CCC8]/20 dark:border-[#374151]/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
+            {/* Logo */}
             <Logo></Logo>
+
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-8">
-              <a href="#features" className="text-[#5D4037] dark:text-[#E5E7EB] hover:text-[#8B5A3C] dark:hover:text-[#10B981] transition-colors">Features</a>
-              <a href="#how-it-works" className="text-[#5D4037] dark:text-[#E5E7EB] hover:text-[#8B5A3C] dark:hover:text-[#10B981] transition-colors">About</a>
-              <a href="#Contact" className="text-[#5D4037] dark:text-[#E5E7EB] hover:text-[#8B5A3C] dark:hover:text-[#10B981] transition-colors">Contact</a>
+              <a
+                href="#features"
+                className="text-[#5D4037] dark:text-[#E5E7EB] hover:text-[#8B5A3C] dark:hover:text-[#10B981] transition-colors">
+                Features
+              </a>
+
+              <a
+                href="#how-it-works"
+                className="text-[#5D4037] dark:text-[#E5E7EB] hover:text-[#8B5A3C] dark:hover:text-[#10B981] transition-colors"
+>
+                About
+              </a>
+              <button
+                onClick={() => handleSupportClick('contact')}
+                className="text-[#5D4037] dark:text-[#E5E7EB] hover:text-[#8B5A3C] dark:hover:text-[#10B981] transition-colors"
+              >
+                Contact
+              </button>
             </div>
+
 
             {/* Right Side Actions */}
             <div className="flex items-center gap-4">
@@ -90,10 +149,10 @@ export const Landing = () => {
                 <span className="text-sm text-[#5D4037] dark:text-[#E5E7EB]">AI-Powered Expense Management</span>
               </div>
 
-              <h1 className="text-5xl md:text-6xl lg:text-7xl text-[#8b6458] dark:text-white mb-6 leading-tight">
+              <h1 className="text-5xl md:text-6xl lg:text-7xl text-[#5D4037] dark:text-white mb-6 leading-tight">
                 Manage your money,
                 <br />
-                <span className="bg-gradient-to-r from-[#5B6FD8] via-[#95a1d7] to-[#5B6FD8] bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-[#5B6FD8] via-[#7B8FE8] to-[#5B6FD8] bg-clip-text text-transparent">
                   smarter
                 </span>
               </h1>
@@ -115,22 +174,6 @@ export const Landing = () => {
                   </Button>
                 </Link>
               </div>
-
-              {/* Trust Indicators */}
-              <div className="flex flex-wrap items-center gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-[#8B5A3C] dark:text-[#10B981]" />
-                  <span className="text-[#8D6E63] dark:text-[#9CA3AF]">Free Forever</span>
-                </div>
-                {/* <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-[#8B5A3C] dark:text-[#10B981]" />
-                  <span className="text-[#8D6E63] dark:text-[#9CA3AF]">No Credit Card</span>
-                </div> */}
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-[#8B5A3C] dark:text-[#10B981]" />
-                  <span className="text-[#8D6E63] dark:text-[#9CA3AF]">10K+ Users</span>
-                </div>
-              </div>
             </motion.div>
 
             {/* Right Image */}
@@ -141,19 +184,6 @@ export const Landing = () => {
               transition={{ duration: 0.8, delay: 0.2 }}
             >
               <div className="relative rounded-3xl overflow-hidden shadow-2xl">
-
-                {/* Gradient Blur Border Layer */}
-                <div
-                  className="
-                  absolute inset-0
-                  rounded-3xl
-                  pointer-events-none
-                  blur-xl
-                  opacity-60
-                  bg-gradient-to-br
-                from-[#ffecd2] to-[#fcb69f]
-                dark:from-[#00ffa3]/40 dark:via-[#00ccff]/40 dark:to-[#0066ff]/40"
-                />
                 <ImageWithFallback
                   src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1115&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                   alt="Smart Expense App"
@@ -161,15 +191,12 @@ export const Landing = () => {
                 />
               </div>
 
-
               {/* Decorative Gradient */}
               <div className="absolute -bottom-6 -right-6 w-72 h-72 bg-gradient-to-br from-[#8B5A3C]/20 to-blue-500/20 dark:from-[#10B981]/20 dark:to-blue-500/20 rounded-full blur-3xl -z-10"></div>
             </motion.div>
           </div>
         </div>
       </section>
-
-
 
       {/* Features Section */}
       <section id="features" className="py-24 px-4 sm:px-6 lg:px-8 bg-[#F5E6D3] dark:bg-[#1A2332]">
@@ -180,7 +207,7 @@ export const Landing = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
             >
-              <div className="inline-flex items-center gap-4 px-4 py-2 rounded-full bg-[#EFE8DD] dark:bg-[#374151] border border-[#D7CCC8] dark:border-[#10B981]/20 mb-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#EFE8DD] dark:bg-[#374151] border border-[#D7CCC8] dark:border-[#10B981]/20 mb-4">
                 <Zap className="w-4 h-4 text-[#8B5A3C] dark:text-[#10B981]" />
                 <span className="text-sm text-[#5D4037] dark:text-[#E5E7EB]">Powerful Features</span>
               </div>
@@ -200,7 +227,7 @@ export const Landing = () => {
               {
                 icon: Users,
                 title: 'Smart Split Bills',
-                description: 'Split expenses equally, by percentage, or custom amounts. Perfect for roommates and groups.',
+                description: 'Split expenses equally, by percentage. Perfect for roommates and groups.',
                 // blue -> cyan
                 start: '#3B82F6',
                 end: '#06B6D4'
@@ -330,173 +357,12 @@ export const Landing = () => {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-[#F5E6D3] dark:bg-[#1A2332]">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-            >
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#EFE8DD] dark:bg-[#374151] border border-[#D7CCC8] dark:border-[#10B981]/20 mb-4">
-                <Star className="w-4 h-4 text-[#8B5A3C] dark:text-[#10B981]" />
-                <span className="text-sm text-[#5D4037] dark:text-[#E5E7EB]">Testimonials</span>
-              </div>
-              <h2 className="text-4xl md:text-5xl text-[#5D4037] dark:text-white mb-4">
-                Loved by Users
-                <br />
-                <span className="text-[#8B5A3C] dark:text-[#10B981]">Worldwide</span>
-              </h2>
-            </motion.div>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                name: 'Rahul Sharma',
-                role: 'Software Engineer',
-                text: 'This app helped me track my expenses easily. Loved the UI!',
-                image: 'https://img.freepik.com/free-photo/portrait-young-indian-businessman-student-sitting-with-pen_1262-17490.jpg?w=740&q=80'
-              }
-              ,
-              {
-                name: 'Mohit Patel',
-                role: 'Student',
-                text: "Splitting expenses with friends used to be messy. Now everything is clear and automatic!",
-                image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop'
-
-              }
-              ,
-              {
-                name: 'Radhika Modi',
-                role: 'Freelancer',
-                text: 'Analytics dashboard helps me understand where my money goes. Game changer!',
-                image: 'https://img.freepik.com/free-photo/portrait-happy-indian-woman-standing-isolated_1303-27653.jpg?w=740&q=80'
-              }
-            ].map((testimonial, index) => (
-              <motion.div
-                key={index}
-                className="bg-white dark:bg-[#293548] rounded-2xl p-8 border border-[#D7CCC8] dark:border-[#374151] hover:shadow-xl transition-all"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <div className="flex gap-1 mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 fill-[#8B5A3C] dark:fill-[#10B981] text-[#8B5A3C] dark:text-[#10B981]" />
-                  ))}
-                </div>
-                <p className="text-[#5D4037] dark:text-[#E5E7EB] mb-6 leading-relaxed">
-                  "{testimonial.text}"
-                </p>
-                <div className="flex items-center gap-3">
-                  <ImageWithFallback
-                    src={testimonial.image}
-                    alt={testimonial.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <div>
-                    <div className="text-[#5D4037] dark:text-white">{testimonial.name}</div>
-                    <div className="text-sm text-[#8D6E63] dark:text-[#9CA3AF]">{testimonial.role}</div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section
-      <section id="pricing" className="py-24 px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#293548]">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#EFE8DD] dark:bg-[#374151] border border-[#D7CCC8] dark:border-[#10B981]/20 mb-6">
-              <PiggyBank className="w-4 h-4 text-[#8B5A3C] dark:text-[#10B981]" />
-              <span className="text-sm text-[#5D4037] dark:text-[#E5E7EB]">Simple Pricing</span>
-            </div>
-
-            <h2 className="text-4xl md:text-5xl text-[#5D4037] dark:text-white mb-4">
-              100% Free
-              <br />
-              <span className="text-[#8B5A3C] dark:text-[#10B981]">Forever</span>
-            </h2>
-
-            <p className="text-lg text-[#8D6E63] dark:text-[#9CA3AF] mb-12">
-              No hidden fees. No credit card required. All features included.
-            </p>
-
-            <div className="bg-gradient-to-br from-[#8B5A3C] to-[#6D452E] dark:from-[#10B981] dark:to-[#059669] rounded-3xl p-12 text-white">
-              <div className="text-6xl mb-4">$0</div>
-              <div className="text-xl mb-8 opacity-90">Free Forever</div>
-
-              <div className="space-y-4 mb-10 text-left max-w-md mx-auto">
-                {[
-                  'Unlimited expense tracking',
-                  'Unlimited groups & members',
-                  'AI-powered insights',
-                  'Multi-currency support',
-                  'Parental monitoring',
-                  'Export reports (PDF/Excel)',
-                  'Priority support',
-                  'PWA - works offline'
-                ].map((feature, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 flex-shrink-0" />
-                    <span>{feature}</span>
-                  </div>
-                ))}
-              </div>
-
-              <Link to="/register">
-                <Button className="bg-white text-[#8B5A3C] dark:text-[#10B981] hover:bg-gray-100 px-10 py-7 text-lg rounded-xl shadow-xl">
-                  Get Started Now
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-      </section> */}
-
-      {/* Final CTA */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-[#F5E6D3] to-[#EFE8DD] dark:from-[#1A2332] dark:to-[#293548]">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-4xl md:text-5xl text-[#5D4037] dark:text-white mb-6">
-              Ready to Take Control of
-              <br />
-              <span className="text-[#8B5A3C] dark:text-[#10B981]">Your Finances?</span>
-            </h2>
-
-            <p className="text-xl text-[#8D6E63] dark:text-[#9CA3AF] mb-10">
-              Join thousands of users managing their expenses smarter.
-            </p>
-
-            <Link to="/register">
-              <Button className="bg-gradient-to-r from-[#8B5A3C] to-[#6D452E] dark:from-[#10B981] dark:to-[#059669] text-white px-12 py-8 text-xl rounded-2xl shadow-2xl hover:shadow-xl transition-all group">
-                Start Your Journey
-                <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-
-            <p className="mt-6 text-sm text-[#8D6E63] dark:text-[#9CA3AF]">
-              • Setup in 2 minutes • Free forever
-            </p>
-          </motion.div>
-        </div>
-      </section>
 
 
+
+
+
+      {/* Footer */}
       <footer className="bg-[#5D4037] dark:bg-[#0F1419] text-white py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-12 mb-12">
@@ -521,11 +387,11 @@ export const Landing = () => {
               <ul className="space-y-3 text-sm text-white/70">
                 <li><a href="#features" className="hover:text-white transition-colors">Clear Spending Insights</a></li>
                 <li><a href="#pricing" className="hover:text-white transition-colors">Split Group Expenses</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Compare tricount</a></li>
-                {/* <li><a href="#" className="hover:text-white transition-colors">Roadmap</a></li> */}
+
               </ul>
             </div>
 
+            {/* Use Cases */}
             <div>
               <h4 className="mb-4">Use Cases</h4>
               <ul className="space-y-3 text-sm text-white/70">
@@ -533,18 +399,30 @@ export const Landing = () => {
                 <li><a href="#" className="hover:text-white transition-colors">For Group Holidays</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">For Roommates</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">For Restaurant Bills</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">For Freelancers
-                </a></li>
+
               </ul>
             </div>
-
 
             {/* Support */}
             <div>
               <h4 className="mb-4">Support</h4>
               <ul className="space-y-3 text-sm text-white/70">
-                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+                <li>
+                  <button
+                    onClick={() => handleSupportClick('help')}
+                    className="hover:text-white transition-colors"
+                  >
+                    Help Center
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => handleSupportClick('contact')}
+                    className="hover:text-white transition-colors"
+                  >
+                    Contact Us
+                  </button>
+                </li>
                 <li><a href="#" className="hover:text-white transition-colors">Terms</a></li>
               </ul>
             </div>
@@ -552,7 +430,7 @@ export const Landing = () => {
 
           <div className="border-t border-white/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-white/60 text-sm">
-              &copy; 2025 Coincious. 
+              &copy; 2025 Smart Expense. 
             </p>
             <div className="flex gap-6 text-sm text-white/60">
               <a href="#" className="hover:text-white transition-colors">Youtube</a>
@@ -561,6 +439,104 @@ export const Landing = () => {
           </div>
         </div>
       </footer>
+
+      {/* Support Dialog */}
+      <Dialog open={supportDialogOpen} onOpenChange={setSupportDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] bg-white dark:bg-[#293548] border-[#D7CCC8] dark:border-[#374151]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl text-[#5D4037] dark:text-white flex items-center gap-2">
+              <Mail className="w-6 h-6 text-[#8B5A3C] dark:text-[#10B981]" />
+              {supportType === 'help' ? 'Help Center' : 'Contact Us'}
+            </DialogTitle>
+            <DialogDescription className="text-[#8D6E63] dark:text-[#9CA3AF]">
+              {supportType === 'help'
+                ? 'Get help with your Smart Expense account or features.'
+                : 'Send us a message and we\'ll get back to you within 24 hours.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmitSupport} className="space-y-5 mt-4">
+            <div>
+              <Label htmlFor="name" className="text-[#5D4037] dark:text-[#E5E7EB]">Name</Label>
+              <Input
+                id="name"
+                placeholder="Your full name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+                className="mt-1.5 bg-[#ffffff] dark:bg-[#1A2332] border-[#b9b6b5] dark:border-[#374151] text-[#5D4037] dark:text-white"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="email" className="text-[#5D4037] dark:text-[#E5E7EB]">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter Your Email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+                className="mt-1.5 bg-[#ffffff] dark:bg-[#1A2332] border-[#b9b6b5] dark:border-[#374151] text-[#5D4037] dark:text-white"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="subject" className="text-[#5D4037] dark:text-[#E5E7EB]">Subject</Label>
+              <Select
+                value={formData.subject}
+                onValueChange={(value) => setFormData({ ...formData, subject: value })}
+                required
+              >
+                <SelectTrigger className="mt-1.5 bg-[#ffffff] dark:bg-[#1A2332] border-[#b9b6b5] dark:border-[#374151] text-[#5D4037] dark:text-white">
+                  <SelectValue placeholder="Select a topic" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-[#293548] border-[#D7CCC8] dark:border-[#697281]">
+                  <SelectItem value="account">Account & Login Issues</SelectItem>
+                  <SelectItem value="groups">Group Management</SelectItem>
+                  <SelectItem value="expenses">Expense Tracking</SelectItem>
+                  <SelectItem value="payments">Payments & Settlements</SelectItem>
+                  <SelectItem value="technical">Technical Support</SelectItem>
+                  <SelectItem value="feature">Feature Request</SelectItem>
+                  <SelectItem value="billing">Billing Question</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="message" className="text-[#5D4037] dark:text-[#E5E7EB]">Message</Label>
+              <Textarea
+                id="message"
+                placeholder="Describe your issue or question in detail..."
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                required
+                rows={5}
+                className="mt-1.5 bg-[#ffffff] dark:bg-[#1A2332] border-[#D7CCC8] dark:border-[#374151] text-[#5D4037] dark:text-white resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSupportDialogOpen(false)}
+                className="flex-1 bg-[#fbf9f9] border-[#D7CCC8] dark:border-[#374151] text-[#5D4037] dark:text-[#E5E7EB]"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 bg-gradient-to-r from-[#8B5A3C] to-[#6D452E] dark:from-[#10B981] dark:to-[#059669] text-white"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Send Message
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
