@@ -582,17 +582,20 @@ export function Profile() {
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="text-center p-4 bg-muted rounded-lg">
-                  <div className="text-3xl font-bold text-[#8B4513]">{stats.expense_count}</div>
+                  {/* --- CHANGE HERE --- */}
+                  <div className="text-3xl font-bold text-[#8B4513] dark:text-gray-100">{stats.expense_count}</div>
                   <div className="text-sm text-muted-foreground mt-1">Expenses</div>
                 </div>
 
                 <div className="text-center p-4 bg-muted rounded-lg">
-                  <div className="text-3xl font-bold text-[#8B4513]">{stats.group_count}</div>
+                  {/* --- CHANGE HERE --- */}
+                  <div className="text-3xl font-bold text-[#8B4513] dark:text-gray-100">{stats.group_count}</div>
                   <div className="text-sm text-muted-foreground mt-1">Groups</div>
                 </div>
 
                 <div className="text-center p-4 bg-muted rounded-lg">
-                  <div className="text-3xl font-bold text-[#8B4513]">
+                  {/* --- CHANGE HERE --- */}
+                  <div className="text-3xl font-bold text-[#8B4513] dark:text-gray-100">
                     {stats.member_since ? Math.max(1, new Date().getMonth() - new Date(stats.member_since).getMonth()) : 0}
                   </div>
                   <div className="text-sm text-muted-foreground mt-1">Months</div>
