@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { supabase } from '../../utils/supabase/client';
 import { projectId } from '../../lib/info';
 import { useAuth } from '../../App';
+import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
 import {
   Send,
   Brain,
@@ -256,7 +257,19 @@ export function Chatbot() {
                         ? 'bg-primary text-primary-foreground ml-auto'
                         : 'bg-muted'
                         }`}>
-                        <p className="whitespace-pre-line">{message.content}</p>
+
+                        {/* --- MODIFICATION START --- */}
+                        {message.type === 'bot' ? (
+                          <div className="prose dark:prose-invert prose-p:my-0 prose-ul:my-2 prose-li:my-0">
+                            <ReactMarkdown>
+                              {message.content}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-line">{message.content}</p>
+                        )}
+                        {/* --- MODIFICATION END --- */}
+
                       </div>
 
                       <div className={`flex items-center gap-2 mt-1 text-xs text-muted-foreground ${message.type === 'user' ? 'justify-end' : 'justify-start'
