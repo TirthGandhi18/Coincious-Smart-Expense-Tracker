@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTheme } from '../../App';
+import { useTheme } from '../ui/ThemeContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';

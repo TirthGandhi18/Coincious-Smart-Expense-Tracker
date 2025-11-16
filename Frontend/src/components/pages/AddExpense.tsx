@@ -18,11 +18,9 @@ import {
   Receipt,
   Users,
   Calculator,
-  Plus,
-  Minus,
   User,
-  Zap, // Icon for AI button
-  Upload // Icon for Receipt Upload
+  Zap,
+  Upload
 } from 'lucide-react';
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
@@ -42,11 +40,32 @@ interface GroupMember {
   email?: string;
 }
 
+// Mock category list (frontend-only)
+const RECURRING_PERSONAL_EXPENSES_URL =
+  'https://xmuallpfxwgapaxawrwk.supabase.co/functions/v1/recurring-personal-expenses';
+const categories = [
+  { value: 'food', label: 'Food & Dining', icon: '🍽️' },
+  { value: 'transportation', label: 'Transportation', icon: '🚗' },
+  { value: 'accommodation', label: 'Accommodation', icon: '🏠' },
+  { value: 'entertainment', label: 'Entertainment', icon: '🎉' },
+  { value: 'utilities', label: 'Utilities', icon: '💡' },
+  { value: 'shopping', label: 'Shopping', icon: '🛍️' },
+  { value: 'health', label: 'Health & Medical', icon: '⚕️' },
+  { value: 'other', label: 'Other', icon: '💳' }
+];
+
+type RecurringExpense = {
+  id: string;
+  title: string;
+  amount: number;
+  category: string | null;
+};
+
 export function AddExpense() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams(); // Add this line - it was missing!
-  
+  const [searchParams] = useSearchParams();
+
   // Get expense data from navigation state
   const expenseData = location.state?.expenseData;
   const isEdit = location.state?.isEdit || false;
@@ -67,11 +86,14 @@ export function AddExpense() {
   const [selectedGroup, setSelectedGroup] = useState(
     searchParams.get('group') || ''
   );
-  const [paidBy, setPaidBy] = useState(user?.id || ''); // Correctly defaults to logged-in user
+  const [paidBy, setPaidBy] = useState(user?.id || '');
   const [splitMethod, setSplitMethod] = useState<'equal' | 'unequal'>('equal');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([user?.id || '']);
   const [unequalAmounts, setUnequalAmounts] = useState<{ [key: string]: string }>({});
   const [amountErrors, setAmountErrors] = useState<{ [key: string]: string }>({});
+  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
+
+  const [selectedRecurringExpense, setSelectedRecurringExpense] = useState<string>('');
 
   // Data state
   const [groups, setGroups] = useState<any[]>([]);
@@ -79,49 +101,43 @@ export function AddExpense() {
 
   // Loading states
   const [loading, setLoading] = useState(false);
-  const [membersLoading, setMembersLoading] = useState(false); // For tracking group members loading
-  const [isCategorizing, setIsCategorizing] = useState(false); // For AI Categorize
-  const [receiptFile, setReceiptFile] = useState<File | null>(null); // For Receipt Upload
-  const [isParsingReceipt, setIsParsingReceipt] = useState(false); // For Receipt Upload
-  const [expenseDate, setExpenseDate] = useState(''); // For storing the expense date
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [isCategorizing, setIsCategorizing] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [isParsingReceipt, setIsParsingReceipt] = useState(false);
+  const [expenseDate, setExpenseDate] = useState('');
 
-  // Add edit mode state
+  // Edit mode state
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
 
-  // Format today's date as DD/MM/YYYY
+  // Format today's date as YYYY-MM-DD
   useEffect(() => {
     const today = new Date();
-    const day = String(today.getDate()).padStart(2, '0');
     const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
     const year = today.getFullYear();
     setExpenseDate(`${year}-${month}-${day}`);
   }, []);
 
-  // NEW useEffect to handle edit mode - PRE-FILL ALL FIELDS
+  // Pre-fill in edit mode
   useEffect(() => {
     if (isEdit && expenseData) {
-      console.log('📝 EDIT MODE ACTIVATED! Pre-filling data:', expenseData);
-      
       setIsEditMode(true);
       setEditingExpenseId(expenseData.id?.toString() || null);
-      
-      // Pre-fill ALL form fields
       setTitle(expenseData.description || '');
       setAmount(expenseData.amount?.toString() || '');
-      
-      // ✅ FIX: Set category AFTER ensuring it's in the list
+
       if (expenseData.category) {
-        // Add category to list if not present
         if (!availableCategories.includes(expenseData.category)) {
           setAvailableCategories(prev => [...prev, expenseData.category]);
         }
-        // Now set it (delayed to ensure dropdown is ready)
+        // small delay to ensure select has options (keeps your previous approach)
         setTimeout(() => setCategory(expenseData.category), 100);
       }
-      
+
       setExpenseType(expenseData.type || 'personal');
-      
+
       if (expenseData.date) {
         try {
           const date = new Date(expenseData.date);
@@ -129,64 +145,46 @@ export function AddExpense() {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
-            const formattedDate = `${year}-${month}-${day}`;
-            console.log('📅 Setting date to:', formattedDate);
-            setExpenseDate(formattedDate);
+            setExpenseDate(`${year}-${month}-${day}`);
           }
-        } catch (error) {
-          console.error('❌ Error parsing date:', error);
+        } catch (err) {
+          console.error('Error parsing date:', err);
         }
       }
-      
-      console.log('✅ All fields pre-filled successfully!');
     }
   }, [isEdit, expenseData, availableCategories]);
 
-  // ----------------------------------------------------------------
-  // DATA FETCHING (Replaces Dummy Data)
-  // ----------------------------------------------------------------
-
-  // Fetch the user's groups from Supabase when the component loads
+  // Fetch groups
   useEffect(() => {
     const fetchGroups = async () => {
       if (!user) return;
-
-      // Use the Supabase database function 'get_user_groups'
       const { data, error } = await supabase.rpc('get_user_groups');
-
       if (error) {
         console.error('Error fetching groups:', error);
         toast.error('Could not load your groups.');
       } else {
         setGroups(data || []);
-        // If a group was preselected (e.g., coming from a group page), set it
-        if (searchParams.get('group') && data.find((g: any) => g.id === searchParams.get('group'))) {
-          setSelectedGroup(searchParams.get('group'));
+        const g = searchParams.get('group');
+        if (g && Array.isArray(data) && data.find((gg: any) => gg.id === g)) {
+          setSelectedGroup(g);
         }
       }
     };
-
     fetchGroups();
   }, [user, searchParams]);
 
-  // Fetch members whenever the selected group changes
+  // Fetch group members when selectedGroup changes
   useEffect(() => {
     const fetchGroupMembers = async () => {
       if (!selectedGroup || !user) {
         setCurrentMembers([]);
         return;
       }
-
       try {
-        setLoading(true);
-
-        // Get the current session
+        setMembersLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-          throw new Error('No active session');
-        }
+        if (!session?.access_token) throw new Error('No active session');
 
-        // Fetch members using the API endpoint
         const response = await fetch(`http://localhost:8000/api/groups/${selectedGroup}/members`, {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -194,111 +192,119 @@ export function AddExpense() {
           },
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch group members');
-        }
+        if (!response.ok) throw new Error('Failed to fetch group members');
 
-        const data = await response.json();
-        const members = data.members || [];
+        const res = await response.json();
+        const members = res.members || [];
 
-        // Format members data
         const formattedMembers: GroupMember[] = members.map((member: any) => ({
           id: member.user_id || member.id,
           name: member.name || member.email || 'No Name',
           avatar: member.avatar_url || '',
-          email: member.email || ''
+          email: member.email || '',
         }));
 
         setCurrentMembers(formattedMembers);
-
-        // Reset split members to ALL group members by default
         setSelectedMembers(formattedMembers.map(m => m.id));
-        setPaidBy(user.id); // Keep the default payer as the current user
+        setPaidBy(user.id);
         setUnequalAmounts({});
         setAmountErrors({});
-
       } catch (error) {
         console.error('Error fetching group members:', error);
         toast.error('Could not load group members. Please try again.');
         setCurrentMembers([]);
       } finally {
-        setLoading(false);
+        setMembersLoading(false);
       }
-      // --- END OF MODIFICATION ---
     };
 
     fetchGroupMembers();
   }, [selectedGroup, user]);
 
-  // This useEffect will run once and fetch all available categories
+  // Fetch recurring expenses (calling your backend to avoid CORS issues)
+  useEffect(() => {
+    const fetchRecurringExpenses = async () => {
+      if (!user || expenseType !== 'personal') return;
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          console.warn('No session token, skipping recurring expenses fetch.');
+          return;
+        }
+
+        const response = await fetch(`http://localhost:8000/api/recurring-expenses`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.warn(`Failed to fetch recurring expenses from /api/recurring-expenses: ${errorText}`);
+          return;
+        }
+
+        const data = await response.json();
+
+        const rec = (data?.recurring || []).map((r: any) => ({
+          id: String(r.id),
+          title: String(r.title),
+          amount: Number(r.amount || 0),
+          category: r.category ?? null,
+        })) as RecurringExpense[];
+
+        setRecurringExpenses(rec);
+      } catch (err) {
+        console.error('Error fetching recurring expenses:', err);
+      }
+    };
+
+    fetchRecurringExpenses();
+  }, [user, expenseType]);
+
+  // Fetch categories (user-specific)
   useEffect(() => {
     const fetchCategories = async () => {
       if (!user) return;
-
       const { data, error } = await supabase.rpc('get_all_user_categories');
-
       if (error) {
         console.error('Error fetching categories:', error);
         toast.error('Could not load your categories.');
       } else {
-        const uniqueCategories = [...new Set(data as string[])];
+        const uniqueCategories = [...new Set((data as string[]) || [])];
         setAvailableCategories(uniqueCategories);
-        
-        // ✅ If we're in edit mode and have category data, set it NOW
+
         if (isEdit && expenseData?.category) {
-          // Add the expense's category if it's not in the list
           if (!uniqueCategories.includes(expenseData.category)) {
-            setAvailableCategories([...uniqueCategories, expenseData.category]);
+            setAvailableCategories(prev => [...prev, expenseData.category]);
           }
-          // Set the category after categories are loaded
           setCategory(expenseData.category);
-          console.log('✅ Category set to:', expenseData.category);
         }
       }
     };
-
     fetchCategories();
   }, [user, isEdit, expenseData?.category]);
 
-  // MODIFIED: Simplified edit mode useEffect - remove category setting from here
-  useEffect(() => {
-    if (isEdit && expenseData) {
-      console.log('📝 EDIT MODE ACTIVATED! Pre-filling data:', expenseData);
-      
-      setIsEditMode(true);
-      setEditingExpenseId(expenseData.id?.toString() || null);
-      
-      // Pre-fill basic fields
-      setTitle(expenseData.description || '');
-      setAmount(expenseData.amount?.toString() || '');
-      setExpenseType(expenseData.type || 'personal');
-      
-      // Category is now handled in fetchCategories useEffect above
-      
-      // Format date
-      if (expenseData.date) {
-        try {
-          const date = new Date(expenseData.date);
-          if (!isNaN(date.getTime())) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const formattedDate = `${year}-${month}-${day}`;
-            console.log('📅 Setting date to:', formattedDate);
-            setExpenseDate(formattedDate);
-          }
-        } catch (error) {
-          console.error('❌ Error parsing date:', error);
-        }
-      }
-      
-      console.log('✅ All fields pre-filled successfully!');
-    }
-  }, [isEdit, expenseData]);
+  // Handle recurring expense selection (only used in UI when expenseType === 'personal')
+  const handleRecurringExpenseChange = (value: string) => {
+    setSelectedRecurringExpense(value);
 
-  // ----------------------------------------------------------------
-  // AI/FEATURE HANDLERS
-  // ----------------------------------------------------------------
+    if (value === 'none') {
+      // User chose not to use a template; do not overwrite existing fields
+      return;
+    }
+
+    const recurring = recurringExpenses.find(exp => exp.id === value);
+    if (recurring) {
+      setTitle(recurring.title);
+      setAmount(recurring.amount.toString());
+      if (recurring.category) {
+        setCategory(recurring.category);
+      }
+    }
+  };
 
   const handleAICategorize = async () => {
     if (!title.trim()) {
@@ -316,7 +322,7 @@ export function AddExpense() {
       formData.append('description', title);
       formData.append('category', ''); // Trigger prediction mode
 
-      const response = await fetch('http://localhost:8000/api/categorize', { // MAKE SURE PORT IS CORRECT
+      const response = await fetch('http://localhost:8000/api/categorize', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session.access_token}` },
         body: formData,
@@ -328,18 +334,14 @@ export function AddExpense() {
       const aiCategoryLabel = result.category;
 
       if (aiCategoryLabel) {
-        // Check if the AI's suggestion is already in our dropdown
         if (!availableCategories.includes(aiCategoryLabel)) {
-          // If not, add it to our state so it's in the list
           setAvailableCategories(prevCategories => [...prevCategories, aiCategoryLabel]);
         }
-        // Now, set the dropdown to the AI's suggestion
         setCategory(aiCategoryLabel);
         toast.success(`AI suggested: ${aiCategoryLabel}`, { id: toastId });
       } else {
         throw new Error("AI could not determine a category.");
       }
-
     } catch (error: any) {
       toast.error(error.message || 'Failed to get AI category.', { id: toastId });
     } finally {
@@ -378,7 +380,6 @@ export function AddExpense() {
 
       const { parsed } = await response.json();
 
-      // Auto-fill the form fields with parsed data
       if (parsed.vendor_name) setTitle(parsed.vendor_name);
       if (parsed.total) setAmount(parsed.total.toString());
       if (parsed.issue_date) {
@@ -391,16 +392,12 @@ export function AddExpense() {
         setDescription(parsed.notes);
       }
 
-      // Try to find a matching category (MODIFIED to use string array)
       if (parsed.category_guess) {
         const normalizedGuess = parsed.category_guess.toLowerCase().trim();
-
-        // Find a match in the user's availableCategories
         let matchedCategory = availableCategories.find(
           cat => cat.toLowerCase() === normalizedGuess
         );
 
-        // If no exact match, try partial match
         if (!matchedCategory) {
           matchedCategory = availableCategories.find(cat =>
             cat.toLowerCase().includes(normalizedGuess) ||
@@ -408,12 +405,9 @@ export function AddExpense() {
           );
         }
 
-        // If a match is found, set it.
         if (matchedCategory) {
           setCategory(matchedCategory);
         } else {
-          // If no match, but the AI gave a guess, add it as a new category
-          // and select it.
           const capitalizedGuess = parsed.category_guess.charAt(0).toUpperCase() + parsed.category_guess.slice(1);
           if (!availableCategories.includes(capitalizedGuess)) {
             setAvailableCategories(prev => [...prev, capitalizedGuess]);
@@ -431,11 +425,7 @@ export function AddExpense() {
     }
   };
 
-
-  // ----------------------------------------------------------------
-  // FORM HANDLERS (Split Logic)
-  // ----------------------------------------------------------------
-
+  // Split logic helpers
   const handleMemberToggle = (memberId: string) => {
     setSelectedMembers(prev => {
       if (prev.includes(memberId)) {
@@ -458,7 +448,7 @@ export function AddExpense() {
       return;
     }
 
-    const numberRegex = /^\d*\.?\d*$/; // Allow only numbers and a decimal
+    const numberRegex = /^\d*\.?\d*$/;
     if (!numberRegex.test(value)) {
       setAmountErrors(prev => ({ ...prev, [memberId]: 'Invalid number' }));
       return;
@@ -487,17 +477,13 @@ export function AddExpense() {
   };
 
   const splitAmounts = calculateSplitAmounts();
-  const totalSplit = Object.values(splitAmounts).reduce((sum, amount) => sum + Number.parseFloat(amount || '0'), 0);
+  const totalSplit = Object.values(splitAmounts).reduce((sum, a) => sum + Number.parseFloat(a || '0'), 0);
 
-  // ----------------------------------------------------------------
-  // FINAL SUBMIT HANDLER (Connects to Supabase & Python)
-  // ----------------------------------------------------------------
-
+  // Submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // --- 1. VALIDATION ---
     if (!title.trim()) {
       toast.error('Please enter an expense title');
       setLoading(false);
@@ -523,7 +509,7 @@ export function AddExpense() {
     }
 
     try {
-      // AI Learning call (fire-and-forget)
+      // AI learning call (fire-and-forget)
       const learningFormData = new FormData();
       learningFormData.append('description', title);
       learningFormData.append('amount', String(finalAmount));
@@ -535,11 +521,8 @@ export function AddExpense() {
       }).catch(err => console.error("AI Learning call failed:", err));
 
       if (isEditMode && editingExpenseId) {
-        // **UPDATE MODE**
-        console.log('✏️ UPDATING expense:', editingExpenseId);
-        
+        // UPDATE MODE
         if (expenseType === 'personal') {
-          // Update personal expense in Supabase
           const { error: updateError } = await supabase
             .from('expenses')
             .update({
@@ -551,18 +534,14 @@ export function AddExpense() {
             .eq('id', editingExpenseId);
 
           if (updateError) throw updateError;
-          
+
           toast.success('✅ Expense updated successfully!');
           setTimeout(() => navigate('/dashboard'), 1000);
-          
-        } else if (expenseType === 'group') {
-          // Update group expense
+        } else {
           toast.info('Group expense update - implement based on your needs');
-          // You may need to update both expenses table and splits table
         }
-        
       } else {
-        // **CREATE MODE**
+        // CREATE MODE
         if (expenseType === 'personal') {
           const { error: expenseError } = await supabase
             .from('expenses')
@@ -578,7 +557,6 @@ export function AddExpense() {
           if (expenseError) throw expenseError;
           toast.success('Personal expense added!');
           navigate('/dashboard');
-
         } else {
           // Group expense creation
           if (!selectedGroup) {
@@ -592,7 +570,7 @@ export function AddExpense() {
             return;
           }
 
-          const finalSplits: { user_id: string, amount_owed: number }[] = [];
+          const finalSplits: { user_id: string; amount_owed: number }[] = [];
 
           if (splitMethod === 'equal') {
             const equalAmount = finalAmount / selectedMembers.length;
@@ -637,12 +615,10 @@ export function AddExpense() {
     }
   };
 
-  // ----------------------------------------------------------------
-  // JSX (UI Rendering)
-  // ----------------------------------------------------------------
+  // JSX
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto">
-      {/* Header with back button */}
+      {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/dashboard">
@@ -654,10 +630,10 @@ export function AddExpense() {
             {isEditMode ? '✏️ Edit Expense' : 'Add Expense'}
           </h1>
           <p className="text-muted-foreground">
-            {isEditMode 
-              ? 'Update your expense details below' 
-              : expenseType === 'personal' 
-                ? 'Track your personal expense' 
+            {isEditMode
+              ? 'Update your expense details below'
+              : expenseType === 'personal'
+                ? 'Track your personal expense'
                 : 'Split a new expense with your group'}
           </p>
         </div>
@@ -680,28 +656,21 @@ export function AddExpense() {
         </div>
       )}
 
-      {/* Expense Type Tabs - Updated with dark mode styling */}
-      <Tabs 
-        value={expenseType} 
+      <Tabs
+        value={expenseType}
         onValueChange={(value) => {
           if (!isEditMode) {
             setExpenseType(value as 'personal' | 'group');
           }
-        }} 
+        }}
         className="mb-6"
       >
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger 
-            value="personal"
-            className="flex items-center gap-2 dark:data-[state=active]:text-green-500"
-          >
+          <TabsTrigger value="personal" className="flex items-center gap-2 dark:data-[state=active]:text-green-500">
             <User className="h-4 w-4" />
             Personal
           </TabsTrigger>
-          <TabsTrigger 
-            value="group"
-            className="flex items-center gap-2 dark:data-[state=active]:text-green-500"
-          >
+          <TabsTrigger value="group" className="flex items-center gap-2 dark:data-[state=active]:text-green-500">
             <Users className="h-4 w-4" />
             Group
           </TabsTrigger>
@@ -709,7 +678,7 @@ export function AddExpense() {
       </Tabs>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Expense Details Card */}
+        {/* Expense Details */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -718,6 +687,37 @@ export function AddExpense() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Recurring dropdown — only for personal expenses */}
+            {expenseType === 'personal' && (
+              <div className="space-y-2">
+                <Label htmlFor="recurring">Quick Select (Recurring Expenses)</Label>
+                <Select value={selectedRecurringExpense} onValueChange={handleRecurringExpenseChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a frequently used expense" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">-- None (Enter manually) --</SelectItem>
+                    {recurringExpenses.map((expense) => {
+                      const categoryInfo = categories.find(c => c.value === expense.category);
+                      return (
+                        <SelectItem key={expense.id} value={expense.id}>
+                          <div className="flex items-center justify-between gap-4 w-full">
+                            <span className="flex items-center gap-2">
+                              {categoryInfo?.icon} {expense.title}
+                            </span>
+                            <span className="text-muted-foreground">${expense.amount}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Select a recurring expense to auto-fill the details.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="title">Title *</Label>
               <Input
@@ -764,12 +764,11 @@ export function AddExpense() {
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {[...new Set(availableCategories.concat(category ? [category] : []))]
-                    .map((categoryName) => (
-                      <SelectItem key={categoryName} value={categoryName}>
-                        {categoryName}
-                      </SelectItem>
-                    ))}
+                  {[...new Set(availableCategories.concat(category ? [category] : []))].map((categoryName) => (
+                    <SelectItem key={categoryName} value={categoryName}>
+                      {categoryName}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Button
@@ -815,13 +814,11 @@ export function AddExpense() {
                     <SelectValue placeholder="Select a group" />
                   </SelectTrigger>
                   <SelectContent>
-                    {groups.map((group) => {
-                      return (
-                        <SelectItem key={group.id} value={group.id}>
-                          {group.name}
-                        </SelectItem>
-                      );
-                    })}
+                    {groups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -856,7 +853,7 @@ export function AddExpense() {
           </Card>
         )}
 
-        {/* Split Configuration - Only shown for group expenses */}
+        {/* Split Configuration */}
         {expenseType === 'group' && selectedGroup && !membersLoading && (
           <Card>
             <CardHeader>
@@ -866,7 +863,6 @@ export function AddExpense() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Split Method */}
               <div className="space-y-3">
                 <Label>Split Method</Label>
                 <RadioGroup value={splitMethod} onValueChange={(value) => setSplitMethod(value as 'equal' | 'unequal')}>
@@ -885,7 +881,6 @@ export function AddExpense() {
                 </RadioGroup>
               </div>
 
-              {/* Equal Division - Member Selection */}
               {splitMethod === 'equal' && (
                 <div className="space-y-3">
                   <div>
@@ -928,7 +923,6 @@ export function AddExpense() {
                 </div>
               )}
 
-              {/* Unequal Division - Input boxes */}
               {splitMethod === 'unequal' && (
                 <div className="space-y-3">
                   <div>
@@ -974,7 +968,6 @@ export function AddExpense() {
                 </div>
               )}
 
-              {/* Split Summary */}
               {amount && (
                 <div className="p-4 bg-muted/50 rounded-lg space-y-2">
                   <div className="flex justify-between items-center">
@@ -1025,9 +1018,7 @@ export function AddExpense() {
             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
               <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
               <p className="text-sm text-muted-foreground mb-2">
-                {receiptFile
-                  ? `Selected: ${receiptFile.name}`
-                  : 'Drag and drop your receipt here, or click to browse'}
+                {receiptFile ? `Selected: ${receiptFile.name}` : 'Drag and drop your receipt here, or click to browse'}
               </p>
               <div className="relative">
                 <input
@@ -1044,10 +1035,10 @@ export function AddExpense() {
                   disabled={isParsingReceipt}
                 />
                 <Button
-                  type="button" // Important: type="button" so it doesn't submit the form
+                  type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => document.getElementById('receipt-upload')?.click()} // Manually trigger file input
+                  onClick={() => document.getElementById('receipt-upload')?.click()}
                   disabled={isParsingReceipt}
                 >
                   {isParsingReceipt ? (
@@ -1088,9 +1079,9 @@ export function AddExpense() {
           <Button type="button" variant="outline" className="flex-1" asChild>
             <Link to="/dashboard">Cancel</Link>
           </Button>
-          <Button 
-            type="submit" 
-            className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700" 
+          <Button
+            type="submit"
+            className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
             disabled={loading}
           >
             {loading ? (
