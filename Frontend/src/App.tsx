@@ -20,8 +20,9 @@ import { Support } from './components/pages/Support';
 import { Notifications } from './components/pages/Notifications';
 import { Chatbot } from './components/pages/Chatbot';
 import { Settings } from './components/pages/Settings';
-import ExpenseCalendar from './components/pages/ExpenseCalendar'; // default export
+import { ExpenseCalendar } from './components/pages/ExpenseCalendar'; 
 import { ThemeProvider } from './components/ui/ThemeContext';
+import { PasswordResetPage } from './components/pages/PasswordResetPage';
 
 // Simple Public Route Component
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -35,7 +36,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (user) {
+  if (user && user.aud === 'authenticated') {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -54,7 +55,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) {
+  if (!user || user.aud !== 'authenticated') {
     return <Navigate to="/login" replace />;
   }
 
@@ -71,6 +72,9 @@ function AppRoutes() {
         <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+
+        {/* The reset fragment will hit this route, so it must be public */}
+        <Route path="/forgot-password" element={<PublicRoute><PasswordResetPage /></PublicRoute>} /> 
 
         {/* Protected routes */}
         <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
@@ -152,6 +156,7 @@ interface User {
   email: string;
   avatar: string;
   isParent?: boolean;
+  aud?: string;
 }
 
 interface AuthContextType {
@@ -182,6 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: session.user.user_metadata.full_name,
           email: session.user.email || "",
           avatar: session.user.user_metadata.avatar_url,
+          aud: session.user.aud,
         });
       }
       setIsLoading(false);
@@ -196,6 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: session.user.user_metadata.full_name,
           email: session.user.email || "",
           avatar: session.user.user_metadata.avatar_url,
+          aud: session.user.aud,
         });
       } else {
         setUser(null);
