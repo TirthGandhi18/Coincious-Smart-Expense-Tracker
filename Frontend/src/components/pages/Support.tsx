@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
-import { HelpCircle, Mail, Search, Clock, Book, MessageCircle, AlertCircle, CreditCard, Shield, Settings, Calculator } from 'lucide-react';
+import { HelpCircle, Mail, Search, Clock, Book, MessageCircle, Calculator, Settings, X, CreditCard, Copy, Check } from 'lucide-react';
 
 // FAQ data
 const faqs = [
@@ -182,7 +182,6 @@ const faqs = [
 	},
 ];
 
-// Channels - only email now
 const channels = [
 	{
 		icon: Mail,
@@ -194,85 +193,142 @@ const channels = [
 ];
 
 export function Support() {
-	const [query, setQuery] = useState('');
+    const [query, setQuery] = useState('');
+    const [showEmailModal, setShowEmailModal] = useState(false);
+    const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
 
-	const filteredFaqs = faqs
-		.map(cat => ({
-			...cat,
-			questions: cat.questions.filter(
-				q =>
-					q.question.toLowerCase().includes(query.toLowerCase()) ||
-					q.answer.toLowerCase().includes(query.toLowerCase())
-			),
-		}))
-		.filter(cat => cat.questions.length > 0);
+    const filteredFaqs = faqs
+        .map(cat => ({
+            ...cat,
+            questions: cat.questions.filter(
+                q =>
+                    q.question.toLowerCase().includes(query.toLowerCase()) ||
+                    q.answer.toLowerCase().includes(query.toLowerCase())
+            ),
+        }))
+        .filter(cat => cat.questions.length > 0);
 
-	return (
-		<div className="p-4 md:p-6 space-y-6">
-			{/* Header */}
-			<div className="text-center mb-8">
-				<div className="flex items-center justify-center gap-3 mb-4">
-					<div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-						<HelpCircle className="h-6 w-6 text-primary" />
-					</div>
-					<div>
-						<h1 className="text-2xl md:text-3xl font-bold">Help & Support</h1>
-						<p className="text-muted-foreground">
-							Get the help you need, when you need it
-						</p>
-					</div>
-				</div>
-			</div>
+    const copyToClipboard = (email: string) => {
+        navigator.clipboard.writeText(email);
+        setCopiedEmail(email);
+        setTimeout(() => setCopiedEmail(null), 2000);
+    };
 
-			{/* Channels - single column */}
-			<div className="grid md:grid-cols-1 gap-4 mb-8">
-				{channels.map((ch, i) => {
-					const Icon = ch.icon;
-					return (
-						<Card key={i} className="hover:shadow-lg transition-shadow">
-							<CardContent className="p-6 text-center">
-								<div
-									className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${
-										ch.status === 'online' ? 'bg-green-100' : 'bg-gray-100'
-									}`}
-								>
-									<Icon
-										className={`h-6 w-6 ${
-											ch.status === 'online' ? 'text-green-600' : 'text-gray-600'
-										}`}
-									/>
-								</div>
-								<h3 className="font-medium mb-2">{ch.title}</h3>
-								<p className="text-sm text-muted-foreground mb-3">
-									{ch.description}
-								</p>
-								<div className="flex items-center justify-center gap-2">
-									<div
-										className={`w-2 h-2 rounded-full ${
-											ch.status === 'online' ? 'bg-green-500' : 'bg-gray-400'
-										}`}
-									/>
-									<span className="text-xs text-muted-foreground">
-										{ch.availability}
-									</span>
-								</div>
-								<div className="mt-4">
-									<a
-										href={`mailto:support@yourdomain.com`}
-										className="inline-block w-full text-center px-4 py-2 rounded bg-[#8B4513] text-white hover:opacity-95"
-										aria-label="Contact support via email"
-									>
-										Contact via Email
-									</a>
-								</div>
-							</CardContent>
-						</Card>
-					);
-				})}
-			</div>
+    return (
+        <div className="p-4 md:p-6 space-y-6">
+            {/* Header */}
+            <div className="text-center mb-8">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                        <HelpCircle className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold">Help & Support</h1>
+                        <p className="text-muted-foreground">
+                            Get the help you need, when you need it
+                        </p>
+                    </div>
+                </div>
+            </div>
 
-			{/* FAQ search */}
-			<div className="relative mb-4 max-w-2xl mx-auto">
+            {/* Channels - single column */}
+            <div className="grid md:grid-cols-1 gap-4 mb-8">
+                <Card className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-6 text-center">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 bg-green-100">
+                            <Mail className="h-6 w-6 text-green-600" />
+                        </div>
+                        <h3 className="font-medium mb-2">Email Support</h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                            Get help via email
+                        </p>
+                        <div className="flex items-center justify-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-green-500" />
+                            <span className="text-xs text-muted-foreground">
+                                Response within 24 hours
+                            </span>
+                        </div>
+                        <div className="mt-4">
+                            <div
+                                onClick={() => setShowEmailModal(true)}
+                                className="inline-block w-full text-center px-4 py-2 rounded bg-[#8B4513] text-white hover:opacity-95 cursor-pointer select-none"
+                            >
+                                Contact via Email
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Email Modal */}
+            {showEmailModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]" onClick={() => setShowEmailModal(false)}>
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold">Contact Support</h3>
+                            <div 
+                                onClick={() => setShowEmailModal(false)} 
+                                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer"
+                            >
+                                <X className="h-5 w-5" />
+                            </div>
+                        </div>
+                        
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            Click to copy email address to your clipboard
+                        </p>
+
+                        <div className="space-y-3">
+                            <div 
+                                onClick={() => copyToClipboard('support@smartexpense.com')}
+                                className="w-full text-left p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                                            <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-sm">General Support</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">support@smartexpense.com</p>
+                                        </div>
+                                    </div>
+                                    {copiedEmail === 'support@smartexpense.com' ? (
+                                        <Check className="h-5 w-5 text-green-600" />
+                                    ) : (
+                                        <Copy className="h-5 w-5 text-gray-400" />
+                                    )}
+                                </div>
+                            </div>
+
+                            <div 
+                                onClick={() => copyToClipboard('technical@smartexpense.com')}
+                                className="w-full text-left p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
+                                            <Mail className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-sm">Technical Issues</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">technical@smartexpense.com</p>
+                                        </div>
+                                    </div>
+                                    {copiedEmail === 'technical@smartexpense.com' ? (
+                                        <Check className="h-5 w-5 text-green-600" />
+                                    ) : (
+                                        <Copy className="h-5 w-5 text-gray-400" />
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* FAQ search */}
+            <div className="relative mb-4 max-w-2xl mx-auto">
 				<Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
 				<Input
 					placeholder="Search FAQ..."
