@@ -41,6 +41,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Calendar } from '../ui/calendar';
 import { format } from 'date-fns';
 import { Pencil, Trash2 } from 'lucide-react';
+import React from 'react';
 
 const DEFAULT_COLORS = [
   '#ECAABA',
@@ -64,7 +65,7 @@ const recentTransactions = [
   {
     id: '1',
     title: 'Dinner at Italian Restaurant',
-    amount: -45.80,
+    amount: -45.8,
     type: 'group',
     category: 'Food & Dining',
     date: '2 hours ago',
@@ -74,7 +75,7 @@ const recentTransactions = [
   {
     id: '2',
     title: 'Uber to Airport',
-    amount: -28.50,
+    amount: -28.5,
     type: 'personal',
     category: 'Transportation',
     date: '1 day ago',
@@ -83,7 +84,7 @@ const recentTransactions = [
   {
     id: '3',
     title: 'Coffee with Team',
-    amount: -15.60,
+    amount: -15.6,
     type: 'group',
     category: 'Food & Dining',
     date: '2 days ago',
@@ -105,14 +106,14 @@ const insights = [
   {
     type: 'spending',
     title: 'Spending Alert',
-    message: 'You\'ve spent 15% more on dining this month compared to last month.',
+    message: "You've spent 15% more on dining this month compared to last month.",
     icon: TrendingUp,
     color: 'text-amber-600'
   },
   {
     type: 'savings',
     title: 'Great Progress!',
-    message: 'You\'re on track to reach your savings goal this month.',
+    message: "You're on track to reach your savings goal this month.",
     icon: Target,
     color: 'text-green-600'
   },
@@ -126,16 +127,70 @@ const insights = [
 ];
 
 const DUMMY_EXPENSES = [
-  { id: 1, date: '2025-11-06', description: 'Grocery Shopping', amount: 125.50, category: 'Food', type: 'personal' },
-  { id: 2, date: '2025-11-06', description: 'Gas Station', amount: 45.00, category: 'Transportation', type: 'personal' },
-  { id: 3, date: '2025-11-07', description: 'Team Lunch', amount: 280.00, category: 'Food', type: 'group' },
+  { id: 1, date: '2025-11-06', description: 'Grocery Shopping', amount: 125.5, category: 'Food', type: 'personal' },
+  { id: 2, date: '2025-11-06', description: 'Gas Station', amount: 45.0, category: 'Transportation', type: 'personal' },
+  { id: 3, date: '2025-11-07', description: 'Team Lunch', amount: 280.0, category: 'Food', type: 'group' },
   { id: 4, date: '2025-11-07', description: 'Coffee Shop', amount: 15.75, category: 'Food', type: 'personal' },
-  { id: 5, date: '2025-11-08', description: 'Movie Night', amount: 65.00, category: 'Entertainment', type: 'group' },
-  { id: 6, date: '2025-11-08', description: 'Uber Ride', amount: 22.50, category: 'Transportation', type: 'personal' },
+  { id: 5, date: '2025-11-08', description: 'Movie Night', amount: 65.0, category: 'Entertainment', type: 'group' },
+  { id: 6, date: '2025-11-08', description: 'Uber Ride', amount: 22.5, category: 'Transportation', type: 'personal' },
   { id: 7, date: '2025-11-08', description: 'Amazon Order', amount: 89.99, category: 'Shopping', type: 'personal' },
-  { id: 8, date: '2025-11-09', description: 'Dinner Party', amount: 450.00, category: 'Food', type: 'group' },
-  { id: 9, date: '2025-11-09', description: 'Gym Membership', amount: 49.99, category: 'Health', type: 'personal' },
+  { id: 8, date: '2025-11-09', description: 'Dinner Party', amount: 450.0, category: 'Food', type: 'group' },
+  { id: 9, date: '2025-11-09', description: 'Gym Membership', amount: 49.99, category: 'Health', type: 'personal' }
 ];
+
+// BudgetProgressRing: bigger than default
+function BudgetProgressRing({
+  percent,
+  size = 180, // larger ring
+  stroke = 18,
+  color = 'green'
+}: { percent: number; size?: number; stroke?: number; color?: string }) {
+  const radius = (size - stroke) / 2;
+  const circ = 2 * Math.PI * radius;
+  const offset = circ - (percent / 100) * circ;
+
+  let ringColor = '#22c55e'; // green-500
+  if (percent >= 80) ringColor = '#ef4444'; // red-500
+  else if (percent >= 50) ringColor = '#eab308'; // yellow-500
+
+  return (
+    <svg width={size} height={size} className="block mx-auto" style={{ display: 'block' }}>
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="#e5e7eb"
+        strokeWidth={stroke}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke={ringColor}
+        strokeWidth={stroke}
+        strokeDasharray={circ}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        style={{
+          transition: 'stroke-dashoffset 1s cubic-bezier(.4,2,.6,1), stroke 0.3s'
+        }}
+      />
+      <text
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        dy="0.3em"
+        fontSize={size * 0.22}
+        fontWeight={700}
+        fill={ringColor}
+      >
+        {`${Math.round(percent)}%`}
+      </text>
+    </svg>
+  );
+}
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -164,22 +219,21 @@ export function Dashboard() {
     originalRange: { from: undefined, to: undefined }
   });
 
-  // STATE VARIABLES FOR BALANCES
+  // Balances
   const [youOwe, setYouOwe] = useState<number | null>(null);
   const [youAreOwed, setYouAreOwed] = useState<number | null>(null);
   const [balancesLoading, setBalancesLoading] = useState(true);
 
-  // --- BUDGET STATE (Supabase-backed, local fallback)
+  // Budget
   const [budget, setBudget] = useState<number | null>(null);
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [budgetInput, setBudgetInput] = useState<string>('');
   const [budgetSaving, setBudgetSaving] = useState(false);
   const [currentMonthTotal, setCurrentMonthTotal] = useState<number>(0);
-  // Table name & column (update if your schema differs)
-  const BUDGET_TABLE = 'budgets'; // table name
-  // amount_limit is the numeric column in that table (per your screenshot)
 
-  // Load budget from Supabase (if user) or localStorage fallback
+  const BUDGET_TABLE = 'budgets';
+
+  // Load budget
   useEffect(() => {
     const load = async () => {
       if (user?.id) {
@@ -204,7 +258,6 @@ export function Dashboard() {
         }
       }
 
-      // fallback: try localStorage
       try {
         const key = user?.id ? `budget_${user.id}` : 'budget_anon';
         const saved = localStorage.getItem(key);
@@ -212,17 +265,14 @@ export function Dashboard() {
           const parsed = parseFloat(saved);
           if (!Number.isNaN(parsed)) setBudget(parsed);
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     };
 
     load();
   }, [user?.id]);
 
-  // Persist budget: if user logged in, upsert to Supabase; otherwise use localStorage
+  // Persist budget
   const persistBudget = async (value: number | null) => {
-    // clear
     if (value === null) {
       if (user?.id) {
         try {
@@ -242,23 +292,24 @@ export function Dashboard() {
       return;
     }
 
-    // save
     if (user?.id) {
       setBudgetSaving(true);
       try {
-        // Upsert on user_id (ensure unique constraint on user_id)
         const payload = { user_id: user.id, amount_limit: value };
         const { error } = await supabase.from(BUDGET_TABLE).upsert(payload, { onConflict: 'user_id' });
         if (error) {
           console.warn('Supabase upsert error', error);
-          // fallback to localStorage
-          try { localStorage.setItem(`budget_${user.id}`, String(value)); } catch(e){}
+          try {
+            localStorage.setItem(`budget_${user.id}`, String(value));
+          } catch (e) {}
         } else {
           setBudget(value);
         }
       } catch (e) {
         console.warn('Error saving budget to Supabase', e);
-        try { localStorage.setItem(`budget_${user.id}`, String(value)); } catch(e){}
+        try {
+          localStorage.setItem(`budget_${user.id}`, String(value));
+        } catch (e2) {}
       } finally {
         setBudgetSaving(false);
       }
@@ -273,14 +324,14 @@ export function Dashboard() {
     }
   };
 
-  // 👇 CORRECTED FUNCTION TO FETCH BALANCES WITH PARSEFLOAT
+  // Balances
   const fetchBalances = async () => {
     if (!user?.id) return;
     setBalancesLoading(true);
 
     try {
       const { data: oweData, error: oweError } = await supabase.rpc('get_user_owe_amount', {
-        p_user_id: user.id,
+        p_user_id: user.id
       });
 
       if (oweError) {
@@ -290,7 +341,9 @@ export function Dashboard() {
         setYouOwe(owedAmount > 0 ? owedAmount : 0);
       }
 
-      const { data: owedData, error: owedError } = await supabase.rpc('calculate_you_owed', { p_user_id: user.id });
+      const { data: owedData, error: owedError } = await supabase.rpc('calculate_you_owed', {
+        p_user_id: user.id
+      });
 
       if (owedError) {
         setYouAreOwed(0);
@@ -308,22 +361,23 @@ export function Dashboard() {
   useEffect(() => {
     fetchBalances();
   }, [user]);
-  // Fetch ONLY the current month's total
+
+  // Monthly total
   useEffect(() => {
     const fetchMonthlyTotal = async () => {
       if (!user) return;
-      
+
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session }
+        } = await supabase.auth.getSession();
         if (!session?.access_token) return;
 
-        // Call the new Python route
-        // Note: We assume your blueprint is mounted at /api, so the path is /api/current-month-total
         const response = await fetch('http://localhost:8000/api/current-month-total', {
           headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
         });
 
         if (response.ok) {
@@ -337,21 +391,23 @@ export function Dashboard() {
 
     fetchMonthlyTotal();
   }, [user]);
-  // --- (EXISTING USE EFFECTS) ---
 
+  // Analytics
   useEffect(() => {
     const fetchAnalytics = async () => {
       if (!user) return;
 
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session }
+        } = await supabase.auth.getSession();
         if (!session?.access_token) return;
 
         const response = await fetch(`http://localhost:8000/api/supabase/proxy/analytics/spending`, {
           headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
         });
 
         if (response.ok) {
@@ -370,6 +426,7 @@ export function Dashboard() {
     fetchAnalytics();
   }, [user]);
 
+  // Category donut
   useEffect(() => {
     const fetchMonthlyTotals = async () => {
       if (!user) return;
@@ -377,7 +434,9 @@ export function Dashboard() {
       setCategoryError(null);
 
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session }
+        } = await supabase.auth.getSession();
         if (!session?.access_token) {
           setCategoryError('No session token');
           return;
@@ -388,10 +447,10 @@ export function Dashboard() {
         const res = await fetch(`http://localhost:8000/api/expense_monthly_donut`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
           },
-          body: JSON.stringify(reqBody),
+          body: JSON.stringify(reqBody)
         });
 
         if (!res.ok) {
@@ -405,7 +464,7 @@ export function Dashboard() {
         const mapped = (data || []).map((d: any, i: number) => ({
           name: d.category,
           value: Number(d.total) || 0,
-          color: DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+          color: DEFAULT_COLORS[i % DEFAULT_COLORS.length]
         }));
 
         setCategoryData(mapped);
@@ -420,12 +479,15 @@ export function Dashboard() {
     fetchMonthlyTotals();
   }, [user, categoryPeriod]);
 
+  // Date range -> total
   useEffect(() => {
     const fetchExpensesByDateRange = async () => {
       if (!user || !dateRange.from) return;
 
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session }
+        } = await supabase.auth.getSession();
         if (!session?.access_token) return;
 
         const params = new URLSearchParams({
@@ -435,9 +497,9 @@ export function Dashboard() {
 
         const response = await fetch(`http://localhost:8000/api/expenses_by_date_range?${params}`, {
           headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
         });
 
         if (response.ok) {
@@ -453,6 +515,7 @@ export function Dashboard() {
     fetchExpensesByDateRange();
   }, [user, dateRange]);
 
+  // Date range -> list
   useEffect(() => {
     const fetchDailyExpenses = async () => {
       if (!user || !dateRange.from) {
@@ -461,7 +524,9 @@ export function Dashboard() {
       }
 
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session }
+        } = await supabase.auth.getSession();
         if (!session?.access_token) return;
 
         const params = new URLSearchParams({
@@ -471,9 +536,9 @@ export function Dashboard() {
 
         const response = await fetch(`http://localhost:8000/api/expenses_by_date_range?${params}`, {
           headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
         });
 
         if (response.ok) {
@@ -490,6 +555,7 @@ export function Dashboard() {
     fetchDailyExpenses();
   }, [user, dateRange]);
 
+  // Close datepicker on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -501,21 +567,15 @@ export function Dashboard() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showDatePicker]);
-  
-  // --- (END EXISTING USE EFFECTS) ---
 
   const totalSpending = analyticsData?.total_spending || 0;
   const savingsGoal = 1000;
   const monthlySavings = Math.max(0, savingsGoal - totalSpending);
   const savingsProgress = (monthlySavings / savingsGoal) * 100;
 
-  const displayAmount = dateRange.from ? filteredExpenses : totalSpending;
-
-  // Budget derived values (do not mutate any existing values)
   const budgetValue = budget ?? null;
-  const budgetUsed = displayAmount || 0;
+  const budgetUsed = currentMonthTotal || 0;
   const budgetRemaining = budgetValue !== null ? Math.max(0, budgetValue - budgetUsed) : null;
-  const budgetProgress = budgetValue && budgetValue > 0 ? Math.min(100, (budgetUsed / budgetValue) * 100) : 0;
 
   const handleEditExpense = (expense: any) => {
     navigate('/add-expense', {
@@ -529,12 +589,12 @@ export function Dashboard() {
   const handleDeleteExpense = (expenseId: number) => {
     if (!confirm('Are you sure you want to delete this expense?')) return;
 
-    const updatedExpenses = dailyExpenses.filter(exp => exp.id !== expenseId);
+    const updatedExpenses = dailyExpenses.filter((exp) => exp.id !== expenseId);
     setDailyExpenses(updatedExpenses);
-    
+
     const total = updatedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
     setFilteredExpenses(total);
-    
+
     alert('Expense deleted successfully!');
   };
 
@@ -548,30 +608,6 @@ export function Dashboard() {
         setDateRange({ from: dateRange.from, to: date });
       } else {
         setDateRange({ from: date, to: dateRange.from });
-      }
-    }
-  };
-
-  const handleDragStart = (date: Date, dragType: 'start' | 'end') => {
-    setDragState({
-      isDragging: true,
-      dragType,
-      originalRange: { ...dateRange }
-    });
-  };
-
-  const handleDragOver = (date: Date) => {
-    if (!dragState.isDragging || !dragState.dragType) return;
-
-    if (dragState.dragType === 'start') {
-      if (dateRange.to && date <= dateRange.to) {
-        setDateRange({ from: date, to: dateRange.to });
-      } else if (!dateRange.to) {
-        setDateRange({ from: date, to: undefined });
-      }
-    } else if (dragState.dragType === 'end') {
-      if (dateRange.from && date >= dateRange.from) {
-        setDateRange({ from: dateRange.from, to: date });
       }
     }
   };
@@ -590,7 +626,7 @@ export function Dashboard() {
     const firstDay = new Date(year, month, 1);
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
-    
+
     const days = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -598,22 +634,25 @@ export function Dashboard() {
     for (let i = 0; i < 42; i++) {
       const currentDate = new Date(startDate);
       currentDate.setDate(startDate.getDate() + i);
-      
+
       const isCurrentMonth = currentDate.getMonth() === month;
       const isToday = currentDate.getTime() === today.getTime();
       const isFuture = currentDate > today;
-      
+
       const dateStr = format(currentDate, 'yyyy-MM-dd');
-      const dayExpenses = DUMMY_EXPENSES.filter(exp => exp.date === dateStr);
+      const dayExpenses = DUMMY_EXPENSES.filter((exp) => exp.date === dateStr);
       const hasExpenses = dayExpenses.length > 0;
       const totalAmount = dayExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-      
+
       const isStartDate = dateRange.from && currentDate.getTime() === dateRange.from.getTime();
       const isEndDate = dateRange.to && currentDate.getTime() === dateRange.to.getTime();
       const isSelected = isStartDate || isEndDate;
-      const isInRange = dateRange.from && dateRange.to &&
-                       currentDate > dateRange.from && currentDate < dateRange.to;
-      
+      const isInRange =
+        dateRange.from &&
+        dateRange.to &&
+        currentDate > dateRange.from &&
+        currentDate < dateRange.to;
+
       let buttonClasses = `
         aspect-square p-2 text-sm font-medium rounded-xl transition-all duration-200 relative border-2 select-none
         ${!isCurrentMonth ? 'text-gray-400 dark:text-gray-600 opacity-60' : ''}
@@ -626,9 +665,11 @@ export function Dashboard() {
       }
 
       if (isStartDate) {
-        buttonClasses += ` bg-purple-600 text-white shadow-lg scale-110 border-purple-700 font-bold ring-2 ring-purple-300`;
+        buttonClasses +=
+          ' bg-purple-600 text-white shadow-lg scale-110 border-purple-700 font-bold ring-2 ring-purple-300';
       } else if (isEndDate) {
-        buttonClasses += ` bg-pink-600 text-white shadow-lg scale-110 border-pink-700 font-bold ring-2 ring-pink-300`;
+        buttonClasses +=
+          ' bg-pink-600 text-white shadow-lg scale-110 border-pink-700 font-bold ring-2 ring-pink-300';
       } else if (isInRange) {
         buttonClasses += ' bg-purple-200 text-purple-900 border-purple-300 font-semibold';
       } else if (!isFuture && isCurrentMonth) {
@@ -673,17 +714,28 @@ export function Dashboard() {
         >
           <div className="flex flex-col items-center justify-center h-full relative">
             <span className="text-sm font-semibold mb-1">{currentDate.getDate()}</span>
-            
+
             {hasExpenses && (
               <div className="flex flex-col items-center gap-0.5">
                 <div className="flex gap-0.5">
                   {dayExpenses.slice(0, 3).map((exp, idx) => {
-                    const emoji = exp.category === 'Food' ? '🍔' : 
-                                 exp.category === 'Transportation' ? '🚗' :
-                                 exp.category === 'Entertainment' ? '🎉' :
-                                 exp.category === 'Shopping' ? '🛍️' :
-                                 exp.category === 'Health' ? '⚕️' : '💳';
-                    return <span key={idx} className="text-xs">{emoji}</span>;
+                    const emoji =
+                      exp.category === 'Food'
+                        ? '🍔'
+                        : exp.category === 'Transportation'
+                        ? '🚗'
+                        : exp.category === 'Entertainment'
+                        ? '🎉'
+                        : exp.category === 'Shopping'
+                        ? '🛍️'
+                        : exp.category === 'Health'
+                        ? '⚕️'
+                        : '💳';
+                    return (
+                      <span key={idx} className="text-xs">
+                        {emoji}
+                      </span>
+                    );
                   })}
                 </div>
                 <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
@@ -691,15 +743,15 @@ export function Dashboard() {
                 </span>
               </div>
             )}
-            
+
             {(isStartDate || isEndDate) && (
               <div className="absolute inset-0 cursor-grab active:cursor-grabbing flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                 <div className="text-white text-xs font-bold">⟲</div>
               </div>
             )}
-            
+
             {isToday && !isSelected && (
-              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-blue-600 rounded-full shadow-sm"></div>
+              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-blue-600 rounded-full shadow-sm" />
             )}
           </div>
         </button>
@@ -722,26 +774,26 @@ export function Dashboard() {
   useEffect(() => {
     const loadExpenses = () => {
       setLoading(true);
-      
+
       try {
-        const filtered = DUMMY_EXPENSES.filter(expense => {
+        const filtered = DUMMY_EXPENSES.filter((expense) => {
           const expenseDate = new Date(expense.date);
           expenseDate.setHours(0, 0, 0, 0);
-          
+
           const fromDate = dateRange.from ? new Date(dateRange.from) : null;
           if (fromDate) fromDate.setHours(0, 0, 0, 0);
-          
+
           const toDate = dateRange.to ? new Date(dateRange.to) : fromDate;
           if (toDate) toDate.setHours(0, 0, 0, 0);
-          
+
           if (fromDate && toDate) {
             return expenseDate >= fromDate && expenseDate <= toDate;
           }
           return false;
         });
-        
+
         setDailyExpenses(filtered);
-        
+
         const total = filtered.reduce((sum, exp) => sum + exp.amount, 0);
         setFilteredExpenses(total);
       } catch (error) {
@@ -755,20 +807,22 @@ export function Dashboard() {
   }, [dateRange]);
 
   const formatBalance = (amount: number | null) => {
-    if (balancesLoading && amount === null) return '...'; 
+    if (balancesLoading && amount === null) return '...';
     if (amount !== null) return `$${amount.toFixed(2)}`;
     return '$0.00';
   };
-  
-  const youOweMessage = youOwe !== null && youOwe > 0 ? `Settlement needed` : 'All settled up!';
-  const youAreOwedMessage = youAreOwed !== null && youAreOwed > 0 ? `Awaiting repayment` : 'All settled up!';
+
+  const youOweMessage =
+    youOwe !== null && youOwe > 0 ? `Settlement needed` : 'All settled up!';
+  const youAreOwedMessage =
+    youAreOwed !== null && youAreOwed > 0 ? `Awaiting repayment` : 'All settled up!';
 
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back! Here's your financial overview.</p>
+          <p className="text-muted-foreground">Welcome back! Here&apos;s your financial overview.</p>
         </div>
         <Button asChild>
           <Link to="/add-expense">
@@ -779,12 +833,13 @@ export function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Total Expenses + date picker */}
         <Card className="relative overflow-hidden border-2 hover:shadow-lg transition-all">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-pink-50/50 dark:from-purple-950/20 dark:to-pink-950/20" />
-          
+
           <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-            
+
             <div className="relative calendar-wrapper">
               <button
                 type="button"
@@ -797,52 +852,74 @@ export function Dashboard() {
               >
                 <CalendarIcon className="h-4 w-4 text-purple-600" />
               </button>
-              
+
               {showDatePicker && (
                 <>
-                  <div 
+                  <div
                     className="fixed inset-0 bg-black/50 z-[9998] animate-in fade-in duration-300"
                     onClick={() => setShowDatePicker(false)}
                   />
-                  
+
                   <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                     <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto animate-in zoom-in duration-300">
                       <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
                         <div>
-                          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Select Date Range</h3>
-                          
+                          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                            Select Date Range
+                          </h3>
+
                           <div className="mt-2 space-y-1">
                             {!dateRange.from ? (
-                              <p className="text-sm text-gray-600 dark:text-gray-400">Choose your start date</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Choose your start date
+                              </p>
                             ) : !dateRange.to ? (
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-3 h-3 bg-purple-600 rounded-full"></div>
-                                  <span className="text-sm font-medium text-purple-700">From: {format(dateRange.from, "dd MMM yyyy")}</span>
+                                  <div className="w-3 h-3 bg-purple-600 rounded-full" />
+                                  <span className="text-sm font-medium text-purple-700">
+                                    From: {format(dateRange.from, 'dd MMM yyyy')}
+                                  </span>
                                 </div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">Now choose your end date</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                  Now choose your end date
+                                </p>
                               </div>
                             ) : (
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-3 h-3 bg-purple-600 rounded-full"></div>
-                                  <span className="text-sm font-medium text-purple-700">From: {format(dateRange.from, "dd MMM yyyy")}</span>
+                                  <div className="w-3 h-3 bg-purple-600 rounded-full" />
+                                  <span className="text-sm font-medium text-purple-700">
+                                    From: {format(dateRange.from, 'dd MMM yyyy')}
+                                  </span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <div className="w-3 h-3 bg-pink-600 rounded-full"></div>
-                                  <span className="text-sm font-medium text-pink-700">To: {format(dateRange.to, "dd MMM yyyy")}</span>
+                                  <div className="w-3 h-3 bg-pink-600 rounded-full" />
+                                  <span className="text-sm font-medium text-pink-700">
+                                    To: {format(dateRange.to, 'dd MMM yyyy')}
+                                  </span>
                                 </div>
                               </div>
                             )}
                           </div>
                         </div>
-                        
+
                         <button
                           onClick={() => setShowDatePicker(false)}
                           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
                           </svg>
                         </button>
                       </div>
@@ -852,52 +929,79 @@ export function Dashboard() {
                           <div className="flex items-center justify-between mb-6">
                             <button
                               onClick={() => {
-                                const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1);
+                                const newDate = new Date(
+                                  currentMonth.getFullYear(),
+                                  currentMonth.getMonth() - 1
+                                );
                                 setCurrentMonth(newDate);
                               }}
                               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 19l-7-7 7-7"
+                                />
                               </svg>
                             </button>
-                            
+
                             <h4 className="text-xl font-semibold text-gray-900 dark:text-white">
-                              {format(currentMonth, "MMMM yyyy")}
+                              {format(currentMonth, 'MMMM yyyy')}
                             </h4>
-                            
+
                             <button
                               onClick={() => {
-                                const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1);
+                                const newDate = new Date(
+                                  currentMonth.getFullYear(),
+                                  currentMonth.getMonth() + 1
+                                );
                                 setCurrentMonth(newDate);
                               }}
                               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 5l7 7-7 7"
+                                />
                               </svg>
                             </button>
                           </div>
 
                           <div className="grid grid-cols-7 gap-2 mb-2">
-                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                              <div key={day} className="text-center text-sm font-semibold text-gray-600 p-2">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                              <div
+                                key={day}
+                                className="text-center text-sm font-semibold text-gray-600 p-2"
+                              >
                                 {day}
                               </div>
                             ))}
                           </div>
 
-                          <div className="grid grid-cols-7 gap-2">
-                            {renderCalendarDays()}
-                          </div>
+                          <div className="grid grid-cols-7 gap-2">{renderCalendarDays()}</div>
 
                           <div className="mt-4 flex items-center justify-center gap-4 text-xs text-gray-600">
                             <div className="flex items-center gap-1">
-                              <div className="w-3 h-3 bg-purple-50 border border-purple-200 rounded"></div>
+                              <div className="w-3 h-3 bg-purple-50 border border-purple-200 rounded" />
                               <span>Has expenses</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <div className="w-3 h-3 bg-blue-100 border border-blue-400 rounded"></div>
+                              <div className="w-3 h-3 bg-blue-100 border border-blue-400 rounded" />
                               <span>Today</span>
                             </div>
                           </div>
@@ -906,23 +1010,33 @@ export function Dashboard() {
                         <div className="border-l border-gray-200 dark:border-gray-700 pl-6">
                           <div className="flex items-center justify-between mb-4">
                             <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                              {dateRange.from ? 
-                                (dateRange.to ? 'Expenses in Range' : 'Expenses on Date') : 
-                                'Select dates'}
+                              {dateRange.from
+                                ? dateRange.to
+                                  ? 'Expenses in Range'
+                                  : 'Expenses on Date'
+                                : 'Select dates'}
                             </h4>
-                            
+
                             {dailyExpenses.length > 0 && (
                               <div className="text-right">
-                                <div className="text-xs text-gray-500">{dailyExpenses.length} expense{dailyExpenses.length !== 1 ? 's' : ''}</div>
-                                <div className="text-lg font-bold text-purple-600">${filteredExpenses.toFixed(2)}</div>
+                                <div className="text-xs text-gray-500">
+                                  {dailyExpenses.length} expense
+                                  {dailyExpenses.length !== 1 ? 's' : ''}
+                                </div>
+                                <div className="text-lg font-bold text-purple-600">
+                                  ${filteredExpenses.toFixed(2)}
+                                </div>
                               </div>
                             )}
                           </div>
-                          
+
                           <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
                             {dailyExpenses.length > 0 ? (
                               dailyExpenses.map((expense, index) => (
-                                <div key={index} className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-3 hover:shadow-lg transition-all border border-purple-200 dark:border-purple-800 group">
+                                <div
+                                  key={index}
+                                  className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-3 hover:shadow-lg transition-all border border-purple-200 dark:border-purple-800 group"
+                                >
                                   <div className="flex justify-between items-start gap-3">
                                     <div className="flex-1 min-w-0">
                                       <h5 className="font-semibold text-gray-900 dark:text-white text-sm truncate">
@@ -934,24 +1048,26 @@ export function Dashboard() {
                                         </p>
                                         <span className="text-xs text-gray-400">•</span>
                                         <p className="text-xs text-gray-600 dark:text-gray-400">
-                                          {format(new Date(expense.date), "MMM dd")}
+                                          {format(new Date(expense.date), 'MMM dd')}
                                         </p>
                                       </div>
                                       <div className="mt-2">
-                                        <Badge 
-                                          variant={expense.type === 'group' ? 'secondary' : 'outline'} 
+                                        <Badge
+                                          variant={
+                                            expense.type === 'group' ? 'secondary' : 'outline'
+                                          }
                                           className="text-xs"
                                         >
                                           {expense.type}
                                         </Badge>
                                       </div>
                                     </div>
-                                    
+
                                     <div className="flex flex-col items-end gap-2">
                                       <span className="text-sm font-bold text-red-600 whitespace-nowrap">
                                         ${expense.amount.toFixed(2)}
                                       </span>
-                                      
+
                                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button
                                           type="button"
@@ -984,19 +1100,45 @@ export function Dashboard() {
                               ))
                             ) : dateRange.from ? (
                               <div className="text-center py-8 text-gray-500">
-                                <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h6a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                <svg
+                                  className="w-12 h-12 mx-auto mb-2 opacity-50"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h6a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                                  />
                                 </svg>
                                 <p className="text-sm font-medium">No expenses found</p>
-                                <p className="text-xs text-gray-400 mt-1">Try selecting a different date range</p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Try selecting a different date range
+                                </p>
                               </div>
                             ) : (
                               <div className="text-center py-8 text-gray-500">
-                                <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                <svg
+                                  className="w-12 h-12 mx-auto mb-2 opacity-50"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                  />
                                 </svg>
-                                <p className="text-sm font-medium">Click on dates to view expenses</p>
-                                <p className="text-xs text-gray-400 mt-1">You can drag to select a range</p>
+                                <p className="text-sm font-medium">
+                                  Click on dates to view expenses
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  You can drag to select a range
+                                </p>
                               </div>
                             )}
                           </div>
@@ -1040,22 +1182,16 @@ export function Dashboard() {
             </div>
             <p className="text-xs text-muted-foreground flex items-center mt-1">
               <TrendingUp className="h-3 w-3 mr-1" />
-              {dateRange.from ? (
-                <span className="font-medium">
-                  Custom range
-                </span>
-              ) : (
-                "This month's total"
-              )}
+              {dateRange.from ? <span className="font-medium">Custom range</span> : "This month's total"}
             </p>
-            
+
             {dateRange.from && (
               <div className="mt-2 flex items-center gap-1 text-xs">
                 <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
                   <CalendarIcon className="h-3 w-3" />
                   <span className="font-medium">
-                    {format(dateRange.from, "MMM dd")}
-                    {dateRange.to && ` - ${format(dateRange.to, "MMM dd")}`}
+                    {format(dateRange.from, 'MMM dd')}
+                    {dateRange.to && ` - ${format(dateRange.to, 'MMM dd')}`}
                   </span>
                 </div>
               </div>
@@ -1063,7 +1199,7 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* YOU OWE CARD */}
+        {/* You Owe */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">You Owe</CardTitle>
@@ -1075,7 +1211,7 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* YOU ARE OWED CARD */}
+        {/* You Are Owed */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">You Are Owed</CardTitle>
@@ -1087,139 +1223,29 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Monthly Savings Card */}
+        {/* Monthly Savings */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Monthly Savings</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : `$${monthlySavings.toFixed(2)}`}</div>
+            <div className="text-2xl font-bold">
+              {loading ? '...' : `$${monthlySavings.toFixed(2)}`}
+            </div>
             <Progress value={savingsProgress} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">{savingsProgress.toFixed(0)}% of ${savingsGoal} goal</p>
-          </CardContent>
-        </Card>
-
-        {/* NEW: Budget Card */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">Monthly Budget</CardTitle>
-            </div>
-            <div className="flex items-center gap-2">
-              {!isEditingBudget ? (
-                <button
-                  onClick={() => {
-                    setBudgetInput(budget !== null ? String(budget) : '');
-                    setIsEditingBudget(true);
-                  }}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors text-xs"
-                  title="Edit budget"
-                >
-                  <Pencil className="h-4 w-4 text-muted-foreground" />
-                </button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setIsEditingBudget(false);
-                      setBudgetInput('');
-                    }}
-                    className="text-xs px-2 py-1 rounded-md border border-gray-200 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      const parsed = parseFloat(budgetInput.replace(/[^0-9.]/g, ''));
-                      if (Number.isNaN(parsed) || parsed <= 0) {
-                        alert('Enter a valid budget greater than 0');
-                        return;
-                      }
-                      await persistBudget(parsed);
-                      setIsEditingBudget(false);
-                    }}
-                    disabled={budgetSaving}
-                    className="text-xs px-3 py-1 rounded-md bg-gradient-to-r from-purple-600 to-pink-600 text-white"
-                  >
-                    {budgetSaving ? 'Saving...' : 'Save'}
-                  </button>
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {!isEditingBudget ? (
-              <div>
-                <div className="text-2xl font-bold">
-                  {budgetValue !== null ? `$${budgetValue.toFixed(2)}` : <span className="text-sm text-muted-foreground">No budget set</span>}
-                </div>
-
-                <div className="mt-3">
-                  {budgetValue !== null ? (
-                    <>
-                      <div className="flex items-center justify-between text-xs mb-2">
-                        <span>Spent</span>
-                        <span className="font-medium">${budgetUsed.toFixed(2)}</span>
-                      </div>
-
-                      <Progress value={budgetProgress} className="h-2" />
-
-                      <div className="mt-2 flex items-center justify-between text-xs">
-                        <span>Remaining</span>
-                        <div className="flex items-center gap-2">
-                          <span className={`font-medium ${budgetRemaining !== null && budgetRemaining <= 0 ? 'text-red-600' : ''}`}>
-                            {budgetRemaining !== null ? `$${budgetRemaining.toFixed(2)}` : '--'}
-                          </span>
-                          {budgetValue !== null && (
-                            <button
-                              onClick={() => persistBudget(null)}
-                              className="text-xs px-2 py-1 rounded-md border border-gray-200 hover:bg-gray-50"
-                            >
-                              Clear
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Set a monthly budget to track spending progress here. It will be saved to your account (Supabase) when you're signed in.</p>
-                  )}
-                </div>
-
-                {budgetValue !== null && (
-                  <div className="mt-3 text-xs text-muted-foreground">Progress: {budgetProgress.toFixed(0)}%</div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {/* --- CHANGE 1 --- */}
-                <label className="text-xs text-gray-600 dark:text-gray-400">Enter monthly budget</label>
-                <div className="flex gap-2">
-                  {/* --- CHANGE 2 --- */}
-                  <div className="flex items-center px-3 rounded-md border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">$</span>
-                  </div>
-                  {/* --- CHANGE 3 --- */}
-                  <input
-                    value={budgetInput}
-                    onChange={(e) => setBudgetInput(e.target.value)}
-                    placeholder="e.g. 2000"
-                    className="flex-1 px-3 py-2 rounded-md border border-gray-200 bg-white text-sm focus:outline-none dark:bg-gray-800 dark:text-gray-100"
-                  />
-                </div>
-                {/* --- CHANGE 4 --- */}
-                <div className="text-xs text-gray-500 dark:text-gray-400">Saved to your user settings when signed in. If you want it local-only, sign out first (dev-friendly).</div>
-              </div>
-            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              {savingsProgress.toFixed(0)}% of ${savingsGoal} goal
+            </p>
           </CardContent>
         </Card>
       </div>
 
       <div className="space-y-6">
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card>
+        {/* Bottom grid */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-start">
+          {/* Expense Categories */}
+          <Card className="md:col-span-3">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -1257,60 +1283,176 @@ export function Dashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={categoryData.length ? categoryData : DEFAULT_COLORS.map((c, i) => ({ name: `Category ${i+1}`, value: 0, color: c }))}
+                        data={
+                          categoryData.length
+                            ? categoryData
+                            : DEFAULT_COLORS.map((c, i) => ({
+                                name: `Category ${i + 1}`,
+                                value: 0,
+                                color: c
+                              }))
+                        }
                         innerRadius={50}
                         outerRadius={80}
                         cx="50%"
                         cy="50%"
                         dataKey="value"
                       >
-                        {(categoryData.length ? categoryData : DEFAULT_COLORS).map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={entry.color ?? entry} />
-                        ))}
+                        {(categoryData.length ? categoryData : DEFAULT_COLORS).map(
+                          (entry: any, index: number) => (
+                            <Cell key={`cell-${index}`} fill={entry.color ?? entry} />
+                          )
+                        )}
                       </Pie>
-                      <Tooltip formatter={(value, name) => [`$${Number(value).toFixed(2)}`, name]} />
+                      <Tooltip
+                        formatter={(value, name) => [`$${Number(value).toFixed(2)}`, name]}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 )}
               </div>
               <div className="mt-4 space-y-2">
-                {categoryData.length ? categoryData.map((category) => (
-                  <div key={category.name} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }} />
-                      <span>{category.name}</span>
+                {categoryData.length ? (
+                  categoryData.map((category) => (
+                    <div
+                      key={category.name}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: category.color }}
+                        />
+                        <span>{category.name}</span>
+                      </div>
+                      <span className="font-medium">${category.value.toFixed(2)}</span>
                     </div>
-                    <span className="font-medium">${category.value.toFixed(2)}</span>
-                  </div>
-                )) : (
+                  ))
+                ) : (
                   <div className="text-sm text-muted-foreground">No data for this month</div>
                 )}
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Monthly Trends</CardTitle>
-              <CardDescription>Personal vs Group expenses over time</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyTrends}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="personal" stroke="#9B1313" name="Personal" />
-                    <Line type="monotone" dataKey="group" stroke="#FFA896" name="Group" />
-                  </LineChart>
-                </ResponsiveContainer>
+          {/* Monthly Budget – aligned with categories, less bottom gap */}
+          <Card className="md:col-span-2 flex flex-col">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 w-full">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Monthly Budget</CardTitle>
               </div>
+              <div className="flex items-center gap-2">
+                {!isEditingBudget ? (
+                  <button
+                    onClick={() => {
+                      setBudgetInput(budget !== null ? String(budget) : '');
+                      setIsEditingBudget(true);
+                    }}
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors text-xs"
+                    title="Edit budget"
+                  >
+                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setIsEditingBudget(false);
+                        setBudgetInput('');
+                      }}
+                      className="text-xs px-2 py-1 rounded-md border border-gray-200 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const parsed = parseFloat(budgetInput.replace(/[^0-9.]/g, ''));
+                        if (Number.isNaN(parsed) || parsed <= 0) {
+                          alert('Enter a valid budget greater than 0');
+                          return;
+                        }
+                        await persistBudget(parsed);
+                        setIsEditingBudget(false);
+                      }}
+                      disabled={budgetSaving}
+                      className="text-xs px-3 py-1 rounded-md bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+                    >
+                      {budgetSaving ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+
+            {/* NOTE: pt-4 pb-6, no justify-center -> fixes bottom spacing + keeps uniform */}
+            <CardContent className="flex flex-col items-center w-full pt-4 pb-6">
+              {!isEditingBudget ? (
+                <div className="flex flex-col items-center justify-start w-full">
+                  <div className="flex items-center justify-center w-full mb-2">
+                    <BudgetProgressRing
+                      percent={
+                        budgetValue ? Math.min(100, (budgetUsed / budgetValue) * 100) : 0
+                      }
+                    />
+                  </div>
+                  <div className="mt-2 text-lg font-bold text-center">
+                    {budgetValue !== null ? (
+                      `$${budgetValue.toFixed(2)}`
+                    ) : (
+                      <span className="text-sm text-muted-foreground">No budget set</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-center gap-1 mt-2 text-xs text-muted-foreground w-full">
+                    <span>
+                      Spent:{' '}
+                      <span className="font-semibold text-purple-700">
+                        ${budgetUsed.toFixed(2)}
+                      </span>
+                    </span>
+                    <span>
+                      Remaining:{' '}
+                      <span
+                        className={`font-semibold ${
+                          budgetRemaining !== null && budgetRemaining <= 0
+                            ? 'text-red-600'
+                            : ''
+                        }`}
+                      >
+                        {budgetRemaining !== null
+                          ? `$${budgetRemaining.toFixed(2)}`
+                          : '--'}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2 w-full">
+                  <label className="text-xs text-gray-600 dark:text-gray-400">
+                    Enter monthly budget
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="flex items-center px-3 rounded-md border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">$</span>
+                    </div>
+                    <input
+                      value={budgetInput}
+                      onChange={(e) => setBudgetInput(e.target.value)}
+                      placeholder="e.g. 2000"
+                      className="flex-1 px-3 py-2 rounded-md border border-gray-200 bg-white text-sm focus:outline-none dark:bg-gray-800 dark:text-gray-100"
+                    />
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    Saved to your user settings when signed in. If you want it local-only, sign
+                    out first (dev-friendly).
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
+        {/* Monthly Trends removed */}
       </div>
     </div>
   );

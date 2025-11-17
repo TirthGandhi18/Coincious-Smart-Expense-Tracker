@@ -1,9 +1,9 @@
 from flask import Blueprint, jsonify, g
 from app.auth.decorators import auth_required
-from app.extensions import supabase # Imports your admin client
+from app.extensions import supabase 
 import traceback
 
-# Create a new blueprint for user-related routes
+
 user_bp = Blueprint('user_api', __name__)
 
 @user_bp.route('/user', methods=['DELETE'])
@@ -20,8 +20,7 @@ def delete_user_account():
         user_id = g.user.id
         print(f"--- ATTEMPTING TO DELETE USER: {user_id} ---")
 
-        # Use the admin client (from extensions.py) to delete the user
-        # This is the only way to delete from auth.users
+        
         admin_auth = supabase.auth.admin
         admin_auth.delete_user(user_id)
         
