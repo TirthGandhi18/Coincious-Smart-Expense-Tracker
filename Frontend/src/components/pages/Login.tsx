@@ -13,6 +13,15 @@ import {
   CardTitle,
 } from "../ui/card";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+
 import { Badge } from "../ui/badge";
 import { useAuth } from "../../App";
 import { useTheme } from "../ui/ThemeContext";
@@ -24,6 +33,7 @@ import {
   Moon,
   Mail,
   Lock,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -40,11 +50,15 @@ export function Login() {
   const showPassword = showPasswordState[0];
   const setShowPassword = showPasswordState[1];
 
-  const { login, isLoading, signInWithProvider } = useAuth();
+  const { login, isLoading, signInWithProvider , supabase} = useAuth();
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
   const navigate = useNavigate();
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isSendingReset, setIsSendingReset] = useState(false);
 
   // Simple form submission
   const handleLogin = async (e: React.FormEvent) => {
@@ -80,6 +94,36 @@ export function Login() {
       // Show a helpful error message from the provider when available
       const message = err?.message || (err && JSON.stringify(err)) || 'Unable to start Google sign-in';
       toast.error(`${message}. Please ensure Google OAuth is configured in your Supabase project.`);
+    }
+  };
+
+  // Handle Password Reset Email
+  const handleSendResetEmail = async () => {
+    if (!resetEmail) {
+      toast.error('Please enter your email address.');
+      return;
+    }
+    
+    setIsSendingReset(true);
+
+    try {      
+      const redirectTo = `${window.location.origin}/forgot-password`;
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, { 
+        redirectTo 
+      });
+
+      if (error) throw error;
+      toast.success('Password reset email sent!', { 
+        description: 'Check your inbox for the link to reset your password.' 
+      });
+      setIsResetDialogOpen(false);
+      setResetEmail('');
+    } catch (error: any) {
+      toast.error('Failed to send reset email.', {
+        description: error.message || 'Please check your email and try again.'
+      });
+    } finally {
+      setIsSendingReset(false);
     }
   };
 
@@ -180,12 +224,13 @@ export function Login() {
 
               {/* Forgot password link */}
               <div className="text-right">
-                <Link
-                  to="/forgot-password"
+                <button
+                  type="button"
                   className="text-sm text-primary hover:underline"
+                  onClick={() => setIsResetDialogOpen(true)}
                 >
                   Forgot password?
-                </Link>
+                </button>
               </div>
 
               {/* Login button */}
@@ -251,6 +296,57 @@ export function Login() {
             </div>
           </CardContent>
         </Card>
+
+        {/*Forgot Password Email Dialogue*/}
+        <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Reset Password</DialogTitle>
+              <DialogDescription>
+                Enter the email address associated with your account. We'll send you a link to reset your password.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="john@example.com"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsResetDialogOpen(false)}
+                disabled={isSendingReset}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSendResetEmail}
+                disabled={isSendingReset || !resetEmail}
+              >
+                {isSendingReset ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  'Send Reset Email'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
