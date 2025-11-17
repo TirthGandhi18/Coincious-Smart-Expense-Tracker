@@ -657,7 +657,7 @@ function PasswordModal({
   supabase?: any;
   onSuccess?: () => void;
 }) {
-  const { user } = useAuth() as any;
+  const { user, logout } = useAuth() as any;
   const [current, setCurrent] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -744,6 +744,30 @@ function PasswordModal({
     }
   }
 
+  const handleForgotLoggedIn = async () => {
+    if (!supabase || !user?.email) {
+        toast.error("Account information missing. Please log out and back in.");
+        return;
+    }
+    setLoading(true);
+    try {
+        const redirectTo = `${window.location.origin}/forgot-password`;
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(user.email, {redirectTo});
+
+        if (resetError) throw resetError;
+        toast.success('Password reset link sent!', {
+            description: 'Check your inbox. You are being logged out now.'
+        });
+        onClose(); 
+        logout();
+    } catch (error: any) {
+        console.error('Error sending reset email:', error);
+        toast.error(error.message || 'Failed to send reset link.');
+    } finally {
+        setLoading(false);
+    }
+  };
+  
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={() => !loading && onClose()} />
@@ -780,23 +804,50 @@ function PasswordModal({
               )}
             </div>
 
-            <div>
+           <div>
               <Label>Confirm Password</Label>
               <div className="relative">
-                <Input ref={confirmRef} type={"password"} value={confirm} onChange={(e) => { setConfirm(e.target.value); setTouched((t) => ({ ...t, confirm: true })); }} aria-invalid={!!confirmError} />
+                <Input
+                  ref={confirmRef}
+                  type={showConfirm ? "text" : "password"}
+                  value={confirm}
+                  onChange={(e) => {
+                    setConfirm(e.target.value);
+                    setTouched((t) => ({ ...t, confirm: true }));
+                  }}
+                  onBlur={() => setTouched((t) => ({ ...t, confirm: true }))}
+                  aria-invalid={!!confirmError}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((s) => !s)}
+                  className="absolute right-2 top-2 text-sm px-2 py-1"
+                >
+                  {showConfirm ? "Hide" : "Show"}
+                </button>
               </div>
-              {touched.confirm && confirmError && <div className="text-sm text-red-600 mt-1">{confirmError}</div>}
+              {touched.confirm && confirmError && (
+                <div className="text-sm text-red-600 mt-1">{confirmError}</div>
+              )}
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <button type="button" className="text-sm text-muted-foreground underline" onClick={() => { if (supabase && typeof supabase.auth.resetPasswordForEmail === "function") { supabase.auth.resetPasswordForEmail(user?.email || ""); toast.success("Check your email for password reset link"); } else { toast.error("Password reset not configured yet"); } }}>
+                <button
+                  type="button"
+                  className="text-sm text-muted-foreground underline"
+                  onClick={handleForgotLoggedIn} 
+                >
                   Forgot password?
                 </button>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => !loading && onClose()}>Cancel</Button>
-                <Button type="submit" disabled={loading || !isFormValid}>{loading ? "Updating..." : "Update"}</Button>
+                <Button variant="outline" onClick={() => !loading && onClose()}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={loading || !isFormValid}>
+                  {loading ? "Updating..." : "Update"}
+                </Button>
               </div>
             </div>
           </div>
