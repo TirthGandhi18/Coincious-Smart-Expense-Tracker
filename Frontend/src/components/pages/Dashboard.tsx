@@ -174,7 +174,7 @@ export function Dashboard() {
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [budgetInput, setBudgetInput] = useState<string>('');
   const [budgetSaving, setBudgetSaving] = useState(false);
-
+  const [currentMonthTotal, setCurrentMonthTotal] = useState<number>(0);
   // Table name & column (update if your schema differs)
   const BUDGET_TABLE = 'budgets'; // table name
   // amount_limit is the numeric column in that table (per your screenshot)
@@ -308,7 +308,35 @@ export function Dashboard() {
   useEffect(() => {
     fetchBalances();
   }, [user]);
+  // Fetch ONLY the current month's total
+  useEffect(() => {
+    const fetchMonthlyTotal = async () => {
+      if (!user) return;
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
 
+        // Call the new Python route
+        // Note: We assume your blueprint is mounted at /api, so the path is /api/current-month-total
+        const response = await fetch('http://localhost:8000/api/current-month-total', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentMonthTotal(data.total);
+        }
+      } catch (error) {
+        console.error('Error fetching monthly total:', error);
+      }
+    };
+
+    fetchMonthlyTotal();
+  }, [user]);
   // --- (EXISTING USE EFFECTS) ---
 
   useEffect(() => {
@@ -1008,7 +1036,7 @@ export function Dashboard() {
 
           <CardContent className="relative">
             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-              {loading ? '...' : `$${displayAmount.toFixed(2)}`}
+              {loading ? '...' : `$${currentMonthTotal.toFixed(2)}`}
             </div>
             <p className="text-xs text-muted-foreground flex items-center mt-1">
               <TrendingUp className="h-3 w-3 mr-1" />

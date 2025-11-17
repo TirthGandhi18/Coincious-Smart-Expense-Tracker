@@ -2,6 +2,8 @@
 from flask import Blueprint, request, jsonify, g
 from app.auth.decorators import auth_required
 from app.services import expense_service
+from datetime import datetime
+from app.extensions import supabase
 
 exp_bp = Blueprint('expense_api', __name__)
 
@@ -25,3 +27,31 @@ def api_expense_monthly_donut():
     
     response, status_code = expense_service.get_monthly_donut_data(user_id, period)
     return jsonify(response), status_code
+
+@exp_bp.route('/current-month-total', methods=['GET'])
+@auth_required
+def get_current_month_total():
+    try:
+        user_id = g.user.id
+        
+        # Get the first day of the current month (e.g., "2025-11-01")
+        today = datetime.today()
+        start_of_month = today.replace(day=1).strftime('%Y-%m-%d')
+
+        # Query Supabase directly using the client from extensions.py
+        # We calculate the sum of 'amount' for all expenses where the user is the payer
+        response = supabase.table('expenses')\
+            .select('amount')\
+            .eq('payer_id', user_id)\
+            .gte('date', start_of_month)\
+            .execute()
+
+        # Sum the amounts in Python
+        expenses = response.data
+        total_amount = sum(float(item['amount']) for item in expenses)
+
+        return jsonify({'total': total_amount}), 200
+
+    except Exception as e:
+        print(f"Error calculating monthly total: {e}")
+        return jsonify({'error': str(e)}), 500
