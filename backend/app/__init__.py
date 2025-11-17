@@ -37,6 +37,7 @@ def create_app():
     from .routes import expense_routes
     from .routes import invitation_routes
     from .routes import ai_routes
+    from .routes import user_routes 
     
     app.register_blueprint(invitation_routes.inv_bp, url_prefix='/api/invitations')
     app.register_blueprint(utility_routes.util_bp, url_prefix='/api')
@@ -44,5 +45,6 @@ def create_app():
     app.register_blueprint(group_routes.group_bp, url_prefix='/api/groups')
     app.register_blueprint(expense_routes.exp_bp, url_prefix='/api')
     app.register_blueprint(ai_routes.ai_bp, url_prefix='/api/ai')
-
+    app.register_blueprint(user_routes.user_bp, url_prefix='/api')
+    
     return app

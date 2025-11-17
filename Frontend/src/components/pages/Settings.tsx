@@ -14,13 +14,22 @@ import {
   Download,
   AlertTriangle,
   Save,
-  Shield
+  Shield,
+  Loader2 // <-- ADDED
 } from 'lucide-react';
+import { useAuth } from '../../App'; // <-- ADDED
+import { supabase } from '../../utils/supabase/client'; // <-- ADDED
+import { useNavigate } from 'react-router-dom'; // <-- ADDED
+import { toast } from 'sonner'; // <-- ADDED
 
 export function Settings() {
   const { theme, toggleTheme } = useTheme();
-    const isDark = theme === 'dark';
+  const isDark = theme === 'dark';
+  const { user } = useAuth(); // <-- ADDED
+  const navigate = useNavigate(); // <-- ADDED
+
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false); // <-- ADDED
   const [notifications, setNotifications] = useState({
     email: true,
     expense: true,
@@ -55,6 +64,47 @@ export function Settings() {
   const handleSaveSettings = () => {
     // Here you would typically save settings to your backend
     console.log('Saving settings:', { notifications, preferences, privacy });
+    toast.success('Settings saved!'); // <-- Example notification
+  };
+
+  // +++ NEW FUNCTION FOR DELETING ACCOUNT +++
+  const handleDeleteAccount = async () => {
+    // 1. Confirm with the user
+    if (!window.confirm("Are you sure? This will permanently delete your account and all associated data. This action cannot be undone.")) {
+      return;
+    }
+    
+    setIsDeleting(true);
+    const toastId = toast.loading('Deleting your account...');
+
+    try {
+      // 3. Get session token to authenticate with our backend
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('You must be logged in to delete your account.');
+
+      // 4. Call our new backend /api/user route
+      const response = await fetch('http://localhost:8000/api/user', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to delete account.');
+      }
+
+      // 5. Success! Log the user out and redirect
+      toast.success('Account deleted successfully. You will be logged out.', { id: toastId });
+      await supabase.auth.signOut();
+      navigate('/login'); // Redirect to login page
+
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      toast.error(error.message, { id: toastId });
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -232,9 +282,18 @@ export function Settings() {
                   <Label className="text-destructive">Delete Account</Label>
                   <p className="text-sm text-muted-foreground">Permanently delete your account and all data</p>
                 </div>
-                <Button variant="destructive">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Delete Account
+                {/* --- UPDATED BUTTON --- */}
+                <Button 
+                  variant="destructive" 
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                  )}
+                  {isDeleting ? 'Deleting...' : 'Delete Account'}
                 </Button>
               </div>
             </div>
