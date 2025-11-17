@@ -281,12 +281,17 @@ export function Layout({ children }: LayoutProps) {
               <span>{supportNavItem.label}</span>
             </Link>
 
-            <Button variant="ghost" className="w-full justify-start gap-3" asChild>
-              <Link to="/settings">
-                <Settings className="h-4 w-4" />
-                <span>Settings</span>
-              </Link>
-            </Button>
+            <Link
+              to="/settings"
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                location.pathname === '/settings'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-accent'
+              }`}
+            >
+              <Settings className="h-4 w-4" />
+              <span>Settings</span>
+            </Link>
 
             <Button
               variant="ghost"

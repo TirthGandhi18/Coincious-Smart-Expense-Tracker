@@ -18,7 +18,8 @@ import {
 } from 'lucide-react';
 
 export function Settings() {
-  const { isDark, toggleTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
+    const isDark = theme === 'dark';
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [notifications, setNotifications] = useState({
     email: true,

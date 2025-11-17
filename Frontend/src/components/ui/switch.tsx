@@ -13,18 +13,49 @@ function Switch({
     <SwitchPrimitive.Root
       data-slot="switch"
       className={cn(
-        "peer data-[state=checked]:bg-primary data-[state=unchecked]:bg-switch-background focus-visible:border-ring focus-visible:ring-ring/50 dark:data-[state=unchecked]:bg-input/80 inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
-        
-        "data-[state=unchecked]:border-muted-foreground data-[state=checked]:border-transparent", 
-        className,
+        // Base
+        "peer inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border transition-all outline-none focus-visible:ring-[3px] focus-visible:border-ring focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
+
+        // --- LIGHT MODE ---
+        // OFF
+        "data-[state=unchecked]:bg-[#E6D3B2] data-[state=unchecked]:border-transparent",
+
+        // ON
+        "data-[state=checked]:bg-[#8B4513] data-[state=checked]:border-transparent",
+
+        // --- DARK MODE ---
+        // OFF
+        "dark:data-[state=unchecked]:bg-[#1E293B] dark:data-[state=unchecked]:border-transparent",
+
+        // ON
+        "dark:data-[state=checked]:bg-[#22C55E] dark:data-[state=checked]:border-transparent",
+
+        className
       )}
       {...props}
     >
       <SwitchPrimitive.Thumb
         data-slot="switch-thumb"
         className={cn(
-          "data-[state=checked]:bg-card data-[state=unchecked]:bg-muted-foreground dark:data-[state=checked]:bg-primary-foreground dark:data-[state=unchecked]:bg-card-foreground",
-          "bg-card dark:data-[state=unchecked]:bg-card-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0",
+          // Base thumb
+          "pointer-events-none block size-4 rounded-full ring-0 transition-transform",
+
+          // --- LIGHT MODE 
+          // OFF (left)
+          "data-[state=unchecked]:bg-white",
+
+          // ON (right)
+          "data-[state=checked]:bg-white",
+
+          // --- DARK MODE ---
+          // OFF thumb = light gray
+          "dark:data-[state=unchecked]:bg-[#E2E8F0]",
+
+          // ON thumb = dark navy
+          "dark:data-[state=checked]:bg-[#0F172A]",
+
+          // Movement
+          "data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0"
         )}
       />
     </SwitchPrimitive.Root>

@@ -44,6 +44,7 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.65.0",
     "react-is": "^19.2.0",
+    "react-markdown": "^10.1.0",
     "react-resizable-panels": "^3.0.6",
     "react-router-dom": "^6.28.1",
     "recharts": "^3.2.1",

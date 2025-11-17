@@ -1283,31 +1283,6 @@ export function Dashboard() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5" />
-              AI Insights
-            </CardTitle>
-            <CardDescription>Personalized financial insights powered by AI</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {insights.map((insight, index) => {
-                const Icon = insight.icon;
-                return (
-                  <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-                    <Icon className={`h-5 w-5 mt-0.5 ${insight.color}`} />
-                    <div className="flex-1">
-                      <h4 className="font-medium">{insight.title}</h4>
-                      <p className="text-sm text-muted-foreground">{insight.message}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
