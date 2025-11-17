@@ -352,6 +352,8 @@ export function GroupDetail() {
         <div className="flex-1">
           <h1 className="text-2xl md:text-3xl font-bold">{groupData.name}</h1>
         </div>
+        
+        {/* --- THIS ENTIRE DROPDOWNMENU BLOCK WAS REMOVED ---
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -371,6 +373,8 @@ export function GroupDetail() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        */}
+
       </div>
 
       {/* Summary Cards */}
