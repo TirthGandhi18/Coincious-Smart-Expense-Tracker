@@ -141,9 +141,11 @@ export function Settings() {
               </div>
               <div className="flex items-center gap-2">
                 <Sun className="h-4 w-4" />
+                {/* --- FIXED TOGGLE BUTTON: match style with below --- */}
                 <Switch
                   checked={isDark}
                   onCheckedChange={toggleTheme}
+                  className="data-[state=checked]:bg-purple-600 data-[state=unchecked]:bg-gray-200 transition-colors"
                 />
                 <Moon className="h-4 w-4" />
               </div>
@@ -151,69 +153,8 @@ export function Settings() {
           </CardContent>
         </Card>
 
-        {/* Notification Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notifications
-            </CardTitle>
-            <CardDescription>Configure when and how you receive notifications</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Email Notifications</Label>
-                  <p className="text-sm text-muted-foreground">Receive notifications via email</p>
-                </div>
-                <Switch
-                  checked={notifications.email}
-                  onCheckedChange={(checked) => handleNotificationChange('email', checked)}
-                />
-              </div>
-
-              <Separator />
-
-              <div className="space-y-3">
-                <h4 className="font-medium">Notification Types</h4>
-                
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Expense Updates</Label>
-                    <p className="text-sm text-muted-foreground">When expenses are added or modified</p>
-                  </div>
-                  <Switch
-                    checked={notifications.expense}
-                    onCheckedChange={(checked) => handleNotificationChange('expense', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Group Activity</Label>
-                    <p className="text-sm text-muted-foreground">When someone joins or leaves a group</p>
-                  </div>
-                  <Switch
-                    checked={notifications.group}
-                    onCheckedChange={(checked) => handleNotificationChange('group', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Payment Reminders</Label>
-                    <p className="text-sm text-muted-foreground">When payments are due or received</p>
-                  </div>
-                  <Switch
-                    checked={notifications.payment}
-                    onCheckedChange={(checked) => handleNotificationChange('payment', checked)}
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* REMOVE: Notification Settings */}
+        {/* <Card> ...Notifications... </Card> */}
 
         {/* Privacy & Security */}
         <Card>
@@ -225,6 +166,8 @@ export function Settings() {
             <CardDescription>Control your data privacy and security settings</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* REMOVE: Analytics Tracking */}
+            {/* 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Analytics Tracking</Label>
@@ -237,9 +180,8 @@ export function Settings() {
                 onCheckedChange={(checked) => handlePrivacyChange('analytics', checked)}
               />
             </div>
-
             <Separator />
-
+            */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Data Sharing</Label>
@@ -247,9 +189,17 @@ export function Settings() {
                   Allow sharing data with trusted third-party services
                 </p>
               </div>
+              {/* --- FIXED BUTTON COLORS FOR CONTRAST, MATCH DARK MODE TOGGLE --- */}
               <Switch
                 checked={privacy.dataSharing}
                 onCheckedChange={(checked) => handlePrivacyChange('dataSharing', checked)}
+                className={`
+                  transition-colors
+                  data-[state=checked]:bg-purple-600
+                  data-[state=unchecked]:bg-gray-200
+                  border
+                  ${privacy.dataSharing ? 'border-purple-600' : 'border-gray-300'}
+                `}
               />
             </div>
           </CardContent>
