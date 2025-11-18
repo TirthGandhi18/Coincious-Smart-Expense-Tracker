@@ -1164,7 +1164,7 @@ export function Dashboard() {
                         <button
                           onClick={() => setShowDatePicker(false)}
                           disabled={!dateRange.from}
-                          className="flex-1 py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-all font-medium shadow-lg"
+                          className="flex-1 py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed text-beige rounded-lg transition-all font-medium shadow-lg"
                         >
                           Apply Filter
                         </button>
@@ -1178,7 +1178,7 @@ export function Dashboard() {
 
           <CardContent className="relative">
             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-              {loading ? '...' : `$${currentMonthTotal.toFixed(2)}`}
+              {loading ? '...' : dateRange.from ? `$${filteredExpenses.toFixed(2)}` : `$${currentMonthTotal.toFixed(2)}`}
             </div>
             <p className="text-xs text-muted-foreground flex items-center mt-1">
               <TrendingUp className="h-3 w-3 mr-1" />

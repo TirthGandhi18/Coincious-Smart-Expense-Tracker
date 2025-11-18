@@ -431,8 +431,8 @@ export function ExpenseCalendar() {
                   value={currentDate.getMonth().toString()} 
                   onValueChange={(value) => handleMonthYearChange(parseInt(value), currentDate.getFullYear())}
                 >
-                  <SelectTrigger className="w-[130px] bg-white/20 border-white/30 text-white hover:bg-white/30">
-                    <SelectValue />
+                  <SelectTrigger className="w-[130px] bg-white/20 border-white/30 text-white hover:bg-white/30 font-semibold">
+                    <SelectValue className="text-white" />
                   </SelectTrigger>
                   <SelectContent>
                     {monthNames.map((month, index) => (
@@ -443,10 +443,11 @@ export function ExpenseCalendar() {
 
                 <Select 
                   value={currentDate.getFullYear().toString()} 
-                  onValueChange={(value) => handleMonthYearChange(currentDate.getMonth(), parseInt(value))}
+                  onValueChange={(value) => handleMonthYearChange(currentDate.getMonth(), parseInt(value))
+                  }
                 >
-                  <SelectTrigger className="w-[100px] bg-white/20 border-white/30 text-white hover:bg-white/30">
-                    <SelectValue />
+                  <SelectTrigger className="w-[100px] bg-white/20 border-white/30 text-white hover:bg-white/30 font-semibold">
+                    <SelectValue className="text-white" />
                   </SelectTrigger>
                   <SelectContent>
                     {yearOptions.map((year) => <SelectItem key={year} value={year.toString()}>{year}</SelectItem>)}
@@ -454,10 +455,10 @@ export function ExpenseCalendar() {
                 </Select>
 
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => changeMonth(-1)} className="hover:scale-110 transition-transform bg-white/20 hover:bg-white/40 text-white border-white/30 h-10 w-10">
+                  <Button variant="ghost" size="icon" onClick={() => changeMonth(-1)} className="hover:scale-110 transition-transform bg-white/20 hover:bg-white/40 border-white/30 h-10 w-10">
                     <ChevronLeft className="h-6 w-6 text-white" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => changeMonth(1)} className="hover:scale-110 transition-transform bg-white/20 hover:bg-white/40 text-white border-white/30 h-10 w-10">
+                  <Button variant="ghost" size="icon" onClick={() => changeMonth(1)} className="hover:scale-110 transition-transform bg-white/20 hover:bg-white/40 border-white/30 h-10 w-10">
                     <ChevronRight className="h-6 w-6 text-white" />
                   </Button>
                 </div>
