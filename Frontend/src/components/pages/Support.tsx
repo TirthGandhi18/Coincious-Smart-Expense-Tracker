@@ -231,94 +231,103 @@ export function Support() {
                 </div>
             </div>
 
-            {/* Channels - single column */}
-            <div className="grid md:grid-cols-1 gap-4 mb-8">
-                <Card className="hover:shadow-lg transition-shadow">
-                    <CardContent className="p-6 text-center">
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 bg-green-100">
-                            <Mail className="h-6 w-6 text-green-600" />
+            {/* Email Support Card - Improved */}
+            <Card className="max-w-2xl mx-auto border-2 hover:shadow-xl transition-all duration-300">
+                <CardContent className="p-8">
+                    <div className="flex flex-col md:flex-row items-center gap-6">
+                        {/* Icon Section */}
+                        <div className="flex-shrink-0">
+                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 flex items-center justify-center shadow-lg">
+                                <Mail className="h-10 w-10 text-green-600 dark:text-green-400" />
+                            </div>
                         </div>
-                        <h3 className="font-medium mb-2">Email Support</h3>
-                        <p className="text-sm text-muted-foreground mb-3">
-                            Get help via email
-                        </p>
-                        <div className="flex items-center justify-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500" />
-                            <span className="text-xs text-muted-foreground">
-                                Response within 24 hours
-                            </span>
+                        
+                        {/* Content Section */}
+                        <div className="flex-1 text-center md:text-left">
+                            <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-gray-100">Email Support</h3>
+                            <p className="text-sm text-muted-foreground mb-3">
+                                Get help via email - We're here to assist you
+                            </p>
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/30 rounded-full">
+                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                <span className="text-xs font-medium text-green-700 dark:text-green-400">
+                                    Response within 24 hours
+                                </span>
+                            </div>
                         </div>
-                        <div className="mt-4">
+                        
+                        {/* Button Section */}
+                        <div className="flex-shrink-0 w-full md:w-auto">
                             <div
                                 onClick={() => setShowEmailModal(true)}
-                                className="inline-block w-full text-center px-4 py-2 rounded bg-[#8B4513] text-white hover:opacity-95 cursor-pointer select-none"
+                                className="w-full md:w-auto px-6 py-3 rounded-lg bg-[#8B4513] text-white font-medium hover:bg-[#6D3410] transition-colors cursor-pointer text-center shadow-md hover:shadow-lg"
                             >
                                 Contact via Email
                             </div>
                         </div>
-                    </CardContent>
-                </Card>
-            </div>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Email Modal */}
             {showEmailModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]" onClick={() => setShowEmailModal(false)}>
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold">Contact Support</h3>
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] backdrop-blur-sm" onClick={() => setShowEmailModal(false)}>
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Contact Support</h3>
                             <div 
                                 onClick={() => setShowEmailModal(false)} 
-                                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer"
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer transition-colors"
                             >
-                                <X className="h-5 w-5" />
+                                <X className="h-6 w-6" />
                             </div>
                         </div>
                         
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                            Click to copy email address to your clipboard
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                            Click on any email to copy it to your clipboard
                         </p>
 
                         <div className="space-y-3">
                             <div 
-                                onClick={() => copyToClipboard('support@smartexpense.com')}
-                                className="w-full text-left p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"
+                                onClick={() => copyToClipboard('coincious.expensetracker@gmail.com')}
+                                className="w-full text-left p-5 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all cursor-pointer group"
                             >
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                                            <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <Mail className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                                         </div>
                                         <div>
-                                            <p className="font-medium text-sm">General Support</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">support@smartexpense.com</p>
+                                            <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">General Support</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">coincious.expensetracker@gmail.com</p>
                                         </div>
                                     </div>
-                                    {copiedEmail === 'support@smartexpense.com' ? (
-                                        <Check className="h-5 w-5 text-green-600" />
+                                    {copiedEmail === 'coincious.expensetracker@gmail.com' ? (
+                                        <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
                                     ) : (
-                                        <Copy className="h-5 w-5 text-gray-400" />
+                                        <Copy className="h-5 w-5 text-gray-400 group-hover:text-blue-600 flex-shrink-0" />
                                     )}
                                 </div>
                             </div>
 
                             <div 
                                 onClick={() => copyToClipboard('technical@smartexpense.com')}
-                                className="w-full text-left p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"
+                                className="w-full text-left p-5 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-purple-400 dark:hover:border-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all cursor-pointer group"
                             >
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
-                                            <Mail className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <Mail className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                                         </div>
                                         <div>
-                                            <p className="font-medium text-sm">Technical Issues</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">technical@smartexpense.com</p>
+                                            <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">Technical Issues</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">technical@smartexpense.com</p>
                                         </div>
                                     </div>
                                     {copiedEmail === 'technical@smartexpense.com' ? (
-                                        <Check className="h-5 w-5 text-green-600" />
+                                        <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
                                     ) : (
-                                        <Copy className="h-5 w-5 text-gray-400" />
+                                        <Copy className="h-5 w-5 text-gray-400 group-hover:text-purple-600 flex-shrink-0" />
                                     )}
                                 </div>
                             </div>
