@@ -226,7 +226,10 @@ export function Chatbot() {
                 <Button
                   key={index}
                   variant="outline"
-                  className="h-auto p-3 flex flex-col gap-2"
+                  // --- CHANGE HERE ---
+                  // Added: dark:hover:bg-secondary and dark:hover:border-gray-500
+                  className="h-auto p-3 flex flex-col gap-2 transition-all hover:shadow-md dark:hover:shadow-none dark:hover:bg-secondary dark:hover:border-gray-500"
+                  // --- END CHANGE ---
                   onClick={() => handleQuickAction(action.query)}
                 >
                   <Icon className="h-4 w-4" />
