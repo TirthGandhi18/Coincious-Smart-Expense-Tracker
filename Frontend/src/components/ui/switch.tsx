@@ -24,8 +24,8 @@ function Switch({
         "data-[state=checked]:bg-[#8B4513] data-[state=checked]:border-transparent",
 
         // --- DARK MODE ---
-        // OFF
-        "dark:data-[state=unchecked]:bg-[#1E293B] dark:data-[state=unchecked]:border-transparent",
+        // OFF - CHANGED THIS COLOR from #1E293B to #475569 so it is visible against the card
+        "dark:data-[state=unchecked]:bg-[#475569] dark:data-[state=unchecked]:border-transparent",
 
         // ON
         "dark:data-[state=checked]:bg-[#22C55E] dark:data-[state=checked]:border-transparent",
