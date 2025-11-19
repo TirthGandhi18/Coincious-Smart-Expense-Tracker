@@ -9,13 +9,6 @@ user_bp = Blueprint('user_api', __name__)
 @user_bp.route('/user', methods=['DELETE'])
 @auth_required
 def delete_user_account():
-    """
-    Permanently deletes the authenticated user and all their data
-    from the Supabase auth.users table.
-    
-    This relies on 'ON DELETE CASCADE' in your database schema
-    to remove all related data (expenses, budgets, groups, etc.).
-    """
     try:
         user_id = g.user.id
         print(f"--- ATTEMPTING TO DELETE USER: {user_id} ---")

@@ -6,26 +6,15 @@ from app.config import Config
 from app.services.group_service import get_group_balances
 from cachetools import TTLCache
 
-# Initialize Groq Client
 client = Groq(api_key=Config.GROQ_API_KEY)
 
-# Cache: Stores financial context for 5 minutes (300 seconds) per user
-# maxsize=100 means it stores data for up to 100 distinct users at a time
 context_cache = TTLCache(maxsize=100, ttl=300)
 
 def get_financial_context(user_id):
-    """
-    Fetches comprehensive financial data:
-    1. Last 90 days of expenses (Personal + Group)
-    2. Current Group Balances (Who owes you/You owe)
-    3. Monthly Budget
-    """
-    # 1. Check Cache
     if user_id in context_cache:
         return context_cache[user_id]
 
     try:
-        # 2. Fetch Expenses (Extended to 90 days for trends)
         today = datetime.now()
         ninety_days_ago = (today - timedelta(days=90))
         
@@ -35,8 +24,7 @@ def get_financial_context(user_id):
             .gte('created_at', ninety_days_ago.isoformat())\
             .order('created_at', desc=True) \
             .execute()
-            
-        # 3. Fetch Active Groups & Balances
+        
         groups_resp = supabase.table('group_members') \
             .select('group_id, groups(name)') \
             .eq('user_id', user_id) \
@@ -59,7 +47,6 @@ def get_financial_context(user_id):
                             "my_net_balance": my_balance_obj['balance']
                         })
 
-        # 4. Fetch the User's Budget <--- ADDED THIS ENTIRE BLOCK
         budget_amount = None
         try:
             budget_resp = supabase.table('budgets') \
@@ -72,20 +59,16 @@ def get_financial_context(user_id):
                 budget_amount = budget_resp.data['amount_limit']
         except Exception as e:
             print(f"Error fetching budget: {e}")
-            # Do not fail; just proceed without budget info
-        
-        # 5. Build the final context
+
         context_data = {
             "analysis_date": today.strftime("%Y-%m-%d"),
             "data_start_date": ninety_days_ago.strftime("%Y-%m-%d"),
-            "monthly_budget": budget_amount, # <--- ADDED
+            "monthly_budget": budget_amount,
             "recent_expenses": expenses_resp.data if expenses_resp.data else [],
             "group_balances": groups_summary
         }
         
         json_context = json.dumps(context_data, default=str)
-        
-        # Store in cache
         context_cache[user_id] = json_context
         return json_context
 
@@ -95,10 +78,7 @@ def get_financial_context(user_id):
 
 def chat_with_groq(user_id, user_message, history=[]):
     try:
-        # 1. Get Data Context (Cached if available)
         financial_data = get_financial_context(user_id)
-
-        # 2. Enhanced System Prompt
         system_prompt = f"""
         You are Coincious AI, an expert financial analyst and assistant. Your tone is professional, encouraging, and helpful.
 
@@ -129,7 +109,6 @@ def chat_with_groq(user_id, user_message, history=[]):
         5. **Unknowns**: If the answer isn't in the data (e.g., "how much did I spend in January 2020?"), say so politely. "My analysis only covers the last 90 days, so I can't see that far back. However, in the last 90 days..." Do not hallucinate numbers.
         """
 
-        # 3. Build Message Chain (This remains the same)
         messages = [{"role": "system", "content": system_prompt}]
         
         if history:
@@ -137,7 +116,6 @@ def chat_with_groq(user_id, user_message, history=[]):
             
         messages.append({"role": "user", "content": user_message})
 
-        # 4. Call Groq API (This remains the same)
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=messages,

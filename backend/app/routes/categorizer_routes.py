@@ -1,7 +1,6 @@
-# app/routes/categorizer_routes.py
 from flask import Blueprint, request, jsonify, g
 from app.auth.decorators import auth_required
-from app.services.categorizer_service import categorizer # Import the instance
+from app.services.categorizer_service import categorizer
 import json
 
 cat_bp = Blueprint('categorizer_api', __name__)
@@ -9,7 +8,7 @@ cat_bp = Blueprint('categorizer_api', __name__)
 @cat_bp.route('/categorize', methods=['POST'])
 @auth_required
 def api_categorize():
-    user = g.user # Get the user from the decorator
+    user = g.user
     
     form_data = request.form
     description = form_data.get('description', '').strip()
@@ -30,7 +29,6 @@ def api_categorize():
 @cat_bp.route('/parse-bill', methods=['POST'])
 @auth_required
 def api_parse_bill():
-    # user = g.user (We don't need the user.id here, but auth is still required)
 
     if 'image' not in request.files:
         return jsonify({'error': 'No image file provided. Use form-data with key "image".'}), 400

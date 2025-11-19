@@ -1,13 +1,8 @@
-# app/auth/decorators.py
 from functools import wraps
 from flask import request, jsonify, g
 from app.extensions import supabase
 
 def auth_required(f):
-    """
-    A decorator to check for a valid JWT token in the Authorization header.
-    If valid, it attaches the user object to flask.g.user
-    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         auth_header = request.headers.get('Authorization')
@@ -24,8 +19,6 @@ def auth_required(f):
             
             if not user_response or not hasattr(user_response, 'user') or not user_response.user:
                 return jsonify({'error': 'Invalid user token', 'details': 'Token is invalid or expired.'}), 401
-            
-            # Attach user to the request context (g)
             g.user = user_response.user
             
         except Exception as e:

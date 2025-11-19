@@ -1,10 +1,6 @@
-# app/routes/group_routes.py
 from flask import Blueprint, request, jsonify, g
 from app.auth.decorators import auth_required
 from app.services import group_service
-
-# Note: The url_prefix='/groups' is set in app/__init__.py
-# So '/' here actually means '/api/groups/'
 group_bp = Blueprint('group_api', __name__)
 
 @group_bp.route('/', methods=['GET'])

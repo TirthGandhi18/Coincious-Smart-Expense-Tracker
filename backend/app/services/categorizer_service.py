@@ -1,4 +1,3 @@
-# app/services/categorizer_service.py
 import json
 import base64
 import os
@@ -6,7 +5,6 @@ from app.extensions import supabase, gemini_model
 
 class ExpenseCategorizer:
     def __init__(self):
-        # Use the clients initialized in extensions.py
         self.supabase = supabase
         self.model = gemini_model
 
@@ -139,5 +137,4 @@ class ExpenseCategorizer:
         IMPORTANT: Respond ONLY with a JSON object in the format: {{"category": "CATEGORY_NAME"}}
         """
 
-# Create a single, shared instance for all routes to use
 categorizer = ExpenseCategorizer()

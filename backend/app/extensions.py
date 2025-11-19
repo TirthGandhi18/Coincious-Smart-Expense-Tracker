@@ -1,4 +1,3 @@
-# app/extensions.py
 import google.generativeai as genai
 from supabase import create_client, Client
 from .config import Config
@@ -6,10 +5,8 @@ from .config import Config
 if not Config.SUPABASE_URL or not Config.SUPABASE_SERVICE_KEY:
     raise ValueError("Supabase URL and Key must be set in .env file")
 
-# Initialize Supabase client
 supabase: Client = create_client(Config.SUPABASE_URL, Config.SUPABASE_SERVICE_KEY)
 
-# Initialize Gemini model
 gemini_model = None
 if Config.GEMINI_API_KEY:
     try:

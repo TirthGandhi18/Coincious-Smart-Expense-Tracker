@@ -16,8 +16,6 @@ def supabase_proxy(subpath):
     auth_header = request.headers.get('Authorization')
     if not auth_header:
         return jsonify({'error': 'Missing authorization'}), 401
-
-    # Ensure SUPABASE_URL is loaded from config
     supabase_url = Config.SUPABASE_URL
     if not supabase_url:
          return jsonify({'error': 'Server configuration error: SUPABASE_URL not set'}), 500
@@ -35,11 +33,9 @@ def supabase_proxy(subpath):
         else:
             response = requests.post(url, headers=headers, json=request.get_json())
         
-        # Check if response is valid JSON before trying to parse
         if 'application/json' in response.headers.get('Content-Type', ''):
             return jsonify(response.json()), response.status_code
         else:
-            # Return raw text if not JSON
             return response.text, response.status_code
             
     except Exception as e:
