@@ -73,8 +73,14 @@ function AppRoutes() {
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
-        {/* The reset fragment will hit this route, so it must be public */}
-        <Route path="/forgot-password" element={<PublicRoute><PasswordResetPage /></PublicRoute>} /> 
+        <Route 
+          path="/forgot-password" 
+          element={
+            <ProtectedRoute>
+              <PasswordResetPage />
+            </ProtectedRoute>
+          } 
+        />
 
         {/* Protected routes */}
         <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />

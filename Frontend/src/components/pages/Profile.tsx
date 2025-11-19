@@ -663,6 +663,7 @@ function PasswordModal({
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [touched, setTouched] = useState({ current: false, newPassword: false, confirm: false });
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const newRef = React.useRef<HTMLInputElement | null>(null);
   const confirmRef = React.useRef<HTMLInputElement | null>(null);

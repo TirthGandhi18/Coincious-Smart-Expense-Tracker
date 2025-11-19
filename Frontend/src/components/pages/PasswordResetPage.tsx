@@ -17,16 +17,6 @@ export function PasswordResetPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  useEffect(() => {
-    if (user) {
-      if (user.aud === 'authenticated') {
-        
-        toast.error("You are already logged in.", { description: "Redirecting to dashboard..."});
-        navigate('/dashboard', { replace: true });
-      }
-    }
-  }, [user, navigate]);
-
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +64,7 @@ export function PasswordResetPage() {
                 </CardHeader>
                 <form onSubmit={handlePasswordUpdate}>
                     <CardContent className="space-y-4">
-                        {/* New Password input */}
+                        {}
                         <div className="space-y-2">
                             <Label htmlFor="new-password">New Password</Label>
                             <div className="relative">
@@ -101,7 +91,7 @@ export function PasswordResetPage() {
                             </div>
                         </div>
 
-                        {/* Confirm Password input */}
+                        {}
                         <div className="space-y-2">
                             <Label htmlFor="confirm-password">Confirm New Password</Label>
                             <div className="relative">
