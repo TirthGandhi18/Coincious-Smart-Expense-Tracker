@@ -151,6 +151,44 @@ def _sum_by_category(rows):
         sums[r["category"]] += r["amount"]
     return [{"category": k, "total": round(v, 2)} for k, v in sorted(sums.items(), key=lambda kv: kv[1], reverse=True)]
 
+def get_expenses_by_date_range(user_id, start_date, end_date):
+    try:
+        # Query expenses for the user within the specific date range
+        # We order by date descending to show newest first in the list
+        response = (
+            supabase.table("expenses")
+            .select("id, description, amount, category, date, group_id, created_at")
+            .eq("payer_id", user_id)
+            .gte("date", start_date)
+            .lte("date", end_date)
+            .order("date", desc=True)
+            .execute()
+        )
+
+        if hasattr(response, "error") and response.error:
+            return {"error": str(response.error)}, 500
+
+        expenses = []
+        for item in response.data:
+            # Determine if it is a group or personal expense
+            expense_type = "group" if item.get("group_id") else "personal"
+            
+            expenses.append({
+                "id": item["id"],
+                "title": item.get("description", "Untitled"),
+                "amount": float(item["amount"]),
+                "category": item.get("category", "Other"),
+                "date": item.get("date"),
+                "type": expense_type
+            })
+
+        return expenses, 200
+
+    except Exception as e:
+        print(f"Error fetching expenses by date range: {str(e)}")
+        traceback.print_exc()
+        return {"error": str(e)}, 500
+
 def get_monthly_donut_data(user_id, period):
     try:
         period = (period or "current").strip().lower()
