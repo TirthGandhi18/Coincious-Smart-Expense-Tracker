@@ -3,7 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
 import { supabase } from '../../utils/supabase/client';
+import { projectId } from '../../lib/info';
 import { Badge } from '../ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { useAuth } from '../../App';
 import {
   DropdownMenu,
@@ -15,8 +17,10 @@ import {
   DollarSign,
   TrendingUp,
   Plus,
+  Users,
   ArrowUpRight,
   ArrowDownRight,
+  Brain,
   Target,
   ChevronDown,
   Calendar as CalendarIcon,
@@ -26,12 +30,18 @@ import {
   PieChart,
   Pie,
   Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  LineChart,
+  Line
 } from 'recharts';
 import { Link, useNavigate } from 'react-router-dom';
+import { Calendar } from '../ui/calendar';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
-import { Pencil } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 
 const DEFAULT_COLORS = [
   '#ECAABA',
@@ -216,7 +226,7 @@ export function Dashboard() {
         const key = 'budget_anon';
         localStorage.setItem(key, String(value));
         setBudget(value);
-      } catch (e) {}
+      } catch (e) { }
     }
   };
 
@@ -529,11 +539,11 @@ export function Dashboard() {
 
           {/* Amount display */}
           {hasExpenses && !isFuture && (
-             <span className={`text-[10px] font-bold truncate w-full text-center px-1
-               ${isSelected ? 'text-white' : 'text-purple-600 dark:text-purple-400'}
-             `}>
-               ₹{dailyTotal.toFixed(0)}
-             </span>
+            <span className={`text-[10px] font-bold truncate w-full text-center px-1
+              ${isSelected ? 'text-white' : 'text-purple-600 dark:text-purple-400'}
+            `}>
+              ₹{dailyTotal.toFixed(0)}
+            </span>
           )}
           
           {/* Tiny dot for today */}
@@ -615,7 +625,7 @@ export function Dashboard() {
                                     <div className="flex items-center gap-2">
                                        <span className="text-sm font-medium text-purple-700">From: {format(dateRange.from, 'dd MMM yyyy')}</span>
                                        {dateRange.to && <span className="text-sm font-medium text-pink-700">To: {format(dateRange.to, 'dd MMM yyyy')}</span>}
-                                    </div>
+                                     </div>
                                    }
                                 </div>
                             </div>
@@ -632,7 +642,7 @@ export function Dashboard() {
                                 </div>
                                 <div className="grid grid-cols-7 gap-2 mb-2">
                                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                                        <div key={d} className="text-center text-sm font-semibold text-gray-600 p-2">{d}</div>
+                                      <div key={d} className="text-center text-sm font-semibold text-gray-600 p-2">{d}</div>
                                     ))}
                                 </div>
                                 <div className="grid grid-cols-7 gap-2">{renderCalendarDays()}</div>
@@ -825,22 +835,11 @@ export function Dashboard() {
                 <CardTitle className="text-sm font-medium">Monthly Budget</CardTitle>
               </div>
               <div className="flex items-center gap-2">
-                {!isEditingBudget ? (
+                {/* Only showing edit button if NOT editing */}
+                {!isEditingBudget && (
                   <button onClick={() => { setBudgetInput(budget !== null ? String(budget) : ''); setIsEditingBudget(true); }} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors text-xs">
                     <Pencil className="h-4 w-4 text-muted-foreground" />
                   </button>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => { setIsEditingBudget(false); setBudgetInput(''); }} className="text-xs px-2 py-1 rounded-md border border-gray-200 hover:bg-gray-50">Cancel</button>
-                    <button onClick={async () => {
-                        const parsed = parseFloat(budgetInput.replace(/[^0-9.]/g, ''));
-                        if (Number.isNaN(parsed) || parsed <= 0) { alert('Enter a valid budget greater than 0'); return; }
-                        await persistBudget(parsed);
-                        setIsEditingBudget(false);
-                      }} disabled={budgetSaving} className="text-xs px-3 py-1 rounded-md bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-                      {budgetSaving ? 'Saving...' : 'Save'}
-                    </button>
-                  </div>
                 )}
               </div>
             </CardHeader>
@@ -862,13 +861,36 @@ export function Dashboard() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2 w-full">
+                <div className="space-y-3 w-full">
                   <label className="text-xs text-gray-600 dark:text-gray-400">Enter monthly budget</label>
                   <div className="flex gap-2">
                     <div className="flex items-center px-3 rounded-md border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700">
                       <span className="text-sm text-gray-500 dark:text-gray-400">₹</span>
                     </div>
                     <input value={budgetInput} onChange={(e) => setBudgetInput(e.target.value)} placeholder="e.g. 2000" className="flex-1 px-3 py-2 rounded-md border border-gray-200 bg-white text-sm focus:outline-none dark:bg-gray-800 dark:text-gray-100" />
+                  </div>
+                  
+                  {/* BUTTONS MOVED HERE AND REPLACED WITH <Button> COMPONENT */}
+                  <div className="flex justify-end gap-2 mt-3">
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => { setIsEditingBudget(false); setBudgetInput(''); }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button 
+                        size="sm"
+                        onClick={async () => {
+                            const parsed = parseFloat(budgetInput.replace(/[^0-9.]/g, ''));
+                            if (Number.isNaN(parsed) || parsed <= 0) { alert('Enter a valid budget greater than 0'); return; }
+                            await persistBudget(parsed);
+                            setIsEditingBudget(false);
+                        }} 
+                        disabled={budgetSaving} 
+                    >
+                      {budgetSaving ? 'Saving...' : 'Save'}
+                    </Button>
                   </div>
                 </div>
               )}
