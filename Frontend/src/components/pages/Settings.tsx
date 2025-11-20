@@ -15,21 +15,25 @@ import {
   AlertTriangle,
   Save,
   Shield,
-  Loader2 // <-- ADDED
+  Loader2,
+  X
 } from 'lucide-react';
-import { useAuth } from '../../App'; // <-- ADDED
-import { supabase } from '../../utils/supabase/client'; // <-- ADDED
-import { useNavigate } from 'react-router-dom'; // <-- ADDED
-import { toast } from 'sonner'; // <-- ADDED
+import { useAuth } from '../../App';
+import { supabase } from '../../utils/supabase/client';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export function Settings() {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
-  const { user } = useAuth(); // <-- ADDED
-  const navigate = useNavigate(); // <-- ADDED
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false); // <-- ADDED
+  // State for the custom confirmation dialog
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); 
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   const [notifications, setNotifications] = useState({
     email: true,
     expense: true,
@@ -62,27 +66,24 @@ export function Settings() {
   };
 
   const handleSaveSettings = () => {
-    // Here you would typically save settings to your backend
     console.log('Saving settings:', { notifications, preferences, privacy });
-    toast.success('Settings saved!'); // <-- Example notification
+    toast.success('Settings saved!');
   };
 
-  // +++ NEW FUNCTION FOR DELETING ACCOUNT +++
-  const handleDeleteAccount = async () => {
-    // 1. Confirm with the user
-    if (!window.confirm("Are you sure? This will permanently delete your account and all associated data. This action cannot be undone.")) {
-      return;
-    }
-    
+  // Triggered when the initial "Delete Account" button is clicked
+  const handleDeleteClick = () => {
+    setDeleteConfirmOpen(true);
+  };
+
+  // Triggered when the user confirms in the custom modal
+  const executeAccountDeletion = async () => {
     setIsDeleting(true);
     const toastId = toast.loading('Deleting your account...');
 
     try {
-      // 3. Get session token to authenticate with our backend
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('You must be logged in to delete your account.');
 
-      // 4. Call our new backend /api/user route
       const response = await fetch('http://localhost:8000/api/user', {
         method: 'DELETE',
         headers: {
@@ -95,20 +96,20 @@ export function Settings() {
         throw new Error(err.error || 'Failed to delete account.');
       }
 
-      // 5. Success! Log the user out and redirect
       toast.success('Account deleted successfully. You will be logged out.', { id: toastId });
       await supabase.auth.signOut();
-      navigate('/login'); // Redirect to login page
+      navigate('/login');
 
     } catch (error: any) {
       console.error('Error deleting account:', error);
       toast.error(error.message, { id: toastId });
       setIsDeleting(false);
+      setDeleteConfirmOpen(false); // Close modal on error
     }
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto">
+    <div className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto relative">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -141,7 +142,6 @@ export function Settings() {
               </div>
               <div className="flex items-center gap-2">
                 <Sun className="h-4 w-4" />
-                {/* --- FIXED TOGGLE BUTTON: match style with below --- */}
                 <Switch
                   checked={isDark}
                   onCheckedChange={toggleTheme}
@@ -153,9 +153,6 @@ export function Settings() {
           </CardContent>
         </Card>
 
-        {/* REMOVE: Notification Settings */}
-        {/* <Card> ...Notifications... </Card> */}
-
         {/* Privacy & Security */}
         <Card>
           <CardHeader>
@@ -166,22 +163,6 @@ export function Settings() {
             <CardDescription>Control your data privacy and security settings</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* REMOVE: Analytics Tracking */}
-            {/* 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Analytics Tracking</Label>
-                <p className="text-sm text-muted-foreground">
-                  Help us improve by sharing anonymous usage data
-                </p>
-              </div>
-              <Switch
-                checked={privacy.analytics}
-                onCheckedChange={(checked) => handlePrivacyChange('analytics', checked)}
-              />
-            </div>
-            <Separator />
-            */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Data Sharing</Label>
@@ -189,7 +170,6 @@ export function Settings() {
                   Allow sharing data with trusted third-party services
                 </p>
               </div>
-              {/* --- FIXED BUTTON COLORS FOR CONTRAST, MATCH DARK MODE TOGGLE --- */}
               <Switch
                 checked={privacy.dataSharing}
                 onCheckedChange={(checked) => handlePrivacyChange('dataSharing', checked)}
@@ -214,39 +194,44 @@ export function Settings() {
             </CardTitle>
             <CardDescription>Manage your app data and storage</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="space-y-0.5">
-                <Label>Export Data</Label>
-                <p className="text-sm text-muted-foreground">Download all your expense data</p>
+          <CardContent className="space-y-6">
+            
+            {/* Export Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-4 transition-all hover:bg-accent/5">
+              <div className="space-y-1">
+                <Label className="text-base">Export Data</Label>
+                <p className="text-sm text-muted-foreground">Download all your expense data in CSV format for external analysis</p>
               </div>
-              <Button variant="outline" onClick={() => setExportModalOpen(true)}>
+              <Button 
+                variant="outline" 
+                onClick={() => setExportModalOpen(true)}
+                className="w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/10 hover:text-primary font-medium"
+              >
                 <Download className="h-4 w-4 mr-2" />
-                Export
+                Export CSV
               </Button>
             </div>
 
-            <div className="p-4 border border-destructive rounded-lg bg-destructive/5">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-destructive">Delete Account</Label>
-                  <p className="text-sm text-muted-foreground">Permanently delete your account and all data</p>
-                </div>
-                {/* --- UPDATED BUTTON --- */}
-                <Button 
-                  variant="destructive" 
-                  onClick={handleDeleteAccount}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                  )}
-                  {isDeleting ? 'Deleting...' : 'Delete Account'}
-                </Button>
+            {/* Delete Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-4 transition-all hover:bg-accent/5">
+              <div className="space-y-1">
+                <Label className="text-destructive text-base font-semibold">Delete Account</Label>
+                <p className="text-sm text-muted-foreground">
+                  Permanently remove your account and all associated data. This action is irreversible.
+                </p>
               </div>
+              {/* Only opens the dialog now */}
+              <Button 
+                variant="outline" 
+                onClick={handleDeleteClick}
+                disabled={isDeleting}
+                className="w-full sm:w-auto shadow-sm border-destructive text-destructive hover:bg-destructive hover:text-white"
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Delete Account
+              </Button>
             </div>
+
           </CardContent>
         </Card>
 
@@ -271,19 +256,11 @@ export function Settings() {
                 <span>September 16, 2024</span>
               </div>
             </div>
-
             <Separator />
-
             <div className="flex flex-wrap gap-2">
-              <Button variant="link" className="h-auto p-0 text-sm">
-                Privacy Policy
-              </Button>
-              <Button variant="link" className="h-auto p-0 text-sm">
-                Terms of Service
-              </Button>
-              <Button variant="link" className="h-auto p-0 text-sm">
-                Open Source Licenses
-              </Button>
+              <Button variant="link" className="h-auto p-0 text-sm">Privacy Policy</Button>
+              <Button variant="link" className="h-auto p-0 text-sm">Terms of Service</Button>
+              <Button variant="link" className="h-auto p-0 text-sm">Open Source Licenses</Button>
             </div>
           </CardContent>
         </Card>
@@ -291,6 +268,73 @@ export function Settings() {
 
       {/* Date Range Export Modal */}
       <DateRangeExportModal open={exportModalOpen} onOpenChange={setExportModalOpen} />
+
+      {/* --- CUSTOM DELETE CONFIRMATION DIALOG --- */}
+      {deleteConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4 animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" 
+            onClick={() => !isDeleting && setDeleteConfirmOpen(false)}
+          />
+          
+          {/* Dialog Content */}
+          <div className="relative w-full max-w-md transform rounded-xl bg-background p-6 shadow-2xl transition-all border border-border sm:scale-100 scale-100 animate-in zoom-in-95 slide-in-from-bottom-10 sm:slide-in-from-bottom-0 duration-200">
+            
+            <div className="flex flex-col gap-4">
+              {/* Header Icon & Text */}
+              <div className="flex flex-col gap-2 text-center sm:text-left">
+                <div className="flex items-center justify-center sm:justify-start gap-2 text-destructive mb-2">
+                   <div className="p-2 rounded-full bg-destructive/10">
+                      <AlertTriangle className="h-6 w-6" />
+                   </div>
+                </div>
+                <h2 className="text-lg font-semibold leading-none tracking-tight">
+                  Are you absolutely sure?
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  This action cannot be undone. This will permanently delete your account and remove your data from our servers.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setDeleteConfirmOpen(false)}
+                  disabled={isDeleting}
+                  className="h-10"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={executeAccountDeletion}
+                  disabled={isDeleting}
+                  className="h-10 shadow-sm"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : null}
+                  {isDeleting ? 'Deleting...' : 'Yes, delete my account'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Close X button top-right */}
+            {!isDeleting && (
+              <button 
+                onClick={() => setDeleteConfirmOpen(false)}
+                className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
