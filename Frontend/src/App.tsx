@@ -23,6 +23,7 @@ import { Settings } from './components/pages/Settings';
 import { ExpenseCalendar } from './components/pages/ExpenseCalendar'; 
 import { ThemeProvider } from './components/ui/ThemeContext';
 import { PasswordResetPage } from './components/pages/PasswordResetPage';
+import { AuthVerify } from './components/pages/AuthVerify';
 
 // Simple Public Route Component
 function PublicRoute({ children }: { children: React.ReactNode }) {
@@ -72,6 +73,7 @@ function AppRoutes() {
         <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/auth/verify" element={<PublicRoute><AuthVerify /></PublicRoute>} />
 
         <Route 
           path="/forgot-password" 
@@ -233,17 +235,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (email: string, password: string, name: string) => {
     setIsLoading(true);
+    const redirectTo = `${window.location.origin}/auth/verify`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: redirectTo,
         data: {
           full_name: name,
         },
       },
     });
+    setIsLoading(false);
     if (error) {
-      setIsLoading(false);
       throw error;
     }
   };

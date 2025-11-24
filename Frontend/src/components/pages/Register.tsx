@@ -8,7 +8,7 @@ import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
 import { useAuth } from '../../App';
 import { ThemeProvider, useTheme } from '../ui/ThemeContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Eye, EyeOff, Sun, Moon, Mail, Lock, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Logo } from '../ui/logo';
@@ -41,7 +41,7 @@ export function Register() {
 
   const { register, isLoading, signInWithProvider } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const navigate = useNavigate();
+  
 
   // Simple validation function
   const isFormValid = () => {
@@ -79,10 +79,11 @@ export function Register() {
     try {
       // Use the correct parameter order: email, password, name
       await register(email, password, name);
-      toast.success('Account created successfully!');
-      navigate('/dashboard');
-    } catch (error) {
-      toast.error('Registration failed! Please use admin@gmail.com and password "password"');
+      // Inform user to check email for verification link
+      toast.success('Check your email and authenticate your email.');
+      // Do not auto-navigate to dashboard; wait for email confirmation
+    } catch (error: any) {
+      toast.error(error?.message || 'Registration failed!');
     }
   };
 
