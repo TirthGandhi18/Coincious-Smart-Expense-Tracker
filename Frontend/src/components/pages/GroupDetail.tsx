@@ -22,7 +22,7 @@ import {
   RefreshCw,
   Check // Added for Settle Up button
 } from 'lucide-react';
-import { Link,useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../utils/supabase/client';
 import { toast } from 'sonner';
 import { AddMemberDialog } from '../AddMemberDialog';
@@ -352,7 +352,7 @@ export function GroupDetail() {
         <div className="flex-1">
           <h1 className="text-2xl md:text-3xl font-bold">{groupData.name}</h1>
         </div>
-        
+
         {/* --- THIS ENTIRE DROPDOWNMENU BLOCK WAS REMOVED ---
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -458,7 +458,7 @@ export function GroupDetail() {
           ) : expenses.map((expense) => (
             <Card key={expense.id}>
               <CardContent className="p-4">
-                <div className="flex items-start justify-between">
+                <div className="flex items-center justify-between">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center text-lg">
                       {getCategoryIcon(expense.category)}
@@ -485,12 +485,6 @@ export function GroupDetail() {
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-bold">${expense.amount.toFixed(2)}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {expense.splitAmong.length > 0
-                        ? `$${(expense.amount / expense.splitAmong.length).toFixed(2)} per person`
-                        : `(Details missing)`
-                      }
-                    </div>
                   </div>
                 </div>
               </CardContent>
