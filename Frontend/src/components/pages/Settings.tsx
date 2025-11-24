@@ -98,7 +98,7 @@ export function Settings() {
 
       toast.success('Account deleted successfully. You will be logged out.', { id: toastId });
       await supabase.auth.signOut();
-      navigate('/login');
+      navigate('/register');
 
     } catch (error: any) {
       console.error('Error deleting account:', error);
@@ -245,23 +245,19 @@ export function Settings() {
             <div className="grid gap-4 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Version</span>
-                <span>2.1.0</span>
+                <span>1.0.0</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Build</span>
-                <span>2024.09.16.1</span>
+                <span>2025.09.16.1</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Last Updated</span>
-                <span>September 16, 2024</span>
+                <span>November 29, 2025</span>
               </div>
             </div>
             <Separator />
-            <div className="flex flex-wrap gap-2">
-              <Button variant="link" className="h-auto p-0 text-sm">Privacy Policy</Button>
-              <Button variant="link" className="h-auto p-0 text-sm">Terms of Service</Button>
-              <Button variant="link" className="h-auto p-0 text-sm">Open Source Licenses</Button>
-            </div>
+          
           </CardContent>
         </Card>
       </div>
