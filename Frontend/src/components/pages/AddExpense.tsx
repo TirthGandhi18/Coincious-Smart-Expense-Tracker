@@ -111,14 +111,24 @@ export function AddExpense() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
 
-  // Format today's date as YYYY-MM-DD
+  // Remove dateError state and feedback
+  // const [dateError, setDateError] = useState<string>('');
+
+  // Format today's date as YYYY-MM-DD in IST
   useEffect(() => {
     const today = new Date();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const year = today.getFullYear();
+    // Convert to IST
+    const istOffset = 5.5 * 60; // IST is UTC+5:30
+    const localOffset = today.getTimezoneOffset();
+    const istTime = new Date(today.getTime() + (istOffset + localOffset) * 60000);
+    const year = istTime.getFullYear();
+    const month = String(istTime.getMonth() + 1).padStart(2, '0');
+    const day = String(istTime.getDate()).padStart(2, '0');
     setExpenseDate(`${year}-${month}-${day}`);
   }, []);
+
+  // Remove date validation feedback effect
+  // useEffect(() => { ... }, [expenseDate]);
 
   // Pre-fill in edit mode
   useEffect(() => {
@@ -511,6 +521,20 @@ export function AddExpense() {
   const splitAmounts = calculateSplitAmounts();
   const totalSplit = Object.values(splitAmounts).reduce((sum, a) => sum + Number.parseFloat(a || '0'), 0);
 
+  // Add state for amount error feedback
+  const [amountError, setAmountError] = useState<string>('');
+
+  // Handle amount input change and validation
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setAmount(val);
+    if (val && parseFloat(val) < 0) {
+      setAmountError('Invalid amount');
+    } else {
+      setAmountError('');
+    }
+  };
+
   // Submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -524,13 +548,31 @@ export function AddExpense() {
     const finalAmount = parseFloat(amount);
     if (isNaN(finalAmount) || finalAmount <= 0) {
       toast.error('Please enter a valid amount');
+      setAmountError('Invalid amount');
       setLoading(false);
       return;
     }
+    setAmountError('');
     if (!category) {
       toast.error('Please select a category');
       setLoading(false);
       return;
+    }
+
+    // Date validation: prevent future dates (IST)
+    if (expenseDate) {
+      const selected = new Date(expenseDate + 'T23:59:59+05:30'); // End of day IST
+      const now = new Date();
+      // Convert now to IST
+      const istOffset = 5.5 * 60;
+      const localOffset = now.getTimezoneOffset();
+      const nowIST = new Date(now.getTime() + (istOffset + localOffset) * 60000);
+      nowIST.setHours(0, 0, 0, 0);
+      if (selected > nowIST) {
+        toast.error('Expense date cannot be in the future.');
+        setLoading(false);
+        return;
+      }
     }
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -771,11 +813,15 @@ export function AddExpense() {
                   step="0.01"
                   placeholder="0.00"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={handleAmountChange}
                   className="pl-10"
                   required
+                  min="0"
                 />
               </div>
+              {amountError && (
+                <div className="text-xs text-red-600 mt-1">{amountError}</div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -786,13 +832,28 @@ export function AddExpense() {
                 value={expenseDate}
                 onChange={(e) => setExpenseDate(e.target.value)}
                 required
+                max={
+                  (() => {
+                    // Today in IST
+                    const today = new Date();
+                    const istOffset = 5.5 * 60;
+                    const localOffset = today.getTimezoneOffset();
+                    const istTime = new Date(today.getTime() + (istOffset + localOffset) * 60000);
+                    const year = istTime.getFullYear();
+                    const month = String(istTime.getMonth() + 1).padStart(2, '0');
+                    const day = String(istTime.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                  })()
+                }
               />
+              {/* Feedback message removed */}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="category">Category *</Label>
               <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
+                <SelectTrigger id="category-trigger">
+
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
