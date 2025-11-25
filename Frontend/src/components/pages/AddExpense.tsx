@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -111,9 +111,6 @@ export function AddExpense() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
 
-  // Remove dateError state and feedback
-  // const [dateError, setDateError] = useState<string>('');
-
   // Format today's date as YYYY-MM-DD in IST
   useEffect(() => {
     const today = new Date();
@@ -126,9 +123,6 @@ export function AddExpense() {
     const day = String(istTime.getDate()).padStart(2, '0');
     setExpenseDate(`${year}-${month}-${day}`);
   }, []);
-
-  // Remove date validation feedback effect
-  // useEffect(() => { ... }, [expenseDate]);
 
   // Pre-fill in edit mode
   useEffect(() => {
@@ -359,113 +353,110 @@ export function AddExpense() {
     }
   };
 
+  // ---------- Receipt upload logic (kept original handleReceiptUpload) ----------
+  // This function is preserved from your original code; it's used by the new UI below.
   const handleReceiptUpload = async (file: File) => {
-  if (!file) return;
+    if (!file) return;
 
-  // Basic client-side checks
-  const maxMB = 8;
-  if (file.size > maxMB * 1024 * 1024) {
-    toast.error(`File too large. Please upload < ${maxMB}MB.`);
-    return;
-  }
-
-  // Optional: allow only certain mime types
-  const allowed = ['image/jpeg','image/png','image/jpg','application/pdf'];
-  if (!allowed.includes(file.type)) {
-    // allow empty type for some browsers — be permissive if you want
-    toast.error('Unsupported file type. Use JPG/PNG/PDF.');
-    return;
-  }
-
-  setReceiptFile(file);
-  setIsParsingReceipt(true);
-  const toastId = toast.loading('Parsing receipt...');
-
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-      toast.error('Please log in to upload receipts', { id: toastId });
-      setIsParsingReceipt(false);
+    // Basic client-side checks
+    const maxMB = 8;
+    if (file.size > maxMB * 1024 * 1024) {
+      toast.error(`File too large. Please upload < ${maxMB}MB.`);
       return;
     }
 
-    const formData = new FormData();
-    formData.append('image', file); 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60_000); 
-
-    const response = await fetch('http://localhost:8000/api/parse-bill', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        // DO NOT set Content-Type: browser will set multipart boundary
-      },
-      body: formData,
-      signal: controller.signal
-    });
-
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      // try read JSON error if possible
-      let errText = `Request failed (${response.status})`;
-      try {
-        const errJson = await response.json();
-        if (errJson?.error) errText = errJson.error;
-        else if (errJson?.message) errText = errJson.message;
-      } catch (_) {
-        errText = await response.text().catch(() => errText);
-      }
-      throw new Error(errText);
+    const allowed = ['image/jpeg','image/png','image/jpg','application/pdf'];
+    if (!allowed.includes(file.type)) {
+      toast.error('Unsupported file type. Use JPG/PNG/PDF.');
+      return;
     }
 
-    // parse JSON; handle invalid JSON safely
-    let json;
+    setReceiptFile(file);
+    setIsParsingReceipt(true);
+    const toastId = toast.loading('Parsing receipt...');
+
     try {
-      json = await response.json();
-    } catch (err) {
-      throw new Error('Invalid JSON from server');
-    }
-
-    const parsed = json?.parsed ?? json; // support either { parsed: {...}} or {...}
-    if (!parsed) throw new Error('No parsed result returned');
-
-    if (parsed.vendor_name) setTitle(parsed.vendor_name);
-    if (parsed.total != null) setAmount(String(parsed.total));
-    if (parsed.issue_date) {
-      const date = new Date(parsed.issue_date);
-      if (!isNaN(date.getTime())) {
-        const formattedDate = date.toISOString().split('T')[0];
-        setDescription(curr => `Date: ${formattedDate}\n${parsed.notes || ''}`.trim());
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Please log in to upload receipts', { id: toastId });
+        setIsParsingReceipt(false);
+        return;
       }
-    } else if (parsed.notes) {
-      setDescription(parsed.notes);
-    }
 
-    if (parsed.category_guess) {
-      const guess = parsed.category_guess;
-      const normalizedGuess = typeof guess === 'string' ? guess.trim() : String(guess);
-      // Keep existing category insertion logic
-      const capitalizedGuess = normalizedGuess.charAt(0).toUpperCase() + normalizedGuess.slice(1);
-      if (!availableCategories.includes(capitalizedGuess)) {
-        setAvailableCategories(prev => [...prev, capitalizedGuess]);
+      const formData = new FormData();
+      formData.append('image', file); 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60_000);
+
+      const response = await fetch('http://localhost:8000/api/parse-bill', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: formData,
+        signal: controller.signal
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        let errText = `Request failed (${response.status})`;
+        try {
+          const errJson = await response.json();
+          if (errJson?.error) errText = errJson.error;
+          else if (errJson?.message) errText = errJson.message;
+        } catch (_) {
+          errText = await response.text().catch(() => errText);
+        }
+        throw new Error(errText);
       }
-      setCategory(capitalizedGuess);
-    }
 
-    toast.success('Receipt processed successfully!', { id: toastId });
-  } catch (err: any) {
-    if (err.name === 'AbortError') {
-      toast.error('Receipt parsing timed out. Try again.', { id: toastId });
-    } else {
-      console.error('Error processing receipt:', err);
-      toast.error(err.message || 'Failed to process receipt. Please enter details manually.', { id: toastId });
-    }
-  } finally {
-    setIsParsingReceipt(false);
-  }
-};
+      let json;
+      try {
+        json = await response.json();
+      } catch (err) {
+        throw new Error('Invalid JSON from server');
+      }
 
+      const parsed = json?.parsed ?? json;
+      if (!parsed) throw new Error('No parsed result returned');
+
+      if (parsed.vendor_name) setTitle(parsed.vendor_name);
+      if (parsed.total != null) setAmount(String(parsed.total));
+      if (parsed.issue_date) {
+        const date = new Date(parsed.issue_date);
+        if (!isNaN(date.getTime())) {
+          const formattedDate = date.toISOString().split('T')[0];
+          setDescription(curr => `Date: ${formattedDate}\n${parsed.notes || ''}`.trim());
+        }
+      } else if (parsed.notes) {
+        setDescription(parsed.notes);
+      }
+
+      if (parsed.category_guess) {
+        const guess = parsed.category_guess;
+        const normalizedGuess = typeof guess === 'string' ? guess.trim() : String(guess);
+        const capitalizedGuess = normalizedGuess.charAt(0).toUpperCase() + normalizedGuess.slice(1);
+        if (!availableCategories.includes(capitalizedGuess)) {
+          setAvailableCategories(prev => [...prev, capitalizedGuess]);
+        }
+        setCategory(capitalizedGuess);
+      }
+
+      toast.success('Receipt processed successfully!', { id: toastId });
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        toast.error('Receipt parsing timed out. Try again.', { id: toastId });
+      } else {
+        console.error('Error processing receipt:', err);
+        toast.error(err.message || 'Failed to process receipt. Please enter details manually.', { id: toastId });
+      }
+    } finally {
+      setIsParsingReceipt(false);
+    }
+  };
+
+  // ---------- End receipt upload logic ----------
 
   // Split logic helpers
   const handleMemberToggle = (memberId: string) => {
@@ -689,6 +680,77 @@ export function AddExpense() {
     }
   };
 
+  // ------------------ NEW: Drag & Drop + Remove Animation for Receipt Upload ------------------
+  // previewUrlRef keeps an object URL for image preview (revoked on change)
+  const previewUrlRef = useRef<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  // optional fallback preview — from uploaded file path in conversation
+  // developer note: environment expects this local path to be transformed to a usable URL by the tooling
+  // ✅ CORRECT (Web URL path)
+  const FALLBACK_PREVIEW = '/assets/Receipt_Upload_Fallback.png';
+
+  useEffect(() => {
+    if (receiptFile) {
+      // revoke previous if any
+      if (previewUrlRef.current && previewUrlRef.current !== FALLBACK_PREVIEW) {
+        try { URL.revokeObjectURL(previewUrlRef.current); } catch (e) {}
+      }
+      // create new object URL for preview if image
+      if (receiptFile.type.startsWith('image/')) {
+        previewUrlRef.current = URL.createObjectURL(receiptFile);
+      } else {
+        previewUrlRef.current = FALLBACK_PREVIEW;
+      }
+    } else {
+      // no file selected, keep fallback
+      previewUrlRef.current = FALLBACK_PREVIEW;
+    }
+
+    return () => {
+      // cleanup on unmount
+      if (previewUrlRef.current && previewUrlRef.current !== FALLBACK_PREVIEW) {
+        try { URL.revokeObjectURL(previewUrlRef.current); } catch (e) {}
+        previewUrlRef.current = null;
+      }
+    };
+  }, [receiptFile]);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleReceiptUpload(file);
+  };
+
+  const handleRemoveWithAnimation = () => {
+    if (isParsingReceipt) return;
+    setRemoving(true);
+    setTimeout(() => {
+      const inputEl = document.getElementById('receipt-upload') as HTMLInputElement | null;
+      if (inputEl) inputEl.value = '';
+      if (previewUrlRef.current && previewUrlRef.current !== FALLBACK_PREVIEW) {
+        try { URL.revokeObjectURL(previewUrlRef.current); } catch (e) {}
+      }
+      previewUrlRef.current = FALLBACK_PREVIEW;
+      setRemoving(false);
+      setReceiptFile(null);
+    }, 300); // keep in sync with CSS transition duration used below
+  };
+  // ------------------ END receipt upload UI helpers ------------------
+
   // JSX
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto">
@@ -834,7 +896,6 @@ export function AddExpense() {
                 required
                 max={
                   (() => {
-                    // Today in IST
                     const today = new Date();
                     const istOffset = 5.5 * 60;
                     const localOffset = today.getTimezoneOffset();
@@ -846,14 +907,12 @@ export function AddExpense() {
                   })()
                 }
               />
-              {/* Feedback message removed */}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="category">Category *</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger id="category-trigger">
-
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1099,7 +1158,7 @@ export function AddExpense() {
           </Card>
         )}
 
-        {/* Receipt Upload */}
+        {/* ---------- Receipt Upload (REPLACED with drag & drop + remove animation) ---------- */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1108,38 +1167,70 @@ export function AddExpense() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground mb-2">
-                {receiptFile ? `Selected: ${receiptFile.name}` : 'Drag and drop your receipt here, or click to browse'}
-              </p>
-              <div className="relative">
-                <input
-                  type="file"
-                  id="receipt-upload"
-                  accept="image/*,.pdf"
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      handleReceiptUpload(file);
-                    }
-                  }}
-                  disabled={isParsingReceipt}
-                />
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-center transition-all duration-200
+                ${dragActive ? 'border-purple-400 bg-purple-50/10' : 'border-muted-foreground/25 bg-transparent'}`}
+            >
+              {/* Preview Image Area */}
+              <div className="mb-6 w-full max-w-sm relative">
+                {receiptFile ? (
+                  // REAL FILE PREVIEW (Object-cover for photos)
+                  (receiptFile.type.startsWith('image/') && previewUrlRef.current) ? (
+                    <img
+                      src={previewUrlRef.current!}
+                      alt="receipt preview"
+                      className={`mx-auto rounded-md shadow-sm object-cover w-full h-48 ${removing ? 'opacity-0 scale-95' : 'opacity-100 scale-100' } transition-all duration-300`}
+                    />
+                  ) : (
+                    // GENERIC FILE ICON (PDFs etc)
+                    <div className={`p-8 rounded-md border bg-muted/20 text-sm ${removing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'} transition-all duration-300`}>
+                      <div className="font-medium truncate max-w-[200px] mx-auto">{receiptFile.name}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{(receiptFile.size / 1024).toFixed(0)} KB</div>
+                    </div>
+                  )
+                ) : (
+                  // FALLBACK IMAGE (Object-contain so text isn't cut off)
+                  <img 
+                    src={FALLBACK_PREVIEW} 
+                    alt="upload placeholder" 
+                    className="mx-auto w-full h-48 object-contain opacity-75" 
+                  />
+                )}
+              </div>
+
+              {/* Text Info - ONLY show if a file is selected (otherwise image says it) */}
+              {receiptFile && (
+                 <p className="text-sm text-muted-foreground mb-4 font-medium">
+                   Selected: <span className="text-foreground">{receiptFile.name}</span>
+                 </p>
+              )}
+
+              {/* Input & Buttons */}
+              <input
+                type="file"
+                id="receipt-upload"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleReceiptUpload(file);
+                }}
+                disabled={isParsingReceipt}
+              />
+
+              <div className="flex items-center gap-3">
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => document.getElementById('receipt-upload')?.click()}
+                  variant={receiptFile ? "outline" : "default"} // Filled button if empty, outline if changing
+                  onClick={() => (document.getElementById('receipt-upload') as HTMLInputElement | null)?.click()}
                   disabled={isParsingReceipt}
                 >
                   {isParsingReceipt ? (
                     <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Processing...
                     </>
                   ) : receiptFile ? (
@@ -1148,24 +1239,26 @@ export function AddExpense() {
                     'Choose File'
                   )}
                 </Button>
+
                 {receiptFile && !isParsingReceipt && (
                   <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
-                    className="ml-2"
-                    onClick={() => setReceiptFile(null)}
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleRemoveWithAnimation();
+                    }}
                   >
                     Remove
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Supported formats: JPG, PNG, PDF
-              </p>
             </div>
           </CardContent>
         </Card>
+        {/* ---------- end replaced receipt upload ---------- */}
 
         {/* Submit Buttons */}
         <div className="flex gap-3">
