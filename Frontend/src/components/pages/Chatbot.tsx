@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { supabase } from '../../utils/supabase/client';
 import { projectId } from '../../lib/info';
 import { useAuth } from '../../App';
+import { useSettings } from '../ui/SettingContext';
+import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
 import {
   Send,
@@ -17,9 +19,20 @@ import {
   PieChart,
   DollarSign,
   Calendar,
-  Users
+  Users,
+  Shield
 } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 
 interface Message {
   id: string;
@@ -71,8 +84,11 @@ export function Chatbot() {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [showDataSharingPopup, setShowDataSharingPopup] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  const { dataSharing } = useSettings();
+  const navigate = useNavigate();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -114,6 +130,12 @@ export function Chatbot() {
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !user) return;
+
+    // Check if data sharing is enabled
+    if (!dataSharing) {
+      setShowDataSharingPopup(true);
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -359,6 +381,29 @@ export function Chatbot() {
           </div>
         </Card>
       </div>
+
+      {/* Data Sharing Popup */}
+      <AlertDialog open={showDataSharingPopup} onOpenChange={setShowDataSharingPopup}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                <Shield className="h-5 w-5 text-orange-600" />
+              </div>
+              <AlertDialogTitle>Data Sharing Required</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription>
+              To use the AI Assistant, you need to enable data sharing in your settings. This allows us to analyze your expense data and provide personalized insights.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => navigate('/settings')}>
+              Go to Settings
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

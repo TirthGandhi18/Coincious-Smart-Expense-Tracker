@@ -7,3 +7,4 @@ supabase==2.23.0
 python-multipart==0.0.9
 Pillow==10.4.0
 groq==0.8.0
+httpx==0.27.2

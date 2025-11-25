@@ -1,5 +1,3 @@
-// src/App.tsx - complete file with Support route added
-
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
@@ -16,16 +14,16 @@ import { Layout } from './components/Layout';
 import { Profile } from './components/pages/Profile';
 import { Groups } from './components/pages/Groups';
 import { GroupDetail } from './components/pages/GroupDetail';
-import { Support } from './components/pages/Support'; 
+import { Support } from './components/pages/Support';
 import { Notifications } from './components/pages/Notifications';
 import { Chatbot } from './components/pages/Chatbot';
 import { Settings } from './components/pages/Settings';
-import { ExpenseCalendar } from './components/pages/ExpenseCalendar'; 
+import { ExpenseCalendar } from './components/pages/ExpenseCalendar';
 import { ThemeProvider } from './components/ui/ThemeContext';
+import { SettingsProvider } from './components/ui/SettingContext';
 import { PasswordResetPage } from './components/pages/PasswordResetPage';
 import { AuthVerify } from './components/pages/AuthVerify';
 
-// Simple Public Route Component
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 
@@ -75,13 +73,13 @@ function AppRoutes() {
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
         <Route path="/auth/verify" element={<PublicRoute><AuthVerify /></PublicRoute>} />
 
-        <Route 
-          path="/forgot-password" 
+        <Route
+          path="/forgot-password"
           element={
             <ProtectedRoute>
               <PasswordResetPage />
             </ProtectedRoute>
-          } 
+          }
         />
 
         {/* Protected routes */}
@@ -119,28 +117,28 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
         <Route path="/chatbot" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Chatbot />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              
-         <Route path="/notifications" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Notifications />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-          <Route path="/settings" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Settings />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-        
+          <ProtectedRoute>
+            <Layout>
+              <Chatbot />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/notifications" element={
+          <ProtectedRoute>
+            <Layout>
+              <Notifications />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <Layout>
+              <Settings />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
         <Route path="/calendar" element={
           <ProtectedRoute>
             <Layout>
@@ -268,7 +266,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-     <AuthContext.Provider
+    <AuthContext.Provider
       value={{
         user,
         login,
@@ -302,8 +300,11 @@ export function useAuth() {
 export default function App() {
   return (
     <ThemeProvider>
+      {/* AuthProvider comes FIRST so SettingsProvider can use the user info */}
       <AuthProvider>
-        <AppRoutes />
+        <SettingsProvider>
+          <AppRoutes />
+        </SettingsProvider>
       </AuthProvider>
     </ThemeProvider>
   );

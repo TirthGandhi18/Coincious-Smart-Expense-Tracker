@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useTheme } from '../ui/ThemeContext';
+import { useSettings } from '../ui/SettingContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { Separator } from '../ui/separator';
 import { DateRangeExportModal } from './DateRangeExportModal';
-import { 
-  Bell,
+import {
   Moon,
   Sun,
   Smartphone,
@@ -25,15 +25,15 @@ import { toast } from 'sonner';
 
 export function Settings() {
   const { theme, toggleTheme } = useTheme();
+  const { dataSharing, setDataSharing } = useSettings();
   const isDark = theme === 'dark';
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [exportModalOpen, setExportModalOpen] = useState(false);
   // State for the custom confirmation dialog
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false); 
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   const [notifications, setNotifications] = useState({
     email: true,
     expense: true,
@@ -41,32 +41,13 @@ export function Settings() {
     payment: true
   });
 
-  const [preferences, setPreferences] = useState({
+  const [preferences] = useState({
     currency: 'USD',
     timezone: 'UTC'
   });
 
-  const [privacy, setPrivacy] = useState({
-    analytics: false,
-    dataSharing: false
-  });
-
-  const handleNotificationChange = (key: string, value: boolean) => {
-    setNotifications(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  };
-
-  const handlePrivacyChange = (key: string, value: boolean) => {
-    setPrivacy(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  };
-
   const handleSaveSettings = () => {
-    console.log('Saving settings:', { notifications, preferences, privacy });
+    console.log('Saving settings:', { notifications, preferences, dataSharing });
     toast.success('Settings saved!');
   };
 
@@ -171,14 +152,14 @@ export function Settings() {
                 </p>
               </div>
               <Switch
-                checked={privacy.dataSharing}
-                onCheckedChange={(checked) => handlePrivacyChange('dataSharing', checked)}
+                checked={dataSharing}
+                onCheckedChange={setDataSharing}
                 className={`
                   transition-colors
                   data-[state=checked]:bg-purple-600
                   data-[state=unchecked]:bg-gray-200
                   border
-                  ${privacy.dataSharing ? 'border-purple-600' : 'border-gray-300'}
+                  ${dataSharing ? 'border-purple-600' : 'border-gray-300'}
                 `}
               />
             </div>
@@ -195,15 +176,15 @@ export function Settings() {
             <CardDescription>Manage your app data and storage</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            
+
             {/* Export Section */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-4 transition-all hover:bg-accent/5">
               <div className="space-y-1">
                 <Label className="text-base">Export Data</Label>
                 <p className="text-sm text-muted-foreground">Download all your expense data in CSV format for external analysis</p>
               </div>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setExportModalOpen(true)}
                 className="w-full sm:w-auto border-primary/20 text-primary hover:bg-primary/10 hover:text-primary font-medium"
               >
@@ -221,8 +202,8 @@ export function Settings() {
                 </p>
               </div>
               {/* Only opens the dialog now */}
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleDeleteClick}
                 disabled={isDeleting}
                 className="w-full sm:w-auto shadow-sm border-destructive text-destructive hover:bg-destructive hover:text-white"
@@ -257,7 +238,7 @@ export function Settings() {
               </div>
             </div>
             <Separator />
-          
+
           </CardContent>
         </Card>
       </div>
@@ -269,21 +250,21 @@ export function Settings() {
       {deleteConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4 animate-in fade-in duration-200">
           {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" 
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
             onClick={() => !isDeleting && setDeleteConfirmOpen(false)}
           />
-          
+
           {/* Dialog Content */}
           <div className="relative w-full max-w-md transform rounded-xl bg-background p-6 shadow-2xl transition-all border border-border sm:scale-100 scale-100 animate-in zoom-in-95 slide-in-from-bottom-10 sm:slide-in-from-bottom-0 duration-200">
-            
+
             <div className="flex flex-col gap-4">
               {/* Header Icon & Text */}
               <div className="flex flex-col gap-2 text-center sm:text-left">
                 <div className="flex items-center justify-center sm:justify-start gap-2 text-destructive mb-2">
-                   <div className="p-2 rounded-full bg-destructive/10">
-                      <AlertTriangle className="h-6 w-6" />
-                   </div>
+                  <div className="p-2 rounded-full bg-destructive/10">
+                    <AlertTriangle className="h-6 w-6" />
+                  </div>
                 </div>
                 <h2 className="text-lg font-semibold leading-none tracking-tight">
                   Are you absolutely sure?
@@ -295,16 +276,16 @@ export function Settings() {
 
               {/* Action Buttons */}
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-2">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setDeleteConfirmOpen(false)}
                   disabled={isDeleting}
                   className="h-10"
                 >
                   Cancel
                 </Button>
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   onClick={executeAccountDeletion}
                   disabled={isDeleting}
                   className="h-10 shadow-sm"
@@ -319,7 +300,7 @@ export function Settings() {
 
             {/* Close X button top-right */}
             {!isDeleting && (
-              <button 
+              <button
                 onClick={() => setDeleteConfirmOpen(false)}
                 className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
               >
