@@ -9,7 +9,7 @@ import { Checkbox } from '../ui/checkbox';
 import { useAuth } from '../../App';
 import { ThemeProvider, useTheme } from '../ui/ThemeContext';
 import { Link } from 'react-router-dom';
-import { Eye, EyeOff, Sun, Moon, Mail, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, Sun, Moon, Mail, Lock, User, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Logo } from '../ui/logo';
 
@@ -38,9 +38,29 @@ export function Register() {
   const setShowConfirmPassword = showConfirmPasswordState[1];
   const acceptTerms = termsAccepted[0];
   const setAcceptTerms = termsAccepted[1];
+  const [passwordFocused, setPasswordFocused] = useState(false);
+
+  // Helper: return array of missing password requirement descriptions
+  const getMissingPasswordRequirements = () => {
+    const missing: string[] = [];
+    if (!hasLength) missing.push('at least 8 characters');
+    if (!hasLower) missing.push('a lowercase letter');
+    if (!hasUpper) missing.push('an uppercase letter');
+    if (!hasNumber) missing.push('a number');
+    if (!hasSpecial) missing.push('a special character');
+    return missing;
+  };
 
   const { register, isLoading, signInWithProvider } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  
+  // Password requirement flags (derived from current password value)
+  const hasLength = password.length >= 8;
+  const hasLower = /[a-z]/.test(password);
+  const hasUpper = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+  const allPasswordChecks = hasLength && hasLower && hasUpper && hasNumber && hasSpecial;
   
 
   // Simple validation function
@@ -55,8 +75,10 @@ export function Register() {
       return false;
     }
 
-    if (password.length < 8) {
-      toast.error('Password must be at least 8 characters');
+    // Password complexity checks (use derived flags)
+    if (!allPasswordChecks) {
+      const missing = getMissingPasswordRequirements();
+      toast.error(`Password must contain ${missing.join(', ')}`);
       return false;
     }
 
@@ -181,6 +203,14 @@ export function Register() {
                     placeholder="At least 8 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    onFocus={() => setPasswordFocused(true)}
+                    onBlur={() => {
+                      setPasswordFocused(false);
+                      if (password && !allPasswordChecks) {
+                        const missing = getMissingPasswordRequirements();
+                        toast.error(`Password must contain ${missing.join(', ')}`);
+                      }
+                    }}
                     className="pl-10 pr-10"
                     required
                   />
@@ -195,6 +225,32 @@ export function Register() {
                   </Button>
                 </div>
               </div>
+
+              {/* Password requirements checklist (shown only when password input is focused) */}
+              {passwordFocused && (
+                <div className="rounded-md border p-3 bg-muted/5 text-sm space-y-1">
+                <div className="flex items-center gap-2">
+                  {hasLength ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-muted-foreground" />}
+                  <span className={hasLength ? 'text-green-600' : 'text-muted-foreground'}>At least 8 characters</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {hasLower ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-muted-foreground" />}
+                  <span className={hasLower ? 'text-green-600' : 'text-muted-foreground'}>Contains a lowercase letter (a-z)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {hasUpper ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-muted-foreground" />}
+                  <span className={hasUpper ? 'text-green-600' : 'text-muted-foreground'}>Contains an uppercase letter (A-Z)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {hasNumber ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-muted-foreground" />}
+                  <span className={hasNumber ? 'text-green-600' : 'text-muted-foreground'}>Contains a number (0-9)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {hasSpecial ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-muted-foreground" />}
+                  <span className={hasSpecial ? 'text-green-600' : 'text-muted-foreground'}>Contains a special character (e.g. !@#$%)</span>
+                </div>
+                </div>
+              )}
 
               {/* Confirm password input */}
               <div className="space-y-2">
@@ -248,7 +304,7 @@ export function Register() {
                   <Button 
                     type="submit" 
                     className="w-full" 
-                    disabled={isLoading || !acceptTerms}
+                    disabled={isLoading || !acceptTerms || !allPasswordChecks}
                     size="lg"
                   >
                     {isLoading ? 'Creating account...' : 'Create Account'}
