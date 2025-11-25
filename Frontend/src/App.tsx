@@ -1,7 +1,7 @@
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
-import { toast } from 'sonner'; // Import toast for notifications
+import { toast } from 'sonner';
 import { supabase } from "./utils/supabase/client";
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 
@@ -86,11 +86,8 @@ function AppRoutes() {
         {/* Protected routes */}
         <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
         <Route path="/add-expense" element={<ProtectedRoute><Layout><AddExpense /></Layout></ProtectedRoute>} />
-
-        {/* PROFILE ROUTE - PROPERLY CONFIGURED */}
         <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
 
-        {/* Group ROUTES */}
         <Route path="/groups" element={
           <ProtectedRoute>
             <Layout>
@@ -226,16 +223,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // --- NEW: Session Validity Checker ---
-  // This fixes the issue where a user stays logged in on an old device 
-  // even after the token was refreshed/invalidated by a new login elsewhere.
   useEffect(() => {
-    // Only setup the checker if a user is currently logged in locally
     if (!user) return;
 
     const checkSession = async () => {
-      // getUser() hits the Supabase Auth server to verify the token is still valid
-      // Unlike getSession(), this will fail if the token was revoked or replaced
       const { error } = await supabase.auth.getUser();
       
       if (error) {
@@ -245,21 +236,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Check immediately on mount
     checkSession();
-
-    // Check whenever the window regains focus (e.g. user switches tabs back to this app)
     const handleFocus = () => checkSession();
     window.addEventListener('focus', handleFocus);
-
-    // Also check periodically (every 2 minutes) as a fallback
     const intervalId = setInterval(checkSession, 2 * 60 * 1000);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
       clearInterval(intervalId);
     };
-  }, [user]); // Re-run if the user object changes (e.g. log in/out)
+  }, [user]);
 
 
   const login = async (email: string, password: string) => {
@@ -331,8 +317,6 @@ export function useAuth() {
   }
   return context;
 }
-
-// (Theme handled by shared ThemeProvider in components/ui/ThemeContext)
 
 // App with all providers
 export default function App() {
