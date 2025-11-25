@@ -260,25 +260,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (email: string, password: string, name: string) => {
+ const register = async (email: string, password: string, name: string) => {
     setIsLoading(true);
-    const redirectTo = `${window.location.origin}/auth/verify`;
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectTo,
-        data: {
-          full_name: name,
-        },
-      },
-    });
-    setIsLoading(false);
-    if (error) {
-      throw error;
-    }
-  };
+    
+    try {
+      const { data: emailExists, error: rpcError } = await supabase.rpc('check_email_exists', { 
+        email_check: email 
+      });
 
+      if (rpcError) {
+        console.error("Error checking email:", rpcError);
+      }
+
+      if (emailExists) {
+        throw new Error("User already registered. Please log in instead.");
+      }
+
+      // 3. If email doesn't exist, proceed with standard sign up
+      const redirectTo = `${window.location.origin}/auth/verify`;
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectTo,
+          data: {
+            full_name: name,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+};
   const signInWithProvider = async (provider: string) => {
     setIsLoading(true);
     const redirectTo = (import.meta.env.VITE_SUPABASE_REDIRECT_URL as string) || window.location.origin;

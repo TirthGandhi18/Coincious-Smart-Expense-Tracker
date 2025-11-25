@@ -6,111 +6,62 @@ from collections import defaultdict
 
 def get_group_expenses(group_id, user_id):
     try:
-        member_check = (
-            supabase.table("group_members")
-            .select("user_id")
-            .eq("group_id", group_id)
-            .eq("user_id", user_id)
-            .maybe_single()
-            .execute()
-        )
+        # 1. Auth Check
+        member_check = supabase.table("group_members").select("user_id").eq("group_id", group_id).eq("user_id", user_id).maybe_single().execute()
+        if not member_check.data: return {"error": "You are not a member of this group"}, 403
 
-        if not member_check.data:
-            return {"error": "You are not a member of this group"}, 403
+        # 2. Fetch ALL Expenses (1 Query)
+        response = supabase.table("expenses").select("*, total_amount").eq("group_id", group_id).order("created_at", desc=True).execute()
+        expenses_data = response.data or []
+        if not expenses_data: return {"expenses": []}, 200
 
-        response = (
-            supabase.table("expenses")
-            .select("*, total_amount")
-            .eq("group_id", group_id)
-            .order("created_at", desc=True)
-            .execute()
-        )
+        # 3. Collect User IDs to fetch (Batching)
+        user_ids_to_fetch = set()
+        expense_ids = [e['id'] for e in expenses_data]
+        for expense in expenses_data:
+            if expense.get("payer_id"): user_ids_to_fetch.add(str(expense["payer_id"]))
 
-        if hasattr(response, "error") and response.error:
-            return {"error": str(response.error)}, 500
+        # 4. Fetch Splits (1 Query)
+        splits_by_expense = defaultdict(list)
+        if expense_ids:
+            splits_resp = supabase.table("expense_split").select("expense_id, user_id").in_("expense_id", expense_ids).execute()
+            for split in (splits_resp.data or []):
+                splits_by_expense[split['expense_id']].append(split['user_id'])
+                user_ids_to_fetch.add(str(split['user_id']))
 
-        expenses = []
-        for expense in response.data:
-            paid_by_id = None
-            paid_by_name = "Unknown"
+        # 5. Batch Fetch Users (1 Query)
+        user_map = {}
+        if user_ids_to_fetch:
+            users_resp = supabase.table("users").select("id, name, email, avatar_url").in_("id", list(user_ids_to_fetch)).execute()
+            for u in (users_resp.data or []):
+                user_map[str(u['id'])] = {
+                    "id": str(u['id']),
+                    "name": u.get('name') or u.get('email', 'Unknown'),
+                    "avatar": u.get('avatar_url')
+                }
 
-            for field in [
-                "payer_id",
-                "paid_by",
-                "paid_by_user_id",
-                "user_id",
-                "created_by",
-            ]:
-                if field in expense and expense[field]:
-                    paid_by_id = expense[field]
-                    break
+        # 6. Assemble Response
+        final_expenses = []
+        for expense in expenses_data:
+            payer_id = str(expense.get("payer_id"))
+            payer_obj = user_map.get(payer_id, {"id": payer_id, "name": "Unknown"})
+            
+            split_objs = [user_map.get(str(uid), {"id": str(uid), "name": "Unknown"}) for uid in splits_by_expense.get(expense['id'], [])]
 
-            if paid_by_id:
-                try:
-                    paid_by_user = supabase.auth.admin.get_user_by_id(str(paid_by_id))
-                    if hasattr(paid_by_user, "user") and paid_by_user.user:
-                        user_meta = paid_by_user.user.user_metadata or {}
-                        paid_by_name = (
-                            user_meta.get("full_name")
-                            or paid_by_user.user.email
-                            or f"User {str(paid_by_id)[:8]}"
-                        )
-                except Exception as e:
-                    print(f"Error getting user {paid_by_id}: {str(e)}")
-                    paid_by_name = f"User {str(paid_by_id)[:8]}" if paid_by_id else "Unknown"
-
-            split_among = []
-            try:
-                split_members_resp = (
-                    supabase.table("expense_split")
-                    .select("user_id")
-                    .eq("expense_id", expense.get("id"))
-                    .execute()
-                )
-
-                split_among_ids = [s["user_id"] for s in (split_members_resp.data or [])]
-
-                if split_among_ids:
-                    for user_id_str in split_among_ids:
-                        try:
-                            user_data = supabase.auth.admin.get_user_by_id(user_id_str)
-                            if hasattr(user_data, "user") and user_data.user:
-                                user_meta = user_data.user.user_metadata or {}
-                                user_name = (
-                                    user_meta.get("full_name")
-                                    or user_data.user.email
-                                    or f"User {user_id_str[:8]}"
-                                )
-                                split_among.append({"id": user_id_str, "name": user_name})
-                        except Exception as e:
-                            print(f"Error getting user {user_id_str}: {str(e)}")
-                            split_among.append({"id": user_id_str, "name": f"User {user_id_str[:8]}"})
-            except Exception as e:
-                print(f"Error fetching splits for expense {expense.get('id')}: {str(e)}")
-
-            display_amount = expense.get("total_amount")
-
-            expense_data = {
+            final_expenses.append({
                 "id": expense.get("id"),
                 "description": expense.get("description", "No description"),
-                "amount": float(display_amount) if display_amount is not None else float(expense.get("amount", 0)),
+                "amount": float(expense.get("total_amount") or expense.get("amount") or 0),
                 "category": expense.get("category", "Other"),
                 "date": expense.get("created_at"),
-                "paid_by": {"id": paid_by_id, "name": paid_by_name},
-                "split_among": split_among,
+                "paid_by": payer_obj,
+                "split_among": split_objs,
                 "receipt_url": expense.get("receipt_url"),
-            }
+            })
 
-            if expense_data["id"]:
-                expenses.append(expense_data)
-            else:
-                print(f"Skipping expense with invalid ID: {expense}")
-
-        return {"expenses": expenses}, 200
+        return {"expenses": final_expenses}, 200
 
     except Exception as e:
-        print(f"Error fetching expenses: {str(e)}")
-        traceback.print_exc()
         return {"error": str(e)}, 500
 
 EXP_TABLE = "expenses"

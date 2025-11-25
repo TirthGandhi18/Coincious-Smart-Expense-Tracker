@@ -80,110 +80,6 @@ def create_new_group(user_id, group_name):
         print(f"Error in create_group: {str(e)}\n{error_trace}")
         return {'error': 'Internal server error', 'details': str(e), 'trace': error_trace}, 500
 
-def get_group_members(group_id, user_id):
-    try:
-        member_check = supabase.table('group_members') \
-            .select('*') \
-            .eq('group_id', group_id) \
-            .eq('user_id', user_id) \
-            .execute()
-        
-        if not member_check or not hasattr(member_check, 'data') or not member_check.data:
-            return {'error': 'You are not a member of this group'}, 403
-        
-        members_result = supabase.table('group_members') \
-            .select('users!inner(id, email)') \
-            .eq('group_id', group_id) \
-            .execute()
-        
-        if not members_result or not hasattr(members_result, 'data'):
-            print(f"Error getting members for group {group_id}: {getattr(members_result, 'error', 'Unknown')}")
-            return {'error': 'Failed to fetch group members'}, 500
-
-        members = []
-        for member in members_result.data or []:
-            user = member.get('users', {})
-            if user and user.get('id'):
-                user_id_str = str(user['id'])
-                user_email = user.get('email')
-                user_name = user_email.split('@')[0] if user_email else 'Unknown'
-                user_avatar = None
-
-                try:
-                    auth_user_resp = supabase.auth.admin.get_user_by_id(user_id_str)
-                    if hasattr(auth_user_resp, 'user') and auth_user_resp.user:
-                        user_meta = auth_user_resp.user.user_metadata or {}
-                        user_name = user_meta.get('full_name') or user_name
-                        user_avatar = user_meta.get('avatar_url')
-                except Exception as e:
-                    print(f"Could not fetch metadata for user {user_id_str}: {e}")
-
-                members.append({
-                    'id': user_id_str,
-                    'email': user_email,
-                    'name': user_name,
-                    'balance': 0, 
-                    'avatar': user_avatar
-                })
-            
-        return {'members': members}, 200
-        
-    except Exception as e:
-        print(f"Error getting group members: {str(e)}")
-        traceback.print_exc()
-        return {'error': 'Failed to fetch group members', 'details': str(e)}, 500
-
-def get_group_detail(group_id, user_id):
-    try:
-        member_check = supabase.table('group_members') \
-            .select('*') \
-            .eq('group_id', group_id) \
-            .eq('user_id', user_id) \
-            .execute()
-        
-        if not member_check or not hasattr(member_check, 'data') or not member_check.data:
-            return {'error': 'You are not a member of this group'}, 403
-        
-        group_result = supabase.table('groups') \
-            .select('*') \
-            .eq('id', group_id) \
-            .execute()
-        
-        if not group_result or not hasattr(group_result, 'data') or not group_result.data:
-            return {'error': 'Group not found'}, 404
-        
-        group = group_result.data[0]
-        
-        members_result = supabase.table('group_members') \
-            .select('user_id', count='exact') \
-            .eq('group_id', group_id) \
-            .execute()
-        
-        expenses_result = supabase.table('expenses') \
-            .select('total_amount') \
-            .eq('group_id', group_id) \
-            .neq('category', 'Settlement') \
-            .execute()
-
-        total_expenses_sum = 0.0
-        if expenses_result and hasattr(expenses_result, 'data'):
-            for exp in (expenses_result.data or []):
-                total_amount = exp.get('total_amount')
-                total_expenses_sum += float(total_amount) if total_amount is not None else 0.0
-        
-        total_expenses = total_expenses_sum
-        member_count = members_result.count if members_result else 0
-        
-        return {
-            'group': group,
-            'member_count': member_count,
-            'total_expenses': total_expenses
-        }, 200
-        
-    except Exception as e:
-        error_trace = traceback.format_exc()
-        print(f"Error in get_group_detail: {str(e)}\n{error_trace}")
-        return {'error': 'Internal server error', 'details': str(e), 'trace': error_trace}, 500
 
 def delete_group(group_id, user_id):
     try:
@@ -394,152 +290,142 @@ def add_group_member(group_id, requesting_user, data):
         print(f"Error adding member: {str(e)}\n{error_trace}")
         return {'error': str(e), 'trace': error_trace}, 500
 
+# backend/app/services/group_service.py
+
+def get_group_detail(group_id, user_id):
+    try:
+        # 1. Check Membership
+        member_check = supabase.table('group_members').select('user_id').eq('group_id', group_id).eq('user_id', user_id).maybe_single().execute()
+        if not member_check.data: return {'error': 'You are not a member of this group'}, 403
+        
+        # 2. Get Group Info
+        group_result = supabase.table('groups').select('*').eq('id', group_id).maybe_single().execute()
+        if not group_result.data: return {'error': 'Group not found'}, 404
+        
+        # 3. Get Member Count (Count only)
+        members_result = supabase.table('group_members').select('user_id', count='exact', head=True).eq('group_id', group_id).execute()
+        
+        # 4. Get Total Expenses via Fast Database Function
+        total_resp = supabase.rpc('get_group_total_expenses', {'p_group_id': group_id}).execute()
+        total_expenses = float(total_resp.data) if total_resp.data is not None else 0.0
+        
+        return {
+            'group': group_result.data,
+            'member_count': members_result.count or 0,
+            'total_expenses': total_expenses
+        }, 200
+    except Exception as e:
+        return {'error': 'Internal server error'}, 500
+
+def get_group_members(group_id, user_id):
+    try:
+        # 1. Check Membership
+        member_check = supabase.table('group_members').select('user_id').eq('group_id', group_id).eq('user_id', user_id).maybe_single().execute()
+        if not member_check.data: return {'error': 'You are not a member of this group'}, 403
+        
+        # 2. Get All Member IDs
+        members_result = supabase.table('group_members').select('user_id').eq('group_id', group_id).execute()
+        if not members_result.data: return {'members': []}, 200
+
+        member_ids = [m['user_id'] for m in members_result.data]
+
+        # 3. Batch Fetch User Details (1 Query instead of Loop)
+        users_resp = supabase.table('users').select('id, email, name, avatar_url').in_('id', member_ids).execute()
+        
+        members = []
+        for u in (users_resp.data or []):
+            members.append({
+                'id': str(u['id']),
+                'email': u.get('email'),
+                'name': u.get('name') or u.get('email', 'Unknown').split('@')[0],
+                'balance': 0, # Calculated in get_group_balances
+                'avatar': u.get('avatar_url')
+            })
+            
+        return {'members': members}, 200
+    except Exception as e:
+        return {'error': 'Failed to fetch group members'}, 500
+
 def get_group_balances(group_id, user_id):
     try:
-        member_check = supabase.table('group_members') \
-            .select('user_id') \
-            .eq('group_id', group_id) \
-            .eq('user_id', user_id) \
-            .maybe_single() \
-            .execute()
+        # 1. Check Membership
+        member_check = supabase.table('group_members').select('user_id').eq('group_id', group_id).eq('user_id', user_id).maybe_single().execute()
+        if not member_check.data: return {'error': 'You are not a member of this group'}, 403
 
-        if not member_check or not hasattr(member_check, 'data') or not member_check.data:
-            return {'error': 'You are not a member of this group'}, 403
+        # 2. Fetch All Members for this Group
+        members_resp = supabase.table('group_members').select('user_id').eq('group_id', group_id).execute()
+        if not members_resp.data: return {'error': 'No members found'}, 404
+        member_ids = [m['user_id'] for m in members_resp.data]
 
-        members_resp = supabase.table('group_members') \
-            .select('users!inner(id, email)') \
-            .eq('group_id', group_id) \
-            .execute()
+        # 3. Batch Fetch User Info
+        users_resp = supabase.table('users').select('id, name, email, avatar_url').in_('id', member_ids).execute()
+        members_map = {str(u['id']): u for u in (users_resp.data or [])}
+        
+        balances = {uid: 0.0 for uid in members_map.keys()}
 
-        if not members_resp or not hasattr(members_resp, 'data') or not members_resp.data:
-            print(f"No members found for group {group_id}. Response: {getattr(members_resp, 'error', 'Unknown')}")
-            return {'error': 'No members found for this group'}, 404
+        # 4. Fetch All Expenses and Splits (2 Queries total)
+        expenses = supabase.table('expenses').select('id, payer_id, total_amount').eq('group_id', group_id).execute().data or []
+        expense_ids = [e['id'] for e in expenses]
+        
+        splits = []
+        if expense_ids:
+            splits = supabase.table('expense_split').select('expense_id, user_id, amount_owed').in_('expense_id', expense_ids).execute().data or []
 
-        members = {}
-        for item in members_resp.data:
-            user = item.get('users')
-            if user and user.get('id'):
-                user_id_str = str(user['id'])
-                user_email = user.get('email')
-                user_name = user_email.split('@')[0] if user_email else 'Unknown'
-                user_avatar = None
+        # 5. Calculate in Memory
+        for exp in expenses:
+            pid = str(exp['payer_id'])
+            if pid in balances: balances[pid] += float(exp.get('total_amount') or 0)
+        
+        for s in splits:
+            uid = str(s['user_id'])
+            if uid in balances: balances[uid] -= float(s.get('amount_owed') or 0)
 
-                try:
-                    auth_user_resp = supabase.auth.admin.get_user_by_id(user_id_str)
-                    if hasattr(auth_user_resp, 'user') and auth_user_resp.user:
-                        user_meta = auth_user_resp.user.user_metadata or {}
-                        user_name = user_meta.get('full_name') or user_name
-                        user_avatar = user_meta.get('avatar_url')
-                except Exception as e:
-                    print(f"Could not fetch metadata for user {user_id_str}: {e}")
-
-                members[user_id_str] = {
-                    'id': user_id_str,
-                    'name': user_name,
-                    'email': user_email,
-                    'avatar': user_avatar
-                }
-            else:
-                print(f"Skipping member item with no user data: {item}")
-
-        balances = {uid: 0.0 for uid in members.keys()}
-
-        expenses_resp = supabase.table('expenses') \
-            .select('id, payer_id, amount, total_amount') \
-            .eq('group_id', group_id) \
-            .execute()
-
-        if expenses_resp and hasattr(expenses_resp, 'data') and expenses_resp.data:
-            expense_ids = [exp['id'] for exp in expenses_resp.data]
-
-            if expense_ids:
-                splits_resp = supabase.table('expense_split') \
-                    .select('expense_id, user_id, amount_owed') \
-                    .in_('expense_id', expense_ids) \
-                    .execute()
-
-                splits_by_expense = {}
-                if splits_resp and hasattr(splits_resp, 'data') and splits_resp.data:
-                    for split in splits_resp.data:
-                        exp_id = split['expense_id']
-                        if exp_id not in splits_by_expense:
-                            splits_by_expense[exp_id] = []
-                        splits_by_expense[exp_id].append(split)
-
-                for expense in expenses_resp.data:
-                    payer_id = str(expense['payer_id'])
-                    
-                    total_amount_paid = expense.get('total_amount')
-                    if payer_id in balances:
-                        balances[payer_id] += float(total_amount_paid) if total_amount_paid is not None else 0.0
-                    splits = splits_by_expense.get(expense['id'], [])
-                    for split in splits:
-                        owed_user_id = str(split['user_id'])
-                        
-                        amount_owed = split.get('amount_owed')
-                        if owed_user_id in balances:
-                            balances[owed_user_id] -= float(amount_owed) if amount_owed is not None else 0.0
-        settlements = []
-        creditors = {uid: b for uid, b in balances.items() if b > 0.01}
-        debtors = {uid: b for uid, b in balances.items() if b < -0.01}
-
-        cred_list = sorted(creditors.items(), key=lambda x: x[1], reverse=True)
-        debt_list = sorted(debtors.items(), key=lambda x: x[1])
-
-        cred_idx = 0
-        debt_idx = 0
-
-        while cred_idx < len(cred_list) and debt_idx < len(debt_list):
-            cred_id, cred_amt = cred_list[cred_idx]
-            debt_id, debt_amt = debt_list[debt_idx]
-
-            payment = min(cred_amt, abs(debt_amt))
-            payment = round(payment, 2)
-
-            if payment == 0:
-                break
-
-            settlements.append({
-                'from_id': debt_id,
-                'from_name': members.get(debt_id, {}).get('name', 'Unknown'),
-                'to_id': cred_id,
-                'to_name': members.get(cred_id, {}).get('name', 'Unknown'),
-                'amount': payment
+        # 6. Format Response
+        final_balances = []
+        for uid, amount in balances.items():
+            u = members_map.get(uid, {})
+            final_balances.append({
+                'user_id': uid,
+                'name': u.get('name') or u.get('email', 'Unknown').split('@')[0],
+                'email': u.get('email'),
+                'avatar': u.get('avatar_url'),
+                'balance': round(amount, 2)
             })
 
-            new_cred_amt = round(cred_amt - payment, 2)
-            new_debt_amt = round(debt_amt + payment, 2)
+        # 7. Calculate Settlements (Simplified logic)
+        settlements = []
+        # (Settlement calculation logic remains similar to original but using in-memory data)
+        creditors = sorted([(uid, b) for uid, b in balances.items() if b > 0.01], key=lambda x: x[1], reverse=True)
+        debtors = sorted([(uid, b) for uid, b in balances.items() if b < -0.01], key=lambda x: x[1])
+        
+        i, j = 0, 0
+        while i < len(creditors) and j < len(debtors):
+            cred_id, cred_amt = creditors[i]
+            debt_id, debt_amt = debtors[j]
+            payment = min(cred_amt, abs(debt_amt))
+            
+            settlements.append({
+                'from_id': debt_id,
+                'from_name': members_map.get(debt_id, {}).get('name', 'Unknown'),
+                'to_id': cred_id,
+                'to_name': members_map.get(cred_id, {}).get('name', 'Unknown'),
+                'amount': round(payment, 2)
+            })
+            
+            new_cred = cred_amt - payment
+            new_debt = debt_amt + payment
+            
+            if new_cred <= 0.01: i += 1
+            else: creditors[i] = (cred_id, new_cred)
+            
+            if new_debt >= -0.01: j += 1
+            else: debtors[j] = (debt_id, new_debt)
 
-            if new_cred_amt <= 0.01:
-                cred_idx += 1
-            else:
-                cred_list[cred_idx] = (cred_id, new_cred_amt)
-
-            if new_debt_amt >= -0.01:
-                debt_idx += 1
-            else:
-                debt_list[debt_idx] = (debt_id, new_debt_amt)
-
-        final_balances = [
-            {
-                'user_id': uid,
-                'name': members[uid]['name'],
-                'avatar': members[uid].get('avatar'),
-                'email': members[uid]['email'],
-                'balance': round(balances.get(uid, 0.0), 2)
-            } for uid in members
-        ]
-
-        return {
-            'balances': final_balances,
-            'settlements': settlements
-        }, 200
+        return {'balances': final_balances, 'settlements': settlements}, 200
 
     except Exception as e:
-        error_trace = traceback.format_exc()
-        print(f"Error in get_group_balances: {str(e)}\n{error_trace}")
-        return {'error': 'Internal server error', 'details': str(e), 'trace': error_trace}, 500
-
+        return {'error': str(e)}, 500
+    
 def settle_group_balance(group_id, user_id, data):
     from datetime import datetime
     try:
@@ -638,3 +524,4 @@ def settle_group_balance(group_id, user_id, data):
         error_trace = traceback.format_exc()
         print(f"Error in settle_group_balance: {str(e)}\n{error_trace}")
         return {'error': 'Internal server error', 'details': str(e), 'trace': error_trace}, 500
+    
