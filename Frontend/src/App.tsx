@@ -1,6 +1,7 @@
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
+import { toast } from 'sonner'; // Import toast for notifications
 import { supabase } from "./utils/supabase/client";
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 
@@ -184,6 +185,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
+  // Initial Session Load & Realtime Listener
   useEffect(() => {
     setIsLoading(true);
     supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
@@ -219,6 +226,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // --- NEW: Session Validity Checker ---
+  // This fixes the issue where a user stays logged in on an old device 
+  // even after the token was refreshed/invalidated by a new login elsewhere.
+  useEffect(() => {
+    // Only setup the checker if a user is currently logged in locally
+    if (!user) return;
+
+    const checkSession = async () => {
+      // getUser() hits the Supabase Auth server to verify the token is still valid
+      // Unlike getSession(), this will fail if the token was revoked or replaced
+      const { error } = await supabase.auth.getUser();
+      
+      if (error) {
+        console.warn("Session check failed, logging out:", error.message);
+        toast.error("Session expired. Please log in again.");
+        logout();
+      }
+    };
+
+    // Check immediately on mount
+    checkSession();
+
+    // Check whenever the window regains focus (e.g. user switches tabs back to this app)
+    const handleFocus = () => checkSession();
+    window.addEventListener('focus', handleFocus);
+
+    // Also check periodically (every 2 minutes) as a fallback
+    const intervalId = setInterval(checkSession, 2 * 60 * 1000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(intervalId);
+    };
+  }, [user]); // Re-run if the user object changes (e.g. log in/out)
+
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
@@ -248,11 +291,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) {
       throw error;
     }
-  };
-
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
   };
 
   const signInWithProvider = async (provider: string) => {
