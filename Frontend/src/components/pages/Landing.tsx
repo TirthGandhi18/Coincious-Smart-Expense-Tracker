@@ -3,30 +3,20 @@ import { Button } from '../ui/button';
 import {
   Wallet,
   Users,
-  TrendingUp,
-  Shield,
   Sparkles,
   ArrowRight,
-  CheckCircle,
   Moon,
   Sun,
-  Menu,
-  Star,
-  CircleDollarSign,
   BarChart3,
   MessageSquare,
-  Globe,
-  Lock,
   Zap,
-  PiggyBank,
   Receipt,
-  Phone,
   Mail,
   Send
 } from 'lucide-react';
 import { useTheme } from '../ui/ThemeContext';
 import { motion } from 'motion/react';
-import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { ImageWithFallback } from '../ui/ImageWithFallback';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
@@ -54,8 +44,6 @@ export const Landing = () => {
 
   const handleSubmitSupport = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Simulate form submission
     toast.success('Support request sent!', {
       description: 'We\'ll get back to you within 24 hours.'
     });
@@ -73,7 +61,7 @@ export const Landing = () => {
 
   return (
     <div className="min-h-screen bg-[#F5E6D3] dark:bg-[#1A2332]">
-      {/* Modern Navbar */}
+      {/*  Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#293548]/80 backdrop-blur-xl border-b border-[#D7CCC8]/20 dark:border-[#374151]/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
@@ -91,7 +79,7 @@ export const Landing = () => {
               <a
                 href="#how-it-works"
                 className="text-[#5D4037] dark:text-[#E5E7EB] hover:text-[#8B5A3C] dark:hover:text-[#10B981] transition-colors"
->
+              >
                 About
               </a>
               <button
@@ -102,8 +90,6 @@ export const Landing = () => {
               </button>
             </div>
 
-
-            {/* Right Side Actions */}
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
@@ -128,9 +114,7 @@ export const Landing = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* Background Gradients */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="absolute top-20 -left-20 w-96 h-96 bg-[#8B5A3C]/10 dark:bg-[#10B981]/10 rounded-full blur-3xl"></div>
           <div className="absolute top-40 -right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
@@ -176,7 +160,6 @@ export const Landing = () => {
               </div>
             </motion.div>
 
-            {/* Right Image */}
             <motion.div
               className="relative"
               initial={{ opacity: 0, x: 30 }}
@@ -191,7 +174,6 @@ export const Landing = () => {
                 />
               </div>
 
-              {/* Decorative Gradient */}
               <div className="absolute -bottom-6 -right-6 w-72 h-72 bg-gradient-to-br from-[#8B5A3C]/20 to-blue-500/20 dark:from-[#10B981]/20 dark:to-blue-500/20 rounded-full blur-3xl -z-10"></div>
             </motion.div>
           </div>
@@ -228,7 +210,6 @@ export const Landing = () => {
                 icon: Users,
                 title: 'Smart Split Bills',
                 description: 'Split expenses equally, by percentage. Perfect for roommates and groups.',
-                // blue -> cyan
                 start: '#3B82F6',
                 end: '#06B6D4'
               },
@@ -236,7 +217,6 @@ export const Landing = () => {
                 icon: BarChart3,
                 title: 'Visual Analytics',
                 description: 'Beautiful charts and graphs to understand your spending patterns at a glance.',
-                // purple -> pink
                 start: '#8B5CF6',
                 end: '#EC4899'
               },
@@ -244,7 +224,6 @@ export const Landing = () => {
                 icon: MessageSquare,
                 title: 'AI Assistant',
                 description: 'Chat with our AI to get instant answers about your expenses and financial insights.',
-                // green -> emerald
                 start: '#10B981',
                 end: '#059669'
               },
@@ -253,7 +232,6 @@ export const Landing = () => {
                 icon: Receipt,
                 title: 'Receipt Scanner',
                 description: 'Snap photos of receipts and let AI extract all the details automatically.',
-                // yellow -> orange
                 start: '#F59E0B',
                 end: '#F97316'
               },
@@ -281,11 +259,9 @@ export const Landing = () => {
         </div>
       </section>
 
-      {/* How It Works Section */}
       <section id="how-it-works" className="py-24 px-4 sm:px-6 lg:px-8 bg-white dark:bg-[#293548]">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
-            {/* Left - Image */}
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -301,7 +277,6 @@ export const Landing = () => {
               </div>
             </motion.div>
 
-            {/* Right - Steps */}
             <motion.div
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -357,16 +332,10 @@ export const Landing = () => {
         </div>
       </section>
 
-
-
-
-
-
       {/* Footer */}
       <footer className="bg-[#5D4037] dark:bg-[#0F1419] text-white py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-12 mb-12">
-            {/* Brand */}
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8B5A3C] to-[#D7A86E] dark:from-[#10B981] dark:to-[#34D399] flex items-center justify-center">
@@ -380,8 +349,6 @@ export const Landing = () => {
                 Making expense management simple, smart, and collaborative.
               </p>
             </div>
-
-            {/* Product */}
             <div>
               <h4 className="mb-4">Benefits</h4>
               <ul className="space-y-3 text-sm text-white/70">
@@ -390,8 +357,6 @@ export const Landing = () => {
 
               </ul>
             </div>
-
-            {/* Use Cases */}
             <div>
               <h4 className="mb-4">Use Cases</h4>
               <ul className="space-y-3 text-sm text-white/70">
@@ -402,8 +367,6 @@ export const Landing = () => {
 
               </ul>
             </div>
-
-            {/* Support */}
             <div>
               <h4 className="mb-4">Support</h4>
               <ul className="space-y-3 text-sm text-white/70">
@@ -430,7 +393,7 @@ export const Landing = () => {
 
           <div className="border-t border-white/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-white/60 text-sm">
-              &copy; 2025 Smart Expense. 
+              &copy; 2025 Smart Expense.
             </p>
             <div className="flex gap-6 text-sm text-white/60">
               <a href="#" className="hover:text-white transition-colors">Youtube</a>

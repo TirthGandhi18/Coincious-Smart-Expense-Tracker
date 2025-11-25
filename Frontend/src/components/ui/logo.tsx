@@ -1,4 +1,3 @@
-import React from "react";
 import { Wallet } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -35,7 +34,7 @@ export function Logo({ size = "md" }: LogoProps) {
       {/* Text – Always single line */}
       <div className="hidden md:block">
         <div className="text-lg font-semibold tracking-tight text-[#5D4037] dark:text-white whitespace-nowrap">
-          Smart Expense
+          Coincious
         </div>
       </div>
     </div>

@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 type AppUser = SupabaseUser & {
   user_metadata?: {
@@ -10,14 +9,14 @@ type AppUser = SupabaseUser & {
   };
 };
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
 import { Input } from '../ui/input';
 import { supabase } from '../../utils/supabase/client';
 import { useAuth } from '../../App';
-import { Plus, Search, Users, DollarSign, Calendar, Settings, Trash } from 'lucide-react';
+import { Plus, Search, Users, DollarSign, Calendar,  Trash } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   Dialog,
@@ -49,11 +48,8 @@ export function Groups() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth() as { user: AppUser | null };
 
-  // State for delete confirmation
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<any | null>(null);
-
-  const navigate = useNavigate();
 
   // Function to handle the delete button click
   const handleDeleteClick = (group: any) => {
@@ -281,26 +277,6 @@ export function Groups() {
       });
     }
   };
-
-  // Add edit handler
-  const handleEditGroupExpense = (expense: any) => {
-    navigate('/add-expense', {
-      state: {
-        isEdit: true,
-        expenseData: {
-          id: expense.id,
-          title: expense.description,
-          amount: expense.amount,
-          category: expense.category,
-          date: expense.date,
-          type: 'group',
-          group_id: expense.group_id,
-          payer_id: expense.payer_id
-        }
-      }
-    });
-  };
-
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}

@@ -1,42 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Separator } from '../ui/separator';
 import { useAuth } from '../../App';
 import {
   ArrowLeft,
   Plus,
   Users,
   DollarSign,
-  Calendar,
-  MoreVertical,
-  Settings,
   UserPlus,
   Receipt,
-  TrendingUp,
   Clock,
   Loader2,
   RefreshCw,
-  Check // Added for Settle Up button
+  Check
 } from 'lucide-react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../utils/supabase/client';
 import { toast } from 'sonner';
 import { AddMemberDialog } from '../AddMemberDialog';
 import { SettleUpDialog } from '../SettleUpDialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
 
-// --- UPDATED INTERFACES ---
 interface Member {
   id: string;
   email: string;
@@ -46,7 +32,6 @@ interface Member {
 }
 
 interface BalanceData extends Member {
-  // Member already has all the fields needed
 }
 
 interface Settlement {
@@ -57,7 +42,6 @@ interface Settlement {
   amount: number;
 }
 
-// (GroupData interface is unchanged)
 interface GroupData {
   id: string;
   name: string;
@@ -83,14 +67,10 @@ interface Expense {
   receipt?: string;
 }
 
-// --- REMOVED DUMMY SETTLEMENTS ---
-
 export function GroupDetail() {
   const { id } = useParams();
   const { user } = useAuth();
-  const [searchParams] = useSearchParams(); // Get URL search params
-
-  // Read the 'tab' param from the URL or default to 'expenses'
+  const [searchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') || 'expenses';
   const [activeTab, setActiveTab] = useState(initialTab);
   const [groupData, setGroupData] = useState<GroupData>({
@@ -132,23 +112,20 @@ export function GroupDetail() {
         groupResponse,
         membersResponse,
         expensesResponse,
-        balancesResponse // New fetch call
+        balancesResponse
       ] = await Promise.all([
-        // 1. Get Group Details
         fetch(`http://localhost:8000/api/groups/${id}`, {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
         }),
-        // 2. Get Group Members
         fetch(`http://localhost:8000/api/groups/${id}/members`, {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
         }),
-        // 3. Get Group Expenses
         fetch(`http://localhost:8000/api/expenses?group_id=${id}`, {
           method: 'GET',
           mode: 'cors',
@@ -159,7 +136,6 @@ export function GroupDetail() {
             'X-Requested-With': 'XMLHttpRequest'
           }
         }),
-        // 4. Get Group Balances and Settlements
         fetch(`http://localhost:8000/api/groups/${id}/balances`, {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -224,7 +200,6 @@ export function GroupDetail() {
         ...prevData,
         ...groupDetailsResponse.group,
         totalExpenses: groupDetailsResponse.total_expenses || 0,
-        // Use the freshly fetched balances data to update member list
         members: ((balancesData?.balances || []).length > 0 ? balancesData.balances : membersData.members).map((m: any) => ({
           id: m.id || m.user_id,
           name: m.name,
@@ -246,9 +221,7 @@ export function GroupDetail() {
 
   useEffect(() => {
     fetchGroupData();
-  }, [id]); // Removed 'error' dependency to allow retries
-
-  // Add this useEffect to listen for URL changes
+  }, [id]);
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
     if (tabFromUrl && tabFromUrl !== activeTab) {
@@ -257,21 +230,16 @@ export function GroupDetail() {
   }, [searchParams, activeTab]);
 
   const handleMemberAdded = () => {
-    fetchGroupData(); // Refresh all data
+    fetchGroupData();
   };
 
-  // --- NEW: Handle opening the settle dialog ---
   const handleOpenSettleDialog = (settlement: Settlement) => {
     setSelectedSettlement(settlement);
     setIsSettleDialogOpen(true);
   };
 
-  // --- NEW: Handle settlement confirmation ---
   const handleConfirmSettlement = (settlement: Settlement) => {
     console.log('Settlement confirmed:', settlement);
-    // TODO: Call backend API to create a settlement transaction
-
-    // For now, just refetch the balances
     fetchGroupData();
   };
 
@@ -309,7 +277,7 @@ export function GroupDetail() {
           <div className="flex gap-2 justify-center">
             <Button
               variant="outline"
-              onClick={fetchGroupData} // Use fetchGroupData directly
+              onClick={fetchGroupData}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Retry
@@ -352,29 +320,6 @@ export function GroupDetail() {
         <div className="flex-1">
           <h1 className="text-2xl md:text-3xl font-bold">{groupData.name}</h1>
         </div>
-
-        {/* --- THIS ENTIRE DROPDOWNMENU BLOCK WAS REMOVED ---
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Group Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Settings className="h-4 w-4 mr-2" />
-              Group Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setIsAddMemberDialogOpen(true)}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add Members
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        */}
-
       </div>
 
       {/* Summary Cards */}
@@ -492,7 +437,6 @@ export function GroupDetail() {
           ))}
         </TabsContent>
 
-        {/* --- UPDATED BALANCES TAB --- */}
         <TabsContent value="balances" className="space-y-4">
           {/* Settlements */}
           <Card>
@@ -502,7 +446,7 @@ export function GroupDetail() {
             </CardHeader>
             <CardContent className="space-y-4">
               {settlements.length > 0 ? (
-                settlements.map((settlement, index) => (
+                settlements.map((settlement) => (
                   <div key={`${settlement.from_id}-${settlement.to_id}`} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
@@ -516,17 +460,12 @@ export function GroupDetail() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-red-600">${settlement.amount.toFixed(2)}</span>
-
-                      {/* --- THIS IS THE FIX --- */}
-                      {/* Only show the button if the current user is the one who owes */}
                       {user?.id === settlement.from_id && (
                         <Button size="sm" onClick={() => handleOpenSettleDialog(settlement)}>
                           <Check className="h-4 w-4 mr-2" />
                           Settle Up
                         </Button>
                       )}
-                      {/* --- END OF FIX --- */}
-
                     </div>
                   </div>
                 ))
@@ -537,8 +476,6 @@ export function GroupDetail() {
               )}
             </CardContent>
           </Card>
-
-          {/* Individual Balances */}
           <Card>
             <CardHeader>
               <CardTitle>Individual Balances</CardTitle>
@@ -571,7 +508,6 @@ export function GroupDetail() {
               <CardDescription>People in this expense group</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Use the 'balances' array here as it's more complete */}
               {balances.map((member) => (
                 <div key={member.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -614,8 +550,6 @@ export function GroupDetail() {
           />
         </TabsContent>
       </Tabs>
-
-      {/* --- ADD THE SETTLE UP DIALOG --- */}
       <SettleUpDialog
         open={isSettleDialogOpen}
         onOpenChange={setIsSettleDialogOpen}
