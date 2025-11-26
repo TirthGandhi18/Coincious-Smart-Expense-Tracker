@@ -315,7 +315,7 @@ export function AddExpense() {
       formData.append('description', title);
       formData.append('category', ''); // Trigger prediction mode
 
-      const response = await fetch('`${import.meta.env.VITE_API_URL}/api/categorize', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/categorize`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session.access_token}` },
         body: formData,
@@ -374,7 +374,7 @@ export function AddExpense() {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 60_000);
 
-      const response = await fetch('`${import.meta.env.VITE_API_URL}/api/parse-bill', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/parse-bill`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -563,7 +563,7 @@ export function AddExpense() {
       learningFormData.append('description', title);
       learningFormData.append('amount', String(finalAmount));
       learningFormData.append('category', category);
-      fetch('`${import.meta.env.VITE_API_URL}/api/categorize', {
+      fetch(`${import.meta.env.VITE_API_URL}/api/categorize`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${session.access_token}` },
         body: learningFormData,

@@ -123,7 +123,7 @@ export function Groups() {
           throw new Error('No active session. Please log in again.');
         }
 
-        const response = await fetch('${import.meta.env.VITE_API_URL}/api/groups', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/groups`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -216,7 +216,7 @@ export function Groups() {
         throw new Error('No active session');
       }
 
-      const response = await fetch('${import.meta.env.VITE_API_URL}/api/groups', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/groups`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

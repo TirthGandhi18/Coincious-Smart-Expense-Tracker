@@ -63,7 +63,7 @@ export function Settings() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('You must be logged in to delete your account.');
 
-      const response = await fetch('${import.meta.env.VITE_API_URL}/api/user', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/user`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
