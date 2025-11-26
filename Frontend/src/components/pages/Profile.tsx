@@ -1,4 +1,3 @@
-// Profile.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../App";
 import {
@@ -26,9 +25,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-/* ---------------------------
-   Types & Helpers
-   --------------------------- */
 type ProfileData = {
   name: string;
   email: string;
@@ -68,20 +64,12 @@ function sanitizeInput(s: string) {
   return (s || "").replace(/[\u0000-\u001F\u007F]/g, "").trim();
 }
 
-/* ---------------------------
-   Component
-   --------------------------- */
 export function Profile() {
-  // useAuth should provide at least { user, supabase }.
-  // If it also provides setUser, this code will call it to update global user.
   const { user, supabase, setUser } = useAuth() as any;
 
-  // UI / fetch state
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // canonical state loaded from DB
   const [initialProfile, setInitialProfile] = useState<ProfileData>({
     name: (user && (user.user_metadata?.name || user.name)) || "",
     email: (user && user.email) || "",
@@ -89,20 +77,15 @@ export function Profile() {
     avatar_url: (user && (user.user_metadata?.avatar_url || user.avatar)) || null,
   });
 
-  // form state (editable)
   const [form, setForm] = useState<ProfileData>(initialProfile);
 
-  // validation and touched
   const [errors, setErrors] = useState<Partial<Record<keyof ProfileData, string>>>({});
   const [touched, setTouched] = useState<Partial<Record<keyof ProfileData, boolean>>>({});
 
-  // security/session/stats (left as your structure)
   const [securityData, setSecurityData] = useState({ lastPasswordChange: "30 days ago" });
   const [openPasswordModal, setOpenPasswordModal] = useState(false);
   const [openSessionsModal, setOpenSessionsModal] = useState(false);
-  const [sessions, setSessions] = useState<Array<any>>([]);
-  const [sessionsLoading, setSessionsLoading] = useState(false);
-  const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const [sessions] = useState<Array<any>>([]);
   const [stats, setStats] = useState({ expense_count: 0, group_count: 0, member_since: null });
 
 
@@ -121,12 +104,9 @@ export function Profile() {
     let mounted = true;
     async function loadProfile() {
       if (!supabase || !user) {
-        if (mounted) setIsLoading(false);
         return;
       }
-      // do not fetch while saving (prevents race where auth updates cause re-fetch mid-save)
       if (isSaving) return;
-      setIsLoading(true);
       try {
         const { data, error } = await supabase
           .from("users")
@@ -150,8 +130,6 @@ export function Profile() {
       } catch (err: any) {
         console.error("Failed to load profile:", err);
         if (mounted) toast.error(err?.message || "Failed to load your profile.");
-      } finally {
-        if (mounted) setIsLoading(false);
       }
     }
 
@@ -188,23 +166,13 @@ export function Profile() {
     setErrors(validateAll(form));
   }, [form]);
 
-  /* ---------------------------
-     Form helpers
-     --------------------------- */
+  
   const updateField = (field: keyof ProfileData, value: string) => {
     const v = sanitizeInput(value);
     setForm((s) => ({ ...s, [field]: v }));
     setTouched((t) => ({ ...(t || {}), [field]: true }));
   };
 
-  /* ---------------------------
-     Save flow
-     - block concurrent fetches by setting isSaving
-     - update users table, then update auth metadata (best-effort)
-     - update local initial & form state immediately so UI shows saved values
-     - attempt to refresh auth user via supabase.auth.getUser and setUser if provided
-     - no forced full-page reload
-     --------------------------- */
   const saveProfile = async () => {
     const finalErrors = validateAll(form);
     setErrors(finalErrors);
@@ -228,7 +196,7 @@ export function Profile() {
         phone_number: form.phone.trim(),
       };
 
-      // If email changed, try update auth first (keeps auth and user table in sync)
+      
       if (payload.email !== (user?.email || "")) {
         try {
           if (typeof supabase.auth.updateUser === "function") {
@@ -245,7 +213,6 @@ export function Profile() {
         }
       }
 
-      // Update canonical users row
       const { data: updatedRow, error: updateErr } = await supabase
         .from("users")
         .update({
@@ -258,7 +225,6 @@ export function Profile() {
 
       if (updateErr) throw updateErr;
 
-      // Try update auth user metadata (non-fatal)
       try {
         if (typeof supabase.auth.updateUser === "function") {
           await supabase.auth.updateUser({ data: { name: payload.name } });
@@ -269,7 +235,6 @@ export function Profile() {
         console.warn("Auth metadata update failed (non-fatal):", metaErr);
       }
 
-      // Update local canonical state so UI shows saved values without relying on a fetch
       const newCanonical: ProfileData = {
         name: payload.name,
         email: payload.email,
@@ -281,7 +246,6 @@ export function Profile() {
       setIsEditing(false);
       toast.success("Profile saved!", { id: toastId });
 
-      // Try to refresh auth user and update global app state if setUser available
       try {
         if (typeof supabase.auth.getUser === "function") {
           const { data: refreshed, error: getUserErr } = await supabase.auth.getUser();
@@ -290,7 +254,7 @@ export function Profile() {
           }
         }
       } catch (refreshErr) {
-        // non-fatal
+        
         console.debug("Could not refresh auth user:", refreshErr);
       }
     } catch (err: any) {
@@ -301,9 +265,7 @@ export function Profile() {
     }
   };
 
-  /* ---------------------------
-     Cancel edit
-     --------------------------- */
+
   const cancelEdit = () => {
     setForm(initialProfile);
     setErrors({});
@@ -311,18 +273,14 @@ export function Profile() {
     setIsEditing(false);
   };
 
-  /* ---------------------------
-     Avatar upload
-     - validate, upload, update users table + auth metadata (best-effort),
-       reflect locally; no page reload
-     --------------------------- */
+ 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!user || !supabase) {
       toast.error("You must be logged in.");
       return;
     }
     const file = e.target.files?.[0];
-    if (e.target) e.target.value = ""; // allow re-select same file later
+    if (e.target) e.target.value = ""; 
     if (!file) return;
 
     const ALLOWED_TYPES = ["image/png", "image/jpeg"];
@@ -349,7 +307,7 @@ export function Profile() {
       });
       if (uploadError) throw uploadError;
 
-      // get public URL or signed URL as available
+      
       const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(filePath);
       let url: string | undefined = (publicData as any)?.publicUrl || (publicData as any)?.publicURL;
       if (!url) {
@@ -361,7 +319,7 @@ export function Profile() {
 
       const finalUrl = `${url}?t=${Date.now()}`;
 
-      // update auth metadata (best-effort)
+      
       try {
         if (typeof supabase.auth.updateUser === "function") {
           await supabase.auth.updateUser({ data: { avatar_url: finalUrl } });
@@ -372,17 +330,14 @@ export function Profile() {
         console.warn("Auth updateUser for avatar failed:", metaErr);
       }
 
-      // update users table
       const { error: updErr } = await supabase.from("users").update({ avatar_url: finalUrl }).eq("id", user.id);
       if (updErr) throw updErr;
 
-      // reflect locally without reload
       const next: ProfileData = { ...initialProfile, avatar_url: finalUrl };
       setInitialProfile(next);
       setForm(next);
       toast.success("Avatar updated!", { id: toastId });
 
-      // attempt to refresh global user
       try {
         if (typeof supabase.auth.getUser === "function") {
           const { data: refreshed, error: getUserErr } = await supabase.auth.getUser();
@@ -391,7 +346,7 @@ export function Profile() {
           }
         }
       } catch (err) {
-        // ignore
+        console.debug("Could not refresh auth user:", err);
       }
     } catch (err: any) {
       console.error("Error uploading avatar:", err);
@@ -399,24 +354,18 @@ export function Profile() {
     }
   };
 
-  /* ---------------------------
-     Password & Sessions (placeholders - keep original approach)
-     --------------------------- */
   const handleChangePassword = () => setOpenPasswordModal(true);
   const handleViewSessions = () => setOpenSessionsModal(true);
   async function loadSessions() {
-    /* implement admin sessions fetch if desired */
+    // TODO: Implement session loading from backend
   }
-  async function revokeSession(sessionId: string) {
-    /* implement revoke via admin endpoint if desired */
+  async function revokeSession(_sessionId: string) {
+    // TODO: Implement session revocation via backend
   }
   async function signOutCurrent() {
-    /* implement sign out current session if desired */
+    // TODO: Implement current session sign out
   }
 
-  /* ---------------------------
-     Render (keeps your markup & styles)
-     --------------------------- */
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -642,7 +591,7 @@ export function Profile() {
       )}
 
       {openSessionsModal && (
-        <SessionsModal onClose={() => setOpenSessionsModal(false)} sessions={sessions} loading={sessionsLoading} error={sessionsError} onRefresh={loadSessions} onRevoke={revokeSession} signOutCurrent={signOutCurrent} />
+        <SessionsModal onClose={() => setOpenSessionsModal(false)} sessions={sessions} loading={false} error={null} onRefresh={loadSessions} onRevoke={revokeSession} signOutCurrent={signOutCurrent} />
       )}
     </div>
   );
@@ -772,7 +721,6 @@ function PasswordModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={() => !loading && onClose()} />
-      {/* --- CHANGE 1 HERE --- */}
       <div className="relative z-10 w-full max-w-md p-6 bg-card rounded-lg shadow-lg">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Change Password</h3>
@@ -878,7 +826,6 @@ function SessionsModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={() => onClose()} />
-      {/* --- CHANGE 2 HERE --- */}
       <div className="relative z-10 w-full max-w-3xl p-6 bg-card rounded-lg shadow-lg">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Your Sessions</h3>

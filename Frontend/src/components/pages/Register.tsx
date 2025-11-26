@@ -4,10 +4,9 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 
-import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
 import { useAuth } from '../../App';
-import { ThemeProvider, useTheme } from '../ui/ThemeContext';
+import { useTheme } from '../ui/ThemeContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Sun, Moon, Mail, Lock, User, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,7 +14,6 @@ import { Logo } from '../ui/logo';
 
 
 export function Register() {
-  // Simple state for all form fields
   const userName = useState('');
   const userEmail = useState('');
   const userPassword = useState('');
@@ -40,7 +38,6 @@ export function Register() {
   const setAcceptTerms = termsAccepted[1];
   const [passwordFocused, setPasswordFocused] = useState(false);
 
-  // Helper: return array of missing password requirement descriptions
   const getMissingPasswordRequirements = () => {
     const missing: string[] = [];
     if (!hasLength) missing.push('at least 8 characters');
@@ -55,7 +52,6 @@ export function Register() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   
-  // Password requirement flags (derived from current password value)
   const hasLength = password.length >= 8;
   const hasLower = /[a-z]/.test(password);
   const hasUpper = /[A-Z]/.test(password);
@@ -63,8 +59,6 @@ export function Register() {
   const hasSpecial = /[^A-Za-z0-9]/.test(password);
   const allPasswordChecks = hasLength && hasLower && hasUpper && hasNumber && hasSpecial;
   
-
-  // Simple validation function
   const isFormValid = () => {
     if (!name || !email || !password || !confirmPassword) {
       toast.error('Please fill in all fields');
@@ -76,7 +70,6 @@ export function Register() {
       return false;
     }
 
-    // Password complexity checks (use derived flags)
     if (!allPasswordChecks) {
       const missing = getMissingPasswordRequirements();
       toast.error(`Password must contain ${missing.join(', ')}`);
@@ -91,7 +84,6 @@ export function Register() {
     return true;
   };
 
-  // Simple registration handler
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -103,14 +95,12 @@ export function Register() {
       await register(email, password, name);
       toast.success('Check your email and authenticate your email.');
     } catch (error: any) {
-      // Check for our specific "User already registered" error
       if (error.message.includes("User already registered") || error.message.includes("already registered")) {
         toast.error("This account already exists!", {
           description: "Redirecting you to login...",
-          duration: 3000, // Toast stays visible for 3 seconds
+          duration: 3000, 
         });
         
-        // Wait 2 seconds so the user can read the message, then redirect
         setTimeout(() => {
            navigate('/login');
         }, 2000);
@@ -120,13 +110,10 @@ export function Register() {
     }
   };
 
-  // Google OAuth handler
   const handleGoogleSignUp = async () => {
     try {
-      // start the oauth flow using the provider
       await signInWithProvider('google');
     } catch (err) {
-      // If signInWithProvider throws, show an error toast
       toast.error('Google sign-up failed');
     }
   };
@@ -135,10 +122,9 @@ export function Register() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      {/* Simple background */}
+      
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-green-50 dark:from-blue-950/20 dark:to-green-950/20" />
       
-      {/* Theme toggle button */}
       <Button 
         variant="ghost" 
         size="icon" 
@@ -149,16 +135,14 @@ export function Register() {
       </Button>
 
       <div className="relative w-full max-w-md">
-        {/* App header */}
+        
         <div className="text-center mb-8">
          <Link to="/" className="inline-flex items-center gap-2 mb-4">
              <Logo size="md" />
-            {/* <Badge variant="secondary">PWA</Badge> */}
           </Link>
           <p className="text-muted-foreground">Start your journey to smarter expense management</p>
         </div>
 
-        {/* Registration form card */}
         <Card className="backdrop-blur-sm">
           <CardHeader className="text-center">
             <CardTitle>Create Account</CardTitle>
@@ -169,7 +153,7 @@ export function Register() {
           
           <form onSubmit={handleSignUp}>
             <CardContent className="space-y-4">
-              {/* Name input */}
+              
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <div className="relative">
@@ -186,7 +170,6 @@ export function Register() {
                 </div>
               </div>
 
-              {/* Email input */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
@@ -203,7 +186,6 @@ export function Register() {
                 </div>
               </div>
 
-              {/* Password input */}
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
@@ -236,8 +218,7 @@ export function Register() {
                   </Button>
                 </div>
               </div>
-
-              {/* Password requirements checklist (shown only when password input is focused) */}
+              
               {passwordFocused && (
                 <div className="rounded-md border p-3 bg-muted/5 text-sm space-y-1">
                 <div className="flex items-center gap-2">
@@ -263,7 +244,6 @@ export function Register() {
                 </div>
               )}
 
-              {/* Confirm password input */}
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <div className="relative">
@@ -289,7 +269,6 @@ export function Register() {
                 </div>
               </div>
 
-              {/* Terms and conditions checkbox */}
               <div className="flex items-start space-x-2">
                 <Checkbox
                   id="terms"
@@ -310,7 +289,6 @@ export function Register() {
                 </div>
               </div>
 
-              {/* Create account button */}
                 <div className="space-y-2">
                   <Button 
                     type="submit" 
@@ -321,7 +299,6 @@ export function Register() {
                     {isLoading ? 'Creating account...' : 'Create Account'}
                   </Button>
 
-                  {/* Small Google OAuth button */}
                   <Button
                     type="button"
                     variant="outline"
@@ -329,7 +306,6 @@ export function Register() {
                     className="w-full flex items-center justify-center gap-2"
                     onClick={handleGoogleSignUp}
                   >
-                    {/* Google SVG icon (simple multicolor) */}
                     <svg className="h-4 w-4" viewBox="0 0 533.5 544.3" xmlns="http://www.w3.org/2000/svg">
                       <path d="M533.5 278.4c0-17.4-1.4-34.1-4-50.3H272v95.1h146.9c-6.3 34.2-25.2 63.2-53.8 82.6v68.6h86.8c50.8-46.8 83.6-115.9 83.6-191.1z" fill="#4285F4"/>
                       <path d="M272 544.3c72.6 0 133.6-24.1 178.2-65.5l-86.8-68.6c-24.1 16.2-55 25.8-91.4 25.8-70 0-129.4-47.2-150.6-110.6H33.4v69.6C77.8 487 168 544.3 272 544.3z" fill="#34A853"/>

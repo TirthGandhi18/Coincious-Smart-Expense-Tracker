@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../App';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
@@ -9,7 +9,7 @@ import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function PasswordResetPage() {
-  const { user, supabase } = useAuth() as any;
+  const { supabase } = useAuth() as any;
   const navigate = useNavigate();
   
   const [newPassword, setNewPassword] = useState('');

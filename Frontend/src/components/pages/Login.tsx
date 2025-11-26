@@ -22,7 +22,6 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 
-import { Badge } from "../ui/badge";
 import { useAuth } from "../../App";
 import { useTheme } from "../ui/ThemeContext";
 import { Link, useNavigate } from "react-router-dom";
@@ -38,7 +37,6 @@ import {
 import { toast } from "sonner";
 
 export function Login() {
-  // Simple state for form data
   const userEmail = useState("");
   const userPassword = useState("");
   const showPasswordState = useState(false);
@@ -60,11 +58,9 @@ export function Login() {
   const [resetEmail, setResetEmail] = useState('');
   const [isSendingReset, setIsSendingReset] = useState(false);
 
-  // Simple form submission
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Basic validation - simple and clear
     if (!email || !password) {
       toast.error("Please fill in all fields");
       return;
@@ -79,25 +75,20 @@ export function Login() {
     }
   };
 
-  // Google OAuth sign-in
   const handleGoogleSignIn = async () => {
     try {
       setGoogleLoading(true);
-      // Inform the user and start the OAuth flow
       toast('Redirecting to Google...');
       await signInWithProvider('google');
       navigate('/dashboard');
-      // If the flow doesn't redirect, reset loading
       setGoogleLoading(false);
     } catch (err: any) {
       setGoogleLoading(false);
-      // Show a helpful error message from the provider when available
       const message = err?.message || (err && JSON.stringify(err)) || 'Unable to start Google sign-in';
       toast.error(`${message}. Please ensure Google OAuth is configured in your Supabase project.`);
     }
   };
 
-  // Handle Password Reset Email
   const handleSendResetEmail = async () => {
     if (!resetEmail) {
       toast.error('Please enter your email address.');
