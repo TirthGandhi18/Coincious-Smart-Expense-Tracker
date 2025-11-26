@@ -365,13 +365,18 @@ export function GroupDetail() {
         </Card>
       </div>
 
-      {/* Add Expense Button */}
-      <div className="flex justify-center md:justify-start">
+      {/* Action Buttons: Add Expense + Add Member */}
+      <div className="flex justify-center md:justify-start items-center gap-3">
         <Button size="lg" asChild>
           <Link to={`/add-expense?group=${id}`}>
             <Plus className="h-4 w-4 mr-2" />
             Add Expense
           </Link>
+        </Button>
+
+        <Button size="lg" onClick={() => setIsAddMemberDialogOpen(true)}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Add Member
         </Button>
       </div>
 
@@ -533,14 +538,7 @@ export function GroupDetail() {
             </CardContent>
           </Card>
 
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => setIsAddMemberDialogOpen(true)}
-          >
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add Member
-          </Button>
+          {/* Add Member button moved to header actions */}
 
           <AddMemberDialog
             open={isAddMemberDialogOpen}
