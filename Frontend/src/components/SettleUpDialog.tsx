@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from './ui/button';
 import {
     Dialog,
@@ -8,10 +8,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from './ui/dialog';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { ArrowRight, Check, Loader2 } from 'lucide-react'; // Import Loader2
+import { Avatar, AvatarFallback} from './ui/avatar';
+import { ArrowRight, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '../utils/supabase/client'; // Import supabase
+import { supabase } from '../utils/supabase/client';
 
 interface Settlement {
     from_id: string;
@@ -25,7 +25,7 @@ interface SettleUpDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     settlement: Settlement | null;
-    groupId: string; // Add groupId
+    groupId: string; 
     onConfirm: (settlement: Settlement) => void;
 }
 
@@ -33,7 +33,7 @@ export function SettleUpDialog({
     open,
     onOpenChange,
     settlement,
-    groupId, // Get groupId
+    groupId,
     onConfirm,
 }: SettleUpDialogProps) {
     const [loading, setLoading] = useState(false);
@@ -45,7 +45,6 @@ export function SettleUpDialog({
     const handleConfirm = async () => {
         setLoading(true);
         try {
-            // --- THIS IS THE FIX ---
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("No active session");
 
@@ -66,8 +65,6 @@ export function SettleUpDialog({
                 const err = await response.json();
                 throw new Error(err.error || 'Failed to record settlement.');
             }
-
-            // Call the original onConfirm function to trigger a refresh
             onConfirm(settlement);
             toast.success('Settlement recorded!');
             onOpenChange(false);

@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../../utils/supabase/client';
-import { useAuth } from '../../App'; // We need the user ID
-import { toast } from 'sonner'; // Optional: for error notifications
+import { useAuth } from '../../App'; 
+import { toast } from 'sonner';
 
 interface SettingsContextType {
     dataSharing: boolean;
@@ -24,11 +24,10 @@ interface SettingsProviderProps {
 }
 
 export const SettingsProvider = ({ children }: SettingsProviderProps) => {
-    const { user } = useAuth(); // Get the current user
+    const { user } = useAuth();
     const [dataSharing, setDataSharingState] = useState(false);
     const [isLoadingSettings, setIsLoadingSettings] = useState(true);
 
-    // 1. Fetch settings from Supabase when the user logs in
     useEffect(() => {
         async function loadSettings() {
             if (!user) {
@@ -50,7 +49,6 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
                 if (data) {
                     setDataSharingState(data.data_sharing_enabled);
                 } else {
-                    // No settings found for this user yet, default to false
                     setDataSharingState(false);
                 }
             } catch (err) {
@@ -63,9 +61,7 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
         loadSettings();
     }, [user]);
 
-    // 2. Save settings to Supabase when the toggle changes
     const setDataSharing = async (value: boolean) => {
-        // Optimistic update (update UI immediately)
         setDataSharingState(value);
 
         if (!user) return;
@@ -85,7 +81,6 @@ export const SettingsProvider = ({ children }: SettingsProviderProps) => {
             if (error) {
                 console.error('Error saving setting:', error);
                 toast.error('Failed to save settings');
-                // Revert state if it failed
                 setDataSharingState(!value);
             }
         } catch (err) {

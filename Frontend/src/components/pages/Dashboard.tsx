@@ -1,8 +1,6 @@
-// src/components/dashboard/Dashboard.tsx
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Progress } from '../ui/progress';
 import { supabase } from '../../utils/supabase/client';
 import { Badge } from '../ui/badge';
 import { useAuth } from '../../App';
@@ -95,7 +93,7 @@ export function Dashboard() {
   const { user } = useAuth();
 
   // core states
-  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [, setAnalyticsData] = useState<any>(null);
   const [categoryData, setCategoryData] = useState<{ name: string; value: number; color: string }[]>([]);
   const [categoryPeriod, setCategoryPeriod] = useState<'current' | 'previous'>('current');
   const [categoryLoading, setCategoryLoading] = useState(true);
@@ -480,7 +478,6 @@ export function Dashboard() {
   const goalValue = parsedGoal;
   const savingsProgressToGoal = goalValue && goalValue > 0 ? Math.min(100, (monthlySavings / goalValue) * 100) : 0;
 
-  const budgetUsagePercent = budgetValue && budgetValue > 0 ? Math.min(200, (budgetUsed / budgetValue) * 100) : 0;
   const overBudgetAmount = budgetValue !== null && budgetUsed > budgetValue ? budgetUsed - budgetValue : 0;
   const budgetRemaining = budgetValue !== null && budgetUsed <= budgetValue ? Math.max(0, budgetValue - budgetUsed) : 0;
 
@@ -568,10 +565,6 @@ export function Dashboard() {
   const youOweMessage = youOwe !== null && youOwe > 0 ? `Settlement needed` : 'All settled up!';
   const youAreOwedMessage = youAreOwed !== null && youAreOwed > 0 ? `Awaiting repayment` : 'All settled up!';
 
-  // small helpers for UI saving budget only (legacy persistBudget kept for your other code)
-  const persistBudget = async (value: number | null) => {
-    await persistBudgetAndMaybeGoal(value, goalValue ?? null);
-  };
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -596,7 +589,6 @@ export function Dashboard() {
           <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
             <div className="relative calendar-wrapper">
-              {/* Removed preventDefault/stopPropagation — simple toggle now */}
               <button
                 type="button"
                 className="h-8 w-8 inline-flex items-center justify-center rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/20 hover:scale-110 transition-all cursor-pointer bg-white border border-purple-200 shadow-sm"
@@ -733,7 +725,7 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Monthly Savings (now computed from budget - expense) */}
+        {/* Monthly Savings */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="flex items-center gap-2">
@@ -848,7 +840,7 @@ export function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Budget card (with presets & inline edit) */}
+          {/* Budget card */}
           <Card className="md:col-span-2 flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 w-full">
               <div className="flex items-center gap-2">
@@ -910,7 +902,7 @@ export function Dashboard() {
           </Card>
         </div>
 
-        {/* Big Trend graph (sparkline moved here) */}
+        {/* Big Trend graph */}
         <Card>
           <CardHeader>
             <CardTitle>Daily Spend Trend</CardTitle>

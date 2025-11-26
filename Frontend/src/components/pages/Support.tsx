@@ -1,12 +1,10 @@
-// Frontend/src/components/pages/Support.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import { HelpCircle, Mail, Search, Clock, Book, MessageCircle, Calculator, Settings, X, CreditCard, Copy, Check } from 'lucide-react';
 
-// FAQ data
 const faqs = [
 	{
 		id: 'getting-started',
@@ -182,16 +180,6 @@ const faqs = [
 	},
 ];
 
-const channels = [
-	{
-		icon: Mail,
-		title: 'Email Support',
-		description: 'Get help via email',
-		availability: 'Response within 24 hours',
-		status: 'online',
-	},
-];
-
 export function Support() {
     const [query, setQuery] = useState('');
     const [showEmailModal, setShowEmailModal] = useState(false);
@@ -231,7 +219,7 @@ export function Support() {
                 </div>
             </div>
 
-            {/* Email Support Card - Improved */}
+            {/* Email Support Card */}
             <Card className="max-w-2xl mx-auto border-2 hover:shadow-xl transition-all duration-300">
                 <CardContent className="p-8">
                     <div className="flex flex-col md:flex-row items-center gap-6">

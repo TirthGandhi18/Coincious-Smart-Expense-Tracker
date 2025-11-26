@@ -1,15 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { useState, useRef, useEffect } from 'react';
+import { Card, CardContent} from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Badge } from '../ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { Avatar, AvatarFallback} from '../ui/avatar';
 import { supabase } from '../../utils/supabase/client';
-import { projectId } from '../../lib/info';
 import { useAuth } from '../../App';
 import { useSettings } from '../ui/SettingContext';
 import { useNavigate } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown'; // Import ReactMarkdown
+import ReactMarkdown from 'react-markdown';
 import {
   Send,
   Brain,
@@ -18,7 +16,6 @@ import {
   TrendingUp,
   PieChart,
   DollarSign,
-  Calendar,
   Users,
   Shield
 } from 'lucide-react';
@@ -98,40 +95,8 @@ export function Chatbot() {
     scrollToBottom();
   }, [messages]);
 
-  const generateBotResponse = (userMessage: string): string => {
-    const message = userMessage.toLowerCase();
-
-    if (message.includes('food') || message.includes('dining')) {
-      return "Based on your recent expenses, you spent $680 on food and dining this month. That's 15% more than last month. Your most frequent food expenses are lunch orders ($340) and dinner restaurants ($240). Consider meal prepping to reduce lunch costs!";
-    }
-
-    if (message.includes('trend') || message.includes('spending')) {
-      return "Your spending trends show:\n• January: $2,000\n• February: $1,850\n• March: $2,100\n\nYou're spending 12% more this month, mainly due to increased dining and entertainment expenses. Your transportation costs have decreased by 8%.";
-    }
-
-    if (message.includes('budget')) {
-      return "You're currently at 78% of your $2,500 monthly budget with 8 days remaining. You're on track to stay within budget! Your largest categories are Food (27%) and Transportation (18%). Consider reducing entertainment spending for the rest of the month.";
-    }
-
-    if (message.includes('group') || message.includes('split')) {
-      return "Your group expense summary:\n• Weekend Trip: You owe $45.20\n• Roommates: You are owed $125.80\n• Work Lunch Group: You owe $12.30\n\nNet balance: +$68.30 in your favor. Don't forget to collect from your roommates!";
-    }
-
-    if (message.includes('save') || message.includes('tip')) {
-      return "Here are personalized savings tips based on your spending:\n• Set up automatic transfers to savings on payday\n• Use the 24-hour rule for purchases over $50\n• Try cooking at home 2 more times per week\n• Consider carpooling to reduce transportation costs\n• Set spending alerts for your highest categories";
-    }
-
-    if (message.includes('category') || message.includes('biggest')) {
-      return "Your biggest expense categories this month:\n1. Food & Dining: $680 (27%)\n2. Transportation: $450 (18%)\n3. Shopping: $390 (16%)\n4. Entertainment: $320 (13%)\n5. Utilities: $280 (11%)";
-    }
-
-    return "I understand you're asking about your finances. I can help you with spending analysis, budget tracking, expense categorization, and financial insights. Try asking about your spending trends, budget status, or specific expense categories!";
-  };
-
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !user) return;
-
-    // Check if data sharing is enabled
     if (!dataSharing) {
       setShowDataSharingPopup(true);
       return;
@@ -144,7 +109,6 @@ export function Chatbot() {
       timestamp: new Date()
     };
 
-    // Optimistically update UI
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsTyping(true);
@@ -155,10 +119,6 @@ export function Chatbot() {
         setIsTyping(false);
         return;
       }
-
-      // --- NEW: Prepare History ---
-      // Convert current messages to format expected by AI (role: 'user' | 'assistant')
-      // We take the last 6 messages to give context without overloading the token limit
       const history = messages.slice(-6).map(msg => ({
         role: msg.type === 'user' ? 'user' : 'assistant',
         content: msg.content
@@ -172,16 +132,16 @@ export function Chatbot() {
         },
         body: JSON.stringify({
           message: content,
-          history: history // Send history to backend
+          history: history 
         }),
       });
 
-      let botResponseContent = generateBotResponse(content); // Fallback
-
-      if (response.ok) {
-        const data = await response.json();
-        botResponseContent = data.response;
+      if (!response.ok) {
+        throw new Error(`AI Server Error: ${response.status}`);
       }
+      
+      const data = await response.json();
+      const botResponseContent = data.response;
 
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
@@ -203,11 +163,10 @@ export function Chatbot() {
     } catch (error) {
       console.error('Error sending message to AI:', error);
 
-      // Fallback to local response
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
         type: 'bot',
-        content: generateBotResponse(content),
+        content: "I cannot respond currently, there is some issue. Please try again later.", 
         timestamp: new Date()
       };
 
@@ -248,10 +207,7 @@ export function Chatbot() {
                 <Button
                   key={index}
                   variant="outline"
-                  // --- CHANGE HERE ---
-                  // Added: dark:hover:bg-secondary and dark:hover:border-gray-500
                   className="h-auto p-3 flex flex-col gap-2 transition-all hover:shadow-md dark:hover:shadow-none dark:hover:bg-secondary dark:hover:border-gray-500"
-                  // --- END CHANGE ---
                   onClick={() => handleQuickAction(action.query)}
                 >
                   <Icon className="h-4 w-4" />
@@ -283,7 +239,6 @@ export function Chatbot() {
                         : 'bg-muted'
                         }`}>
 
-                        {/* --- MODIFICATION START --- */}
                         {message.type === 'bot' ? (
                           <div className="prose dark:prose-invert prose-p:my-0 prose-ul:my-2 prose-li:my-0">
                             <ReactMarkdown>
@@ -293,7 +248,6 @@ export function Chatbot() {
                         ) : (
                           <p className="whitespace-pre-line">{message.content}</p>
                         )}
-                        {/* --- MODIFICATION END --- */}
 
                       </div>
 

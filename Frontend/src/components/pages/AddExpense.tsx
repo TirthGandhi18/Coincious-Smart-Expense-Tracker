@@ -32,7 +32,7 @@ import {
 } from '../ui/select';
 import { toast } from 'sonner';
 
-// Define the shape of a group member (fetched from Supabase)
+// Fetch Group Memeber from Supabase
 interface GroupMember {
   id: string;
   name: string;
@@ -41,8 +41,6 @@ interface GroupMember {
 }
 
 // Mock category list (frontend-only)
-const RECURRING_PERSONAL_EXPENSES_URL =
-  'https://xmuallpfxwgapaxawrwk.supabase.co/functions/v1/recurring-personal-expenses';
 const categories = [
   { value: 'food', label: 'Food & Dining', icon: '🍽️' },
   { value: 'transportation', label: 'Transportation', icon: '🚗' },
@@ -66,14 +64,13 @@ export function AddExpense() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  // Get expense data from navigation state
   const expenseData = location.state?.expenseData;
   const isEdit = location.state?.isEdit || false;
 
-  const { user } = useAuth(); // Your custom hook to get the logged-in user
+  const { user } = useAuth(); //custom hook
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
-  // Expense type state
+  // Expense type
   const [expenseType, setExpenseType] = useState<'personal' | 'group'>(
     searchParams.get('group') ? 'group' : 'personal'
   );
@@ -111,10 +108,8 @@ export function AddExpense() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
 
-  // Format today's date as YYYY-MM-DD in IST
   useEffect(() => {
     const today = new Date();
-    // Convert to IST
     const istOffset = 5.5 * 60; // IST is UTC+5:30
     const localOffset = today.getTimezoneOffset();
     const istTime = new Date(today.getTime() + (istOffset + localOffset) * 60000);
@@ -124,7 +119,6 @@ export function AddExpense() {
     setExpenseDate(`${year}-${month}-${day}`);
   }, []);
 
-  // Pre-fill in edit mode
   useEffect(() => {
     if (isEdit && expenseData) {
       setIsEditMode(true);
@@ -136,7 +130,6 @@ export function AddExpense() {
         if (!availableCategories.includes(expenseData.category)) {
           setAvailableCategories(prev => [...prev, expenseData.category]);
         }
-        // small delay to ensure select has options (keeps your previous approach)
         setTimeout(() => setCategory(expenseData.category), 100);
       }
 
@@ -177,7 +170,6 @@ export function AddExpense() {
     fetchGroups();
   }, [user, searchParams]);
 
-  // Fetch group members when selectedGroup changes
   useEffect(() => {
     const fetchGroupMembers = async () => {
       if (!selectedGroup || !user) {
@@ -225,7 +217,7 @@ export function AddExpense() {
     fetchGroupMembers();
   }, [selectedGroup, user]);
 
-  // Fetch recurring expenses (calling your backend to avoid CORS issues)
+  // Fetch recurring expenses
   useEffect(() => {
     const fetchRecurringExpenses = async () => {
       if (!user || expenseType !== 'personal') return;
@@ -268,7 +260,6 @@ export function AddExpense() {
     fetchRecurringExpenses();
   }, [user, expenseType]);
 
-  // Fetch categories (user-specific)
   useEffect(() => {
     const fetchCategories = async () => {
       if (!user) return;
@@ -291,12 +282,10 @@ export function AddExpense() {
     fetchCategories();
   }, [user, isEdit, expenseData?.category]);
 
-  // Handle recurring expense selection (only used in UI when expenseType === 'personal')
   const handleRecurringExpenseChange = (value: string) => {
     setSelectedRecurringExpense(value);
 
     if (value === 'none') {
-      // User chose not to use a template; do not overwrite existing fields
       return;
     }
 
@@ -353,12 +342,9 @@ export function AddExpense() {
     }
   };
 
-  // ---------- Receipt upload logic (kept original handleReceiptUpload) ----------
-  // This function is preserved from your original code; it's used by the new UI below.
   const handleReceiptUpload = async (file: File) => {
     if (!file) return;
 
-    // Basic client-side checks
     const maxMB = 8;
     if (file.size > maxMB * 1024 * 1024) {
       toast.error(`File too large. Please upload < ${maxMB}MB.`);
@@ -427,7 +413,7 @@ export function AddExpense() {
         const date = new Date(parsed.issue_date);
         if (!isNaN(date.getTime())) {
           const formattedDate = date.toISOString().split('T')[0];
-          setDescription(curr => `Date: ${formattedDate}\n${parsed.notes || ''}`.trim());
+          setDescription(`Date: ${formattedDate}\n${parsed.notes || ''}`.trim());
         }
       } else if (parsed.notes) {
         setDescription(parsed.notes);
@@ -456,7 +442,6 @@ export function AddExpense() {
     }
   };
 
-  // ---------- End receipt upload logic ----------
 
   // Split logic helpers
   const handleMemberToggle = (memberId: string) => {
@@ -549,17 +534,17 @@ export function AddExpense() {
       setLoading(false);
       return;
     }
-
-    // Date validation: prevent future dates (IST)
     if (expenseDate) {
-      const selected = new Date(expenseDate + 'T23:59:59+05:30'); // End of day IST
       const now = new Date();
-      // Convert now to IST
-      const istOffset = 5.5 * 60;
-      const localOffset = now.getTimezoneOffset();
-      const nowIST = new Date(now.getTime() + (istOffset + localOffset) * 60000);
-      nowIST.setHours(0, 0, 0, 0);
-      if (selected > nowIST) {
+      const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const istOffset = 5.5 * 60 * 60 * 1000;
+      const istDate = new Date(utcTime + istOffset);
+  
+      const year = istDate.getFullYear();
+      const month = String(istDate.getMonth() + 1).padStart(2, '0');
+      const day = String(istDate.getDate()).padStart(2, '0');
+      const todayString = `${year}-${month}-${day}`;
+      if (expenseDate > todayString) {
         toast.error('Expense date cannot be in the future.');
         setLoading(false);
         return;
@@ -574,7 +559,6 @@ export function AddExpense() {
     }
 
     try {
-      // AI learning call (fire-and-forget)
       const learningFormData = new FormData();
       learningFormData.append('description', title);
       learningFormData.append('amount', String(finalAmount));
@@ -680,36 +664,27 @@ export function AddExpense() {
     }
   };
 
-  // ------------------ NEW: Drag & Drop + Remove Animation for Receipt Upload ------------------
-  // previewUrlRef keeps an object URL for image preview (revoked on change)
   const previewUrlRef = useRef<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [removing, setRemoving] = useState(false);
 
-  // optional fallback preview — from uploaded file path in conversation
-  // developer note: environment expects this local path to be transformed to a usable URL by the tooling
-  // ✅ CORRECT (Web URL path)
   const FALLBACK_PREVIEW = '/assets/Receipt_Upload_Fallback.png';
 
   useEffect(() => {
     if (receiptFile) {
-      // revoke previous if any
       if (previewUrlRef.current && previewUrlRef.current !== FALLBACK_PREVIEW) {
         try { URL.revokeObjectURL(previewUrlRef.current); } catch (e) {}
       }
-      // create new object URL for preview if image
       if (receiptFile.type.startsWith('image/')) {
         previewUrlRef.current = URL.createObjectURL(receiptFile);
       } else {
         previewUrlRef.current = FALLBACK_PREVIEW;
       }
     } else {
-      // no file selected, keep fallback
       previewUrlRef.current = FALLBACK_PREVIEW;
     }
 
     return () => {
-      // cleanup on unmount
       if (previewUrlRef.current && previewUrlRef.current !== FALLBACK_PREVIEW) {
         try { URL.revokeObjectURL(previewUrlRef.current); } catch (e) {}
         previewUrlRef.current = null;
@@ -747,11 +722,9 @@ export function AddExpense() {
       previewUrlRef.current = FALLBACK_PREVIEW;
       setRemoving(false);
       setReceiptFile(null);
-    }, 300); // keep in sync with CSS transition duration used below
+    }, 300); 
   };
-  // ------------------ END receipt upload UI helpers ------------------
 
-  // JSX
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto">
       {/* Header */}
@@ -1158,7 +1131,7 @@ export function AddExpense() {
           </Card>
         )}
 
-        {/* ---------- Receipt Upload (REPLACED with drag & drop + remove animation) ---------- */}
+        { /*Receipt Upload*/}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1177,7 +1150,6 @@ export function AddExpense() {
               {/* Preview Image Area */}
               <div className="mb-6 w-full max-w-sm relative">
                 {receiptFile ? (
-                  // REAL FILE PREVIEW (Object-cover for photos)
                   (receiptFile.type.startsWith('image/') && previewUrlRef.current) ? (
                     <img
                       src={previewUrlRef.current!}
@@ -1185,14 +1157,12 @@ export function AddExpense() {
                       className={`mx-auto rounded-md shadow-sm object-cover w-full h-48 ${removing ? 'opacity-0 scale-95' : 'opacity-100 scale-100' } transition-all duration-300`}
                     />
                   ) : (
-                    // GENERIC FILE ICON (PDFs etc)
                     <div className={`p-8 rounded-md border bg-muted/20 text-sm ${removing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'} transition-all duration-300`}>
                       <div className="font-medium truncate max-w-[200px] mx-auto">{receiptFile.name}</div>
                       <div className="text-xs text-muted-foreground mt-1">{(receiptFile.size / 1024).toFixed(0)} KB</div>
                     </div>
                   )
                 ) : (
-                  // FALLBACK IMAGE (Object-contain so text isn't cut off)
                   <img 
                     src={FALLBACK_PREVIEW} 
                     alt="upload placeholder" 
@@ -1201,7 +1171,6 @@ export function AddExpense() {
                 )}
               </div>
 
-              {/* Text Info - ONLY show if a file is selected (otherwise image says it) */}
               {receiptFile && (
                  <p className="text-sm text-muted-foreground mb-4 font-medium">
                    Selected: <span className="text-foreground">{receiptFile.name}</span>
@@ -1224,7 +1193,7 @@ export function AddExpense() {
               <div className="flex items-center gap-3">
                 <Button
                   type="button"
-                  variant={receiptFile ? "outline" : "default"} // Filled button if empty, outline if changing
+                  variant={receiptFile ? "outline" : "default"}
                   onClick={() => (document.getElementById('receipt-upload') as HTMLInputElement | null)?.click()}
                   disabled={isParsingReceipt}
                 >
@@ -1258,7 +1227,6 @@ export function AddExpense() {
             </div>
           </CardContent>
         </Card>
-        {/* ---------- end replaced receipt upload ---------- */}
 
         {/* Submit Buttons */}
         <div className="flex gap-3">

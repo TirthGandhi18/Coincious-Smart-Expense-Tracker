@@ -18,7 +18,6 @@ import {
   Loader2,
   X
 } from 'lucide-react';
-import { useAuth } from '../../App';
 import { supabase } from '../../utils/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -30,11 +29,10 @@ export function Settings() {
   const navigate = useNavigate();
 
   const [exportModalOpen, setExportModalOpen] = useState(false);
-  // State for the custom confirmation dialog
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [notifications, setNotifications] = useState({
+  const [notifications] = useState({
     email: true,
     expense: true,
     group: true,
@@ -85,7 +83,7 @@ export function Settings() {
       console.error('Error deleting account:', error);
       toast.error(error.message, { id: toastId });
       setIsDeleting(false);
-      setDeleteConfirmOpen(false); // Close modal on error
+      setDeleteConfirmOpen(false); 
     }
   };
 
