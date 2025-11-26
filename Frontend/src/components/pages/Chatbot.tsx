@@ -124,7 +124,7 @@ export function Chatbot() {
         content: msg.content
       }));
 
-      const response = await fetch('http://localhost:8000/api/ai/chat', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/ai/chat`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

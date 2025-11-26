@@ -12,7 +12,8 @@ class Config:
     # CORS configuration
     CORS_ORIGINS = [
         "http://localhost:3000",
-        "http://127.0.0.1:3000"
+        "http://127.0.0.1:3000",
+        os.getenv("FRONTEND_URL")
     ]
     CORS_METHODS = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     CORS_ALLOW_HEADERS = ["Content-Type", "Authorization", "X-Requested-With"]
