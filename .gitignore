@@ -18,5 +18,5 @@ Thumbs.db
 # Python
 venv/
 bin/
-lib/
+/lib/
 __pycache__/
