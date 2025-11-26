@@ -62,7 +62,7 @@ export function AddMemberDialog({ open, onOpenChange, groupId, onMemberAdded }: 
       }
 
       // Call our backend API to handle the user lookup and member addition
-      const response = await fetch(`http://localhost:8000/api/groups/${groupId}/add-member`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/groups/${groupId}/add-member`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

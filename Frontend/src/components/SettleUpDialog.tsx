@@ -48,7 +48,7 @@ export function SettleUpDialog({
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) throw new Error("No active session");
 
-            const response = await fetch(`http://localhost:8000/api/groups/${groupId}/settle`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/groups/${groupId}/settle`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`,

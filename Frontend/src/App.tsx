@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { supabase } from "./utils/supabase/client";
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 
-// Page components
 import { Landing } from './components/pages/Landing';
 import { Login } from './components/pages/Login';
 import { Register } from './components/pages/Register';
@@ -19,7 +18,6 @@ import { Support } from './components/pages/Support';
 import { Notifications } from './components/pages/Notifications';
 import { Chatbot } from './components/pages/Chatbot';
 import { Settings } from './components/pages/Settings';
-import { ExpenseCalendar } from './components/pages/ExpenseCalendar';
 import { ThemeProvider } from './components/ui/ThemeContext';
 import { SettingsProvider } from './components/ui/SettingContext';
 import { PasswordResetPage } from './components/pages/PasswordResetPage';
@@ -133,14 +131,6 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout>
               <Settings />
-            </Layout>
-          </ProtectedRoute>
-        } />
-
-        <Route path="/calendar" element={
-          <ProtectedRoute>
-            <Layout>
-              <ExpenseCalendar />
             </Layout>
           </ProtectedRoute>
         } />

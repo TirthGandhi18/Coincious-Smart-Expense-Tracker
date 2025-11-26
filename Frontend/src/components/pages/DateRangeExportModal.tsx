@@ -56,7 +56,7 @@ export function DateRangeExportModal({ open, onOpenChange }: DateRangeExportModa
         const endStr = format(lastDay, 'yyyy-MM-dd');
 
         const response = await fetch(
-          `http://localhost:8000/api/expenses/range?start_date=${startStr}&end_date=${endStr}`,
+          `${import.meta.env.VITE_API_URL}/api/expenses/range?start_date=${startStr}&end_date=${endStr}`,
           { headers: { 'Authorization': `Bearer ${session.access_token}` } }
         );
 
@@ -95,7 +95,7 @@ export function DateRangeExportModal({ open, onOpenChange }: DateRangeExportModa
         const endStr = format(effectiveEnd, 'yyyy-MM-dd') + 'T23:59:59';
 
         const response = await fetch(
-          `http://localhost:8000/api/expenses/range?start_date=${startStr}&end_date=${endStr}`,
+          `${import.meta.env.VITE_API_URL}/api/expenses/range?start_date=${startStr}&end_date=${endStr}`,
           { headers: { 'Authorization': `Bearer ${session.access_token}` } }
         );
 

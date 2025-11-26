@@ -258,7 +258,7 @@ export function Notifications() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("No active session");
     
-      const response = await fetch(`http://localhost:8000/api/invitations/${invitation_id}/respond`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/invitations/${invitation_id}/respond`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${session.access_token}`,

@@ -252,7 +252,7 @@ export function Dashboard() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) return;
-        const response = await fetch('http://localhost:8000/api/current-month-total', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/current-month-total`, {
           headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }
         });
         if (response.ok) {
@@ -273,7 +273,7 @@ export function Dashboard() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) return;
-        const response = await fetch(`http://localhost:8000/api/supabase/proxy/analytics/spending`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/supabase/proxy/analytics/spending`, {
           headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }
         });
         if (response.ok) {
@@ -299,7 +299,7 @@ export function Dashboard() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) { setCategoryError('No session token'); return; }
         const reqBody = { period: categoryPeriod };
-        const res = await fetch(`http://localhost:8000/api/expense_monthly_donut`, {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/expense_monthly_donut`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify(reqBody)
@@ -336,7 +336,7 @@ export function Dashboard() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) return;
         const response = await fetch(
-          `http://localhost:8000/api/expenses/range?start_date=${start}&end_date=${end}`,
+          `${import.meta.env.VITE_API_URL}/api/expenses/range?start_date=${start}&end_date=${end}`,
           { headers: { Authorization: `Bearer ${session.access_token}` } }
         );
         if (response.ok) {
@@ -368,7 +368,7 @@ export function Dashboard() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) return;
         const response = await fetch(
-          `http://localhost:8000/api/expenses/range?start_date=${startFull}&end_date=${endFull}`,
+          `${import.meta.env.VITE_API_URL}/api/expenses/range?start_date=${startFull}&end_date=${endFull}`,
           { headers: { Authorization: `Bearer ${session.access_token}` } }
         );
         if (response.ok) {

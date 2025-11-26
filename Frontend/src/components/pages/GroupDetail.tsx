@@ -114,19 +114,19 @@ export function GroupDetail() {
         expensesResponse,
         balancesResponse
       ] = await Promise.all([
-        fetch(`http://localhost:8000/api/groups/${id}`, {
+        fetch(`${import.meta.env.VITE_API_URL}/api/groups/${id}`, {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
         }),
-        fetch(`http://localhost:8000/api/groups/${id}/members`, {
+        fetch(`${import.meta.env.VITE_API_URL}/api/groups/${id}/members`, {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
         }),
-        fetch(`http://localhost:8000/api/expenses?group_id=${id}`, {
+        fetch(`${import.meta.env.VITE_API_URL}/api/expenses?group_id=${id}`, {
           method: 'GET',
           mode: 'cors',
           credentials: 'include',
@@ -136,7 +136,7 @@ export function GroupDetail() {
             'X-Requested-With': 'XMLHttpRequest'
           }
         }),
-        fetch(`http://localhost:8000/api/groups/${id}/balances`, {
+        fetch(`${import.meta.env.VITE_API_URL}/api/groups/${id}/balances`, {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
