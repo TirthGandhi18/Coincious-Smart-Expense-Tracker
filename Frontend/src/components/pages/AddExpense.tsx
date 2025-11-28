@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import {
   ArrowLeft,
-  DollarSign,
+  IndianRupee, // Changed from DollarSign
   Receipt,
   Users,
   Calculator,
@@ -168,8 +168,8 @@ export function AddExpense() {
       const desc = passedExpense.long_description ?? passedExpense.notes ?? passedExpense.description ?? '';
       if (desc) setDescription(String(desc));
     }
-  // We intentionally do not include availableCategories in deps to avoid re-running too often.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // We intentionally do not include availableCategories in deps to avoid re-running too often.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passedExpense]);
 
   // Fetch groups
@@ -561,7 +561,7 @@ export function AddExpense() {
       const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
       const istOffset = 5.5 * 60 * 60 * 1000;
       const istDate = new Date(utcTime + istOffset);
-  
+   
       const year = istDate.getFullYear();
       const month = String(istDate.getMonth() + 1).padStart(2, '0');
       const day = String(istDate.getDate()).padStart(2, '0');
@@ -650,7 +650,7 @@ export function AddExpense() {
             });
           } else {
             if (Math.abs(totalSplit - finalAmount) > 0.01) {
-              toast.error(`Amounts must add up to $${finalAmount.toFixed(2)}`);
+              toast.error(`Amounts must add up to ₹${finalAmount.toFixed(2)}`); // Changed $ to ₹
               setLoading(false);
               return;
             }
@@ -836,7 +836,7 @@ export function AddExpense() {
                             <span className="flex items-center gap-2">
                               {categoryInfo?.icon} {expense.title}
                             </span>
-                            <span className="text-muted-foreground">${expense.amount}</span>
+                            <span className="text-muted-foreground">₹{expense.amount}</span> {/* Changed $ to ₹ */}
                           </div>
                         </SelectItem>
                       );
@@ -863,7 +863,7 @@ export function AddExpense() {
             <div className="space-y-2">
               <Label htmlFor="amount">Amount *</Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <IndianRupee className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /> {/* Changed DollarSign to IndianRupee */}
                 <Input
                   id="amount"
                   type="number"
@@ -983,7 +983,11 @@ export function AddExpense() {
                   <RadioGroup value={paidBy} onValueChange={setPaidBy}>
                     {currentMembers.map((member) => (
                       <div key={member.id} className="flex items-center space-x-2">
-                        <RadioGroupItem value={member.id} id={`payer-${member.id}`} />
+                        <RadioGroupItem 
+                          value={member.id} 
+                          id={`payer-${member.id}`} 
+                          className="border-gray-900 text-green-600 dark:border-gray-100" // Added specific styling for radio button
+                        />
                         <Label htmlFor={`payer-${member.id}`} className="flex items-center gap-2 cursor-pointer">
                           <Avatar className="h-6 w-6">
                             <AvatarImage src={member.avatar || undefined} alt={member.name} />
@@ -1014,13 +1018,21 @@ export function AddExpense() {
                 <Label>Split Method</Label>
                 <RadioGroup value={splitMethod} onValueChange={(value) => setSplitMethod(value as 'equal' | 'unequal')}>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="equal" id="equal" />
+                    <RadioGroupItem 
+                      value="equal" 
+                      id="equal" 
+                      className="border-gray-900 text-green-600 dark:border-gray-100" // Added specific styling
+                    />
                     <Label htmlFor="equal" className="cursor-pointer">
                       Equal Division
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="unequal" id="unequal" />
+                    <RadioGroupItem 
+                      value="unequal" 
+                      id="unequal" 
+                      className="border-gray-900 text-green-600 dark:border-gray-100" // Added specific styling
+                    />
                     <Label htmlFor="unequal" className="cursor-pointer">
                       Unequal Division
                     </Label>
@@ -1060,7 +1072,7 @@ export function AddExpense() {
                           </div>
                           {isSelected && amount && (
                             <Badge variant="outline" className="ml-2">
-                              ${splitAmount}
+                              ₹{splitAmount} {/* Changed $ to ₹ */}
                             </Badge>
                           )}
                         </div>
@@ -1095,7 +1107,7 @@ export function AddExpense() {
                           </div>
                           <div className="flex flex-col items-end gap-1">
                             <div className="relative">
-                              <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                              <IndianRupee className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /> {/* Changed DollarSign to IndianRupee */}
                               <Input
                                 type="text"
                                 placeholder="0.00"
@@ -1119,14 +1131,14 @@ export function AddExpense() {
                 <div className="p-4 bg-muted/50 rounded-lg space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="font-medium">Total Expense Amount:</span>
-                    <span className="font-bold">${Number.parseFloat(amount).toFixed(2)}</span>
+                    <span className="font-bold">₹{Number.parseFloat(amount).toFixed(2)}</span> {/* Changed $ to ₹ */}
                   </div>
 
                   {splitMethod === 'equal' && selectedMembers.length > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="font-medium">Amount per Member:</span>
                       <span className="font-bold text-green-600">
-                        ${(Number.parseFloat(amount) / selectedMembers.length).toFixed(2)}
+                        ₹{(Number.parseFloat(amount) / selectedMembers.length).toFixed(2)} {/* Changed $ to ₹ */}
                       </span>
                     </div>
                   )}
@@ -1136,13 +1148,13 @@ export function AddExpense() {
                       <div className="flex justify-between items-center">
                         <span className="font-medium">Amount Split:</span>
                         <span className={`font-bold ${Math.abs(totalSplit - Number.parseFloat(amount)) > 0.01 ? 'text-red-600' : 'text-green-600'}`}>
-                          ${totalSplit.toFixed(2)}
+                          ₹{totalSplit.toFixed(2)} {/* Changed $ to ₹ */}
                         </span>
                       </div>
                       {Math.abs(totalSplit - parseFloat(amount)) > 0.01 && (
                         <div className="flex justify-between items-center text-sm text-red-600">
                           <span>Remaining to allocate:</span>
-                          <span>${Math.abs(Number.parseFloat(amount) - totalSplit).toFixed(2)}</span>
+                          <span>₹{Math.abs(Number.parseFloat(amount) - totalSplit).toFixed(2)}</span> {/* Changed $ to ₹ */}
                         </div>
                       )}
                     </>

@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar'
 import { Input } from '../ui/input';
 import { supabase } from '../../utils/supabase/client';
 import { useAuth } from '../../App';
-import { Plus, Search, Users, DollarSign, Calendar,  Trash } from 'lucide-react';
+import { Plus, Search, Users, IndianRupee, Calendar, Trash } from 'lucide-react'; // Changed DollarSign to IndianRupee
 import { Link } from 'react-router-dom';
 import {
   Dialog,
@@ -387,10 +387,10 @@ export function Groups() {
                 {/* Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                   <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <IndianRupee className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">Total Expenses</p>
-                      <p className="font-medium">${(group.total_expenses || 0).toFixed(2)}</p>
+                      <p className="font-medium">₹{(group.total_expenses || 0).toFixed(2)}</p>
                     </div>
                   </div>
 
@@ -399,7 +399,7 @@ export function Groups() {
                     <div>
                       <p className="text-sm text-muted-foreground">Your Balance</p>
                       <p className={`font-medium ${group.yourBalance > 0 ? 'text-green-600' : group.yourBalance < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
-                        {group.yourBalance === 0 ? 'All settled up' : `$${Math.abs(group.yourBalance).toFixed(2)} ${group.yourBalance > 0 ? 'owed to you' : 'you owe'}`}
+                        {group.yourBalance === 0 ? 'All settled up' : `₹${Math.abs(group.yourBalance).toFixed(2)} ${group.yourBalance > 0 ? 'owed to you' : 'you owe'}`}
                       </p>
                     </div>
                   </div>

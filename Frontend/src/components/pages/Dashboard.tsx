@@ -1,4 +1,3 @@
-// Dashboard.tsx
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -12,7 +11,7 @@ import {
   DropdownMenuTrigger
 } from '../ui/dropdown-menu';
 import {
-  DollarSign,
+  IndianRupee,
   TrendingUp,
   Plus,
   ArrowUpRight,
@@ -489,12 +488,18 @@ export function Dashboard() {
       let buttonClasses = `
         aspect-square p-1 text-sm font-medium rounded-xl transition-all duration-200 relative border-2 select-none flex flex-col items-center justify-start pt-2 gap-0.5
         ${!isCurrentMonth ? 'text-gray-300 dark:text-gray-700 opacity-50' : 'text-gray-700 dark:text-gray-200'}
-        ${isFuture ? 'cursor-not-allowed opacity-30 bg-gray-50 dark:bg-gray-900/50' : 'cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20'}
+        ${isFuture ? 'cursor-not-allowed opacity-30 bg-gray-50 dark:bg-gray-900/50' : 'cursor-pointer'}
       `;
+
+      if (!isFuture && !isSelected) {
+        buttonClasses += ' hover:bg-purple-50 dark:hover:bg-purple-900/20';
+      }
+
       if (!isSelected && !isInRange && !isFuture && currentDate.getTime() === today.getTime()) buttonClasses += ' border-blue-400 text-blue-600 font-bold';
       else buttonClasses += ' border-transparent';
-      if (isStartDate) buttonClasses += ' bg-purple-600 text-white shadow-md scale-105 z-10';
-      if (isEndDate) buttonClasses += ' bg-pink-600 text-white shadow-md scale-105 z-10';
+      
+      if (isStartDate) buttonClasses += ' bg-purple-600 text-white shadow-md scale-105 z-10 hover:bg-purple-700';
+      if (isEndDate) buttonClasses += ' bg-pink-600 text-white shadow-md scale-105 z-10 hover:bg-pink-700';
       if (isInRange) buttonClasses += ' bg-purple-100 dark:bg-purple-900/40 text-purple-900 dark:text-purple-100 rounded-none mx-[-2px] border-y border-purple-200';
 
       days.push(
@@ -646,7 +651,6 @@ export function Dashboard() {
                 <CalendarIcon className="h-4 w-4 text-purple-600" />
               </button>
 
-              {/* Date range modal */}
               {showDatePicker && (
                 <>
                   <div className="fixed inset-0 bg-black/50 z-[9998] animate-in fade-in duration-300" onClick={() => setShowDatePicker(false)} />
@@ -685,8 +689,8 @@ export function Dashboard() {
                           <div className="grid grid-cols-7 gap-2">{renderCalendarDays()}</div>
                         </div>
 
-                        <div className="border-l border-gray-200 dark:border-gray-700 pl-6 flex flex-col h-full bg-gray-50 dark:bg-gray-900/30">
-                          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                        <div className="border-l border-gray-200 dark:border-gray-700 pl-6 flex flex-col h-full bg-gray-50 dark:bg-gray-900/30 overflow-hidden">
+                          <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                             <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1 flex items-center justify-between">
                               <span>{dateRange.from ? 'Expenses in Range' : 'Select dates'}</span>
                               {dateRange.from && sidebarTotal > 0 && (
@@ -698,7 +702,7 @@ export function Dashboard() {
                             )}
                           </div>
 
-                          <div className="space-y-3 flex-1 overflow-y-auto p-4">
+                          <div className="space-y-3 flex-1 overflow-y-auto p-4 min-h-0">
                             {isCalendarLoading ? (
                               <div className="flex justify-center py-10"><Loader2 className="animate-spin text-purple-500" /></div>
                             ) : sidebarExpenses.length > 0 ? (
@@ -706,7 +710,7 @@ export function Dashboard() {
                                 <div key={expense.id ?? index} className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-purple-200 transition-all">
                                   <div className="flex justify-between items-start">
                                     <div className="pr-3 flex-1 min-w-0">
-                                      <h5 className="font-semibold text-gray-900 dark:text-white text-sm truncate line-clamp-1">{expense.title}</h5>
+                                      <h5 className="font-semibold text-gray-900 dark:text-white text-sm break-words whitespace-normal">{expense.title}</h5>
                                       <div className="flex items-center gap-2 mt-1">
                                         <Badge variant="secondary" className="text-[10px] h-5 px-1">{expense.category}</Badge>
                                         <p className="text-xs text-gray-500">{format(new Date(expense.date), 'MMM dd')}</p>
@@ -747,7 +751,7 @@ export function Dashboard() {
                             )}
                           </div>
 
-                          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                          <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
                             <div className="flex gap-3">
                               <button onClick={() => { setDateRange({ from: undefined, to: undefined }); setSidebarExpenses([]); }} className="flex-1 py-2 border rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Clear</button>
                               <button onClick={() => setShowDatePicker(false)} disabled={!dateRange.from} className="flex-1 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50">Apply</button>
@@ -838,7 +842,14 @@ export function Dashboard() {
                 )}
               </div>
               {goalValue !== null && (
-                <Button size="sm" variant="outline" onClick={clearGoal}>Clear Goal</Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={clearGoal}
+                  className="!bg-red-600 hover:!bg-red-700 !text-white dark:!bg-red-800 dark:hover:!bg-red-900"
+                >
+                  Clear Goal
+                </Button>
               )}
             </div>
           </CardContent>
@@ -915,7 +926,7 @@ export function Dashboard() {
           <Card className="md:col-span-2 flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 w-full">
               <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                <IndianRupee className="h-4 w-4 text-muted-foreground" />
                 <CardTitle className="text-sm font-medium">Monthly Budget</CardTitle>
               </div>
               <div className="flex items-center gap-2">
@@ -989,7 +1000,20 @@ export function Dashboard() {
                       <stop offset="100%" stopColor="#A78BFA" stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
-                  <Tooltip formatter={(v: number) => `₹${v.toFixed(2)}`} labelFormatter={(l) => l} />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="rounded-lg border bg-background p-2 shadow-sm">
+                            <span className="text-sm font-bold text-foreground">
+                              {label}
+                            </span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
                   <Area type="monotone" dataKey="value" stroke="#A78BFA" strokeWidth={2} fill="url(#dailySpendGradient)" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -1012,10 +1036,10 @@ export function Dashboard() {
 
               <div className="mt-4">
                 <div className="flex gap-2">
-                  <div className="flex items-center px-3 rounded-md border border-gray-200 bg-white">
-                    <span className="text-sm">₹</span>
+                  <div className="flex items-center px-3 rounded-md border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700">
+                    <span className="text-sm text-gray-500 dark:text-gray-200">₹</span>
                   </div>
-                  <input value={goalInput} onChange={(e) => setGoalInput(e.target.value)} placeholder="e.g. 2000" className="flex-1 px-3 py-2 rounded-md border border-gray-200 bg-white text-sm focus:outline-none" />
+                  <input value={goalInput} onChange={(e) => setGoalInput(e.target.value)} placeholder="e.g. 2000" className="flex-1 px-3 py-2 rounded-md border border-gray-200 bg-white text-sm focus:outline-none dark:bg-gray-800 dark:text-gray-100" />
                 </div>
 
                 <div className="flex gap-2 mt-3">

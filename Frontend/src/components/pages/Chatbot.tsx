@@ -15,7 +15,7 @@ import {
   Lightbulb,
   TrendingUp,
   PieChart,
-  DollarSign,
+  IndianRupee, // Changed DollarSign to IndianRupee
   Users,
   Shield
 } from 'lucide-react';
@@ -66,7 +66,7 @@ const quickActions = [
     query: "What are my spending trends over the last 3 months?"
   },
   {
-    icon: DollarSign,
+    icon: IndianRupee, // Changed DollarSign to IndianRupee
     label: "Monthly Budget",
     query: "How am I doing against my monthly budget?"
   },

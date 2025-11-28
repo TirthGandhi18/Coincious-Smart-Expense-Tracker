@@ -1,17 +1,16 @@
-# GUI Testing Documentation – Coincious Smart Expense Tracker
+# GUI Testing documentation
 
 <br>
 
 ## 1. Introduction  
-This document summarises the graphical user interface testing completed for the Coincious Smart Expense Tracker.  
-The aim was to ensure that every visible component behaves correctly, loads consistently, and responds smoothly when interacted with.  
+GUI Testing was done to ensure that every visible component behaves correctly, loads consistently, and responds smoothly when interacted with.  
 All tests were automated using Cypress and executed on the frontend.
 
 <br><br>
 
-## 2. Test Environment
+## 2. Test environment
 
-### 2.1 Tools and Frameworks  
+### 2.1 Tools and frameworks  
 | Tool | Purpose |
 |------|---------|
 | Cypress 13 | Browser-based GUI automation |
@@ -22,14 +21,14 @@ All tests were automated using Cypress and executed on the frontend.
 
 <br>
 
-### 2.2 Test User  
+### 2.2 Test yser  
 The following stable user was used for GUI testing:  
 - **Email:** xyz@example.com  
 - **Password:** 123456789  
 
 <br><br>
 
-## 3. Testing Strategy  
+## 3. Testing strategy  
 Our approach focused on validating the visible behaviour of the system, including:
 
 - Page rendering  
@@ -48,7 +47,7 @@ Each major feature received a dedicated Cypress test file.
 
 <br><br>
 
-## 4. Directory Structure  
+## 4. Directory structure  
 
 The GUI testing files are organised under the `TESTING/GUI_Testing` directory as shown below:
 
@@ -77,112 +76,112 @@ TESTING/
 
 <br><br>
 
-## 5. Test Cases Overview
+## 5. Test cases overview
 
-### 5.1 Login Page  
+### 5.1 Login page  
 | Check | Result |
 |-------|--------|
-| Login page loads | ✔ Passed |
-| Email and password inputs work | ✔ Passed |
-| Invalid login shows error | ✔ Passed |
-| Valid login redirects to dashboard | ✔ Passed |
+| Login page loads | Passed |
+| Email and password inputs work | Passed |
+| Invalid login shows error | Passed |
+| Valid login redirects to dashboard | Passed |
 
 <br>
 
 ### 5.2 Dashboard  
 | Check | Result |
 |-------|--------|
-| Dashboard loads | ✔ Passed |
-| Summary cards visible | ✔ Passed |
-| Date picker opens/closes | ✔ Passed |
-| Charts rendered | ✔ Passed |
+| Dashboard loads | Passed |
+| Summary cards visible | Passed |
+| Date picker opens/closes | Passed |
+| Charts rendered | Passed |
 
 <br>
 
-### 5.3 Add Expense  
+### 5.3 Add expense  
 | Check | Result |
 |-------|--------|
-| Form loads | ✔ Passed |
-| Category dropdown works | ✔ Passed |
-| Inputs accept valid data | ✔ Passed |
-| Submission succeeds | ✔ Passed |
-| Success toast appears | ✔ Passed |
+| Form loads | Passed |
+| Category dropdown works | Passed |
+| Inputs accept valid data | Passed |
+| Submission succeeds | Passed |
+| Success toast appears | Passed |
 
 <br>
 
-### 5.4 Sidebar Navigation  
+### 5.4 Sidebar navigation  
 | Check | Result |
 |-------|--------|
-| Sidebar links navigate correctly | ✔ Passed |
-| Active highlight works | ✔ Passed |
-| Sidebar behaviour consistent | ✔ Passed |
+| Sidebar links navigate correctly | Passed |
+| Active highlight works | Passed |
+| Sidebar behaviour consistent | Passed |
 
 <br>
 
-### 5.5 Groups Page  
+### 5.5 Groups page  
 | Check | Result |
 |-------|--------|
-| Groups page loads | ✔ Passed |
-| No-group message visible | ✔ Passed |
-| Group cards display when available | ✔ Passed |
-| Buttons behave correctly | ✔ Passed |
+| Groups page loads | Passed |
+| No-group message visible | Passed |
+| Group cards display when available | Passed |
+| Buttons behave correctly | Passed |
 
 <br>
 
-### 5.6 Notifications Page  
+### 5.6 Notifications page  
 | Check | Result |
 |-------|--------|
-| Notifications load | ✔ Passed |
-| Empty-state message visible | ✔ Passed |
+| Notifications load | Passed |
+| Empty-state message visible | Passed |
 
 <br>
 
-### 5.7 Settings Page  
+### 5.7 Settings page  
 | Check | Result |
 |-------|--------|
-| Settings page loads | ✔ Passed |
-| Theme toggle works | ✔ Passed |
+| Settings page loads | Passed |
+| Theme toggle works | Passed |
 
 <br>
 
-### 5.8 Home Page  
+### 5.8 Home page  
 | Check | Result |
 |-------|--------|
-| Home loads | ✔ Passed |
-| Navigation works | ✔ Passed |
+| Home loads | Passed |
+| Navigation works | Passed |
 
 <br>
 
-### 5.9 Dark Mode  
+### 5.9 Dark mode  
 | Check | Result |
 |-------|--------|
-| Dark mode toggles immediately | ✔ Passed |
-| Correct theme class applied | ✔ Passed |
-| UI updates without reload | ✔ Passed |
+| Dark mode toggles immediately | Passed |
+| Correct theme class applied | Passed |
+| UI updates without reload | Passed |
 
 <br><br>
 
-## 6. Issues Encountered & Fixes  
+## 6. Issues encountered & fixes  
 
-### 6.1 Login Redirect Loop  
+### 6.1 Login redirect loop  
 Early tests got stuck on login.  
 We resolved this by resetting sessions and using a stable test user.
 
 <br>
 
-### 6.2 Date Picker Behaviour  
+### 6.2 Date picker behaviour  
 Drag selection was incompatible with Cypress.  
 We switched to click-based selection for reliability.
 
 <br>
 
-### 6.3 Theme Persistence  
+### 6.3 Theme persistence  
 Theme would reset on refresh.  
 We explicitly set the theme before running each test.
 
 <br><br>
 
-## 7. Execution Summary  
+## 7. Execution summary  
 | Metric | Result |
 |--------|--------|
 | GUI test files | 9 |
@@ -192,4 +191,16 @@ We explicitly set the theme before running each test.
 | Stability | High |
 
 <br><br>
+
+## 8. Manual visual testing
+In addition to automated Cypress tests, we also performed manual visual testing by interacting with the system directly.
+This helped us verify:
+The UI layout matches the planned design
+Colours, spacing, and alignment are consistent in both dark and light modes
+Components render correctly on different screens
+No unexpected shifts, overlaps, or visual glitches occur
+The overall user experience feels smooth and intuitive making the product easy to use
+This final step ensured that the system not only works correctly, but also looks exactly as intended.
+
+<br>
 --
