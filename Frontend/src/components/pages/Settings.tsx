@@ -13,7 +13,6 @@ import {
   Smartphone,
   Download,
   AlertTriangle,
-  Save,
   Shield,
   Loader2,
   X
@@ -43,11 +42,6 @@ export function Settings() {
     currency: 'USD',
     timezone: 'UTC'
   });
-
-  const handleSaveSettings = () => {
-    console.log('Saving settings:', { notifications, preferences, dataSharing });
-    toast.success('Settings saved!');
-  };
 
   // Triggered when the initial "Delete Account" button is clicked
   const handleDeleteClick = () => {
@@ -95,10 +89,6 @@ export function Settings() {
           <h1 className="text-2xl md:text-3xl font-bold">Settings</h1>
           <p className="text-muted-foreground">Customize your app experience and preferences</p>
         </div>
-        <Button onClick={handleSaveSettings}>
-          <Save className="h-4 w-4 mr-2" />
-          Save All Changes
-        </Button>
       </div>
 
       <div className="grid gap-6">
