@@ -21,7 +21,6 @@ import {
   Save,
   X,
   Lock,
-  Monitor,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -84,8 +83,6 @@ export function Profile() {
 
   const [securityData, setSecurityData] = useState({ lastPasswordChange: "30 days ago" });
   const [openPasswordModal, setOpenPasswordModal] = useState(false);
-  const [openSessionsModal, setOpenSessionsModal] = useState(false);
-  const [sessions] = useState<Array<any>>([]);
   const [stats, setStats] = useState({ expense_count: 0, group_count: 0, member_since: null });
 
 
@@ -355,16 +352,6 @@ export function Profile() {
   };
 
   const handleChangePassword = () => setOpenPasswordModal(true);
-  const handleViewSessions = () => setOpenSessionsModal(true);
-  async function loadSessions() {
-    // TODO: Implement session loading from backend
-  }
-  async function revokeSession(_sessionId: string) {
-    // TODO: Implement session revocation via backend
-  }
-  async function signOutCurrent() {
-    // TODO: Implement current session sign out
-  }
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
@@ -568,19 +555,6 @@ export function Profile() {
                 </div>
                 <Button variant="outline" onClick={handleChangePassword}>Change</Button>
               </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Monitor className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Active Sessions</h4>
-                    <p className="text-sm text-muted-foreground">Where you're logged in</p>
-                  </div>
-                </div>
-                <Button variant="outline" onClick={handleViewSessions}>View All</Button>
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -588,10 +562,6 @@ export function Profile() {
 
       {openPasswordModal && (
         <PasswordModal onClose={() => setOpenPasswordModal(false)} supabase={supabase} onSuccess={() => setSecurityData((s) => ({ ...s, lastPasswordChange: "just now" }))} />
-      )}
-
-      {openSessionsModal && (
-        <SessionsModal onClose={() => setOpenSessionsModal(false)} sessions={sessions} loading={false} error={null} onRefresh={loadSessions} onRevoke={revokeSession} signOutCurrent={signOutCurrent} />
       )}
     </div>
   );
@@ -801,81 +771,6 @@ function PasswordModal({
             </div>
           </div>
         </form>
-      </div>
-    </div>
-  );
-}
-
-function SessionsModal({
-  onClose,
-  sessions,
-  loading,
-  error,
-  onRefresh,
-  onRevoke,
-  signOutCurrent,
-}: {
-  onClose: () => void;
-  sessions: Array<any>;
-  loading: boolean;
-  error: string | null;
-  onRefresh: () => Promise<void>;
-  onRevoke: (sessionId: string) => Promise<void>;
-  signOutCurrent: () => Promise<void>;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={() => onClose()} />
-      <div className="relative z-10 w-full max-w-3xl p-6 bg-card rounded-lg shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Your Sessions</h3>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => onRefresh()}>Refresh</Button>
-            <Button variant="ghost" onClick={() => onClose()}>Close</Button>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {loading && <div>Loading...</div>}
-          {error && <div className="text-red-600">{error}</div>}
-
-          {!loading && sessions && sessions.length === 0 && !error && <div className="p-4 bg-muted rounded">No sessions found</div>}
-
-          {!loading && sessions && sessions.length > 0 && (
-            <div className="space-y-2">
-              {sessions.map((s: any) => (
-                <div key={s.id || s.session_id || JSON.stringify(s)} className="flex items-center justify-between p-3 border rounded">
-                  <div>
-                    <div className="font-medium">
-                      {s.device || s.user_agent || s.browser || "Unknown device"}
-                      {s.current && <span className="ml-2 text-xs px-2 py-1 bg-green-100 rounded text-green-800">Current</span>}
-                    </div>
-                    <div className="text-sm text-muted-foreground">{s.ip || s.location || "Unknown location"} • Active {s.last_active || s.updated_at || s.created_at || "recently"}</div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {!s.current && <Button size="sm" variant="outline" onClick={() => onRevoke(s.id || s.session_id)}>Revoke</Button>}
-                    {s.current && <Button size="sm" variant="secondary" onClick={signOutCurrent}>Sign out</Button>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {!loading && !error && sessions.length === 0 && (
-            <div className="p-3 text-sm text-muted-foreground border rounded">
-              To see and manage sessions, you'll need a backend endpoint that talks to Supabase Admin API.
-              <div className="mt-2">
-                <strong>Here's how:</strong>
-                <ol className="list-decimal ml-5 mt-1">
-                  <li>Set up an endpoint that lists sessions using Supabase service role key</li>
-                  <li>Return the sessions as JSON</li>
-                  <li>Add a DELETE endpoint to revoke sessions</li>
-                </ol>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
