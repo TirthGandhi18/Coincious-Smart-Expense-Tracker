@@ -161,7 +161,8 @@ export function GroupDetail() {
             const formattedExpenses = expensesData.expenses.map((exp: any) => ({
               id: exp.id,
               title: exp.description || 'Expense',
-              amount: parseFloat(exp.amount) || 0,
+              // Fix 1: Prefer Number.parseFloat over parseFloat
+              amount: Number.parseFloat(exp.amount) || 0,
               description: exp.notes || '',
               category: exp.category || 'Other',
               date: exp.date || new Date().toISOString(),
@@ -266,6 +267,13 @@ export function GroupDetail() {
     return '$0.00';
   };
 
+  // Fix 2: Helper function to resolve nested ternary
+  const getMemberStatus = (balance: number) => {
+    if (balance > 0) return 'is owed';
+    if (balance < 0) return 'owes';
+    return 'settled';
+  };
+
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] p-4">
@@ -365,7 +373,6 @@ export function GroupDetail() {
         </Card>
       </div>
 
-      {/* Action Buttons: Add Expense + Add Member */}
       <div className="flex justify-center md:justify-start items-center gap-3">
         <Button size="lg" asChild>
           <Link to={`/add-expense?group=${id}`}>
@@ -529,25 +536,23 @@ export function GroupDetail() {
                     <div className={`font-medium ${getBalanceColor(member.balance)}`}>
                       {getBalanceText(member.balance)}
                     </div>
+                    {/* Fix 2: Usage of helper function */}
                     <div className="text-xs text-muted-foreground">
-                      {member.balance > 0 ? 'is owed' : member.balance < 0 ? 'owes' : 'settled'}
+                      {getMemberStatus(member.balance)}
                     </div>
                   </div>
                 </div>
               ))}
             </CardContent>
           </Card>
-
-          {/* Add Member button moved to header actions */}
-
-          <AddMemberDialog
-            open={isAddMemberDialogOpen}
-            onOpenChange={setIsAddMemberDialogOpen}
-            groupId={id || ''}
-            onMemberAdded={handleMemberAdded}
-          />
         </TabsContent>
       </Tabs>
+      <AddMemberDialog
+        open={isAddMemberDialogOpen}
+        onOpenChange={setIsAddMemberDialogOpen}
+        groupId={id || ''}
+        onMemberAdded={handleMemberAdded}
+      />
       <SettleUpDialog
         open={isSettleDialogOpen}
         onOpenChange={setIsSettleDialogOpen}
