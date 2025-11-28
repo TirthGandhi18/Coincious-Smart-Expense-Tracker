@@ -22,6 +22,14 @@ import {
 
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from './ui/dialog';
 
 import { supabase } from '../utils/supabase/client';
 
@@ -108,9 +116,18 @@ export function Layout({ children }: LayoutProps) {
     navigate('/login');
   };
 
+  const [showSignoutConfirm, setShowSignoutConfirm] = useState(false);
+
+  const openSignoutConfirm = () => setShowSignoutConfirm(true);
+
+  const confirmSignout = () => {
+    setShowSignoutConfirm(false);
+    handleLogout();
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      
+
       {/* DESKTOP HEADER */}
       <header className="hidden md:flex items-center justify-between px-6 py-4 border-b bg-card">
         <Link to="/dashboard" className="flex items-center gap-4">
@@ -164,11 +181,10 @@ export function Layout({ children }: LayoutProps) {
                       key={item.href}
                       to={item.href}
                       aria-current={isActive ? 'page' : undefined}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                        isActive
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                      }`}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                        }`}
                     >
                       <Icon className="h-4 w-4" />
                       <span>{item.label}</span>
@@ -187,11 +203,10 @@ export function Layout({ children }: LayoutProps) {
 
                 <Link
                   to={supportNavItem.href}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                    location.pathname === supportNavItem.href
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                  }`}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${location.pathname === supportNavItem.href
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                    }`}
                 >
                   <SupportIcon className="h-4 w-4" />
                   <span>{supportNavItem.label}</span>
@@ -207,7 +222,7 @@ export function Layout({ children }: LayoutProps) {
                 <Button
                   variant="ghost"
                   className="w-full justify-start gap-3 text-destructive hover:bg-destructive/10"
-                  onClick={handleLogout}
+                  onClick={openSignoutConfirm}
                 >
                   <LogOut className="h-4 w-4" />
                   <span>Sign out</span>
@@ -238,7 +253,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* MAIN LAYOUT */}
       <div className="flex h-[calc(100vh-73px)] md:h-[calc(100vh-81px)]">
-        
+
         {/* DESKTOP SIDEBAR */}
         <aside className="hidden md:flex w-64 flex-col border-r bg-card">
 
@@ -251,9 +266,8 @@ export function Layout({ children }: LayoutProps) {
                 <Link
                   key={item.href}
                   to={item.href}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                    isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'
-                  }`}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent'
+                    }`}
                 >
                   <Icon className="h-4 w-4" />
                   <span>{item.label}</span>
@@ -271,11 +285,10 @@ export function Layout({ children }: LayoutProps) {
           <div className="border-t p-4 space-y-2">
             <Link
               to={supportNavItem.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                location.pathname === supportNavItem.href
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent'
-              }`}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${location.pathname === supportNavItem.href
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-accent'
+                }`}
             >
               <SupportIcon className="h-4 w-4" />
               <span>{supportNavItem.label}</span>
@@ -283,11 +296,10 @@ export function Layout({ children }: LayoutProps) {
 
             <Link
               to="/settings"
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                location.pathname === '/settings'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent'
-              }`}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${location.pathname === '/settings'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-accent'
+                }`}
             >
               <Settings className="h-4 w-4" />
               <span>Settings</span>
@@ -296,7 +308,7 @@ export function Layout({ children }: LayoutProps) {
             <Button
               variant="ghost"
               className="w-full justify-start gap-3 text-destructive hover:bg-destructive/10"
-              onClick={handleLogout}
+              onClick={openSignoutConfirm}
             >
               <LogOut className="h-4 w-4" />
               <span>Sign out</span>
@@ -318,9 +330,8 @@ export function Layout({ children }: LayoutProps) {
               <Link
                 key={item.href}
                 to={item.href}
-                className={`flex flex-col items-center gap-1 relative ${
-                  isActive ? 'text-primary' : 'text-muted-foreground'
-                }`}
+                className={`flex flex-col items-center gap-1 relative ${isActive ? 'text-primary' : 'text-muted-foreground'
+                  }`}
               >
                 <Icon className="h-5 w-5" />
                 <span className="text-xs">{item.label}</span>
@@ -335,6 +346,30 @@ export function Layout({ children }: LayoutProps) {
           })}
         </div>
       </nav>
+      <Dialog open={showSignoutConfirm} onOpenChange={setShowSignoutConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sign out</DialogTitle>
+            <DialogDescription>Are you sure you want to sign out?</DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowSignoutConfirm(false)} className="
+    bg-gray-200 hover:bg-gray-300 text-black
+    dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white
+  ">
+              Cancel
+            </Button>
+
+            <Button variant="destructive" onClick={confirmSignout} className="
+    bg-red-600 hover:bg-red-700 text-white
+    dark:bg-red-800 dark:hover:bg-red-900
+  ">
+              Sign out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

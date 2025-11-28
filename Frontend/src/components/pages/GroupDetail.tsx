@@ -365,7 +365,6 @@ export function GroupDetail() {
         </Card>
       </div>
 
-      {/* Action Buttons: Add Expense + Add Member */}
       <div className="flex justify-center md:justify-start items-center gap-3">
         <Button size="lg" asChild>
           <Link to={`/add-expense?group=${id}`}>
@@ -537,17 +536,14 @@ export function GroupDetail() {
               ))}
             </CardContent>
           </Card>
-
-          {/* Add Member button moved to header actions */}
-
-          <AddMemberDialog
-            open={isAddMemberDialogOpen}
-            onOpenChange={setIsAddMemberDialogOpen}
-            groupId={id || ''}
-            onMemberAdded={handleMemberAdded}
-          />
         </TabsContent>
       </Tabs>
+      <AddMemberDialog
+        open={isAddMemberDialogOpen}
+        onOpenChange={setIsAddMemberDialogOpen}
+        groupId={id || ''}
+        onMemberAdded={handleMemberAdded}
+      />
       <SettleUpDialog
         open={isSettleDialogOpen}
         onOpenChange={setIsSettleDialogOpen}

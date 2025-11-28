@@ -269,25 +269,6 @@ export function Login() {
           </CardFooter>
         </Card>
 
-        {/* Demo login info */}
-        <Card className="mt-4 bg-muted/50">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground text-center mb-2">
-              Demo Credentials:
-            </p>
-            <div className="text-xs space-y-1 text-center">
-              <p>
-                <strong>Regular User:</strong> user@demo.com /
-                password
-              </p>
-              <p>
-                <strong>Parent User:</strong> parent@demo.com /
-                password
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
         {/*Forgot Password Email Dialogue*/}
         <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
