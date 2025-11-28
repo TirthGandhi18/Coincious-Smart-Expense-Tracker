@@ -6,178 +6,158 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '..
 import { HelpCircle, Mail, Search, Clock, Book, MessageCircle, Calculator, Settings, X, CreditCard, Copy, Check } from 'lucide-react';
 
 const faqs = [
-	{
-		id: 'getting-started',
-		title: 'Getting Started',
-		icon: Book,
-		questions: [
-			{
-				question: 'How do I create my first expense group?',
-				answer:
-					'To create a group, go to the Groups page and click "Create Group". Enter a name and description, then invite members by email. You can start adding expenses once your group is set up.',
-			},
-			{
-				question: 'How do I add an expense?',
-				answer:
-					'Click the "Add Expense" button from the dashboard or within a group. Fill in the expense details, choose how to split it (equally, by percentage, or custom amounts), and select who to split with.',
-			},
-			{
-				question: 'How do I invite friends to join my group?',
-				answer:
-					'From your group page, click "Invite Members" and enter their email addresses. They\'ll receive an invitation link to join your group and start splitting expenses with you.',
-			},
-			{
-				question: 'Can I use the app without creating groups?',
-				answer:
-					'Yes! You can track personal expenses on your dashboard. Groups are only needed when you want to split expenses with others.',
-			},
-		],
-	},
-	{
-		id: 'expenses-splitting',
-		title: 'Expenses & Splitting',
-		icon: Calculator,
-		questions: [
-			{
-				question: 'Can I split expenses unequally?',
-				answer:
-					'Yes! When adding an expense, you can choose from three split methods: equal split, percentage-based split, or custom amounts where you specify exactly how much each person owes.',
-			},
-			{
-				question: 'Can I edit an expense after adding it?',
-				answer:
-					'Yes, you can edit expenses from the group detail page or expense history. Click on the expense and select "Edit". Changes will automatically update everyone\'s balances.',
-			},
-			{
-				question: 'What happens if someone leaves a group with outstanding balances?',
-				answer:
-					'Outstanding balances remain until settled. The person can still pay their debts even after leaving the group. Group admins can view and manage these balances.',
-			},
-			{
-				question: 'How do I delete an expense I added by mistake?',
-				answer:
-					'Click on the expense in your group or history, then select "Delete". This will remove the expense and adjust everyone\'s balances accordingly.',
-			},
-			{
-				question: 'Can I add expenses from the past?',
-				answer:
-					'Yes! When adding an expense, you can change the date to any past date. This is useful for adding expenses you forgot to log earlier.',
-			},
-		],
-	},
-	{
-		id: 'groups-management',
-		title: 'Groups & Management',
-		icon: MessageCircle,
-		questions: [
-			{
-				question: 'How do I settle up with someone?',
-				answer:
-					'Go to your dashboard or group page to see outstanding balances. Click "Settle Up" next to a person\'s name, enter the payment amount, and mark it as paid.',
-			},
-			{
-				question: 'How do I leave a group?',
-				answer:
-					'Go to the group settings and click "Leave Group". Make sure all your balances are settled first, or arrange payment outside the app.',
-			},
-			{
-				question: 'Can I make someone else an admin of my group?',
-				answer:
-					'Yes, group creators can promote other members to admin status. Admins can invite/remove members, edit group settings, and manage expenses.',
-			},
-			{
-				question: 'What\'s the maximum number of people in a group?',
-				answer:
-					'Groups can have up to 50 members. For larger events, consider creating multiple smaller groups or using our event planning features.',
-			},
-		],
-	},
-	{
-		id: 'payments-settlements',
-		title: 'Payments & Settlements',
-		icon: CreditCard,
-		questions: [
-			{
-				question: 'Does the app handle actual money transfers?',
-				answer:
-					'No, our app only tracks who owes what. You need to settle payments outside the app using cash, bank transfers, Venmo, PayPal, or other payment methods.',
-			},
-			{
-				question: 'How do I mark a payment as received?',
-				answer:
-					'When someone pays you back, go to your balances and click "Record Payment". Enter the amount and confirm to update both of your balances.',
-			},
-			{
-				question: 'Can I see payment history?',
-				answer:
-					'Yes! Go to your profile or group settings to view all payment records, including who paid whom and when payments were recorded.',
-			},
-			{
-				question: 'What if someone disputes an expense?',
-				answer:
-					'Group members can comment on expenses to discuss any issues. If needed, admins can edit or delete disputed expenses to resolve conflicts.',
-			},
-		],
-	},
-	{
-		id: 'account-settings',
-		title: 'Account & Settings',
-		icon: Settings,
-		questions: [
-			{
-				question: 'How do I change my profile information?',
-				answer:
-					'Go to Settings > Profile to update your name, email, profile picture, and other personal information. Changes will be visible to your group members.',
-			},
-			{
-				question: 'Can I change my email address?',
-				answer:
-					'Yes, go to Settings > Account to change your email. You\'ll need to verify the new email address before the change takes effect.',
-			},
-			{
-				question: 'How do I enable/disable notifications?',
-				answer:
-					'In Settings > Notifications, you can control which alerts you receive via email or push notifications, including new expenses, payments, and reminders.',
-			},
-			{
-				question: 'Can I export my expense data?',
-				answer:
-					'Yes! Go to Settings > Data Export to download your expense history as CSV or PDF files for personal records or tax purposes.',
-			},
-			{
-				question: 'How do I delete my account?',
-				answer:
-					'Go to Settings > Account > Delete Account. Note that you must settle all outstanding balances before account deletion is allowed.',
-			},
-		],
-	},
-	{
-		id: 'troubleshooting',
-		title: 'Troubleshooting',
-		icon: HelpCircle,
-		questions: [
-			{
-				question: 'The app is running slowly or crashing',
-				answer:
-					'Try closing and reopening the app, clearing your browser cache, or updating to the latest version. Contact support if issues persist.',
-			},
-			{
-				question: 'I\'m not receiving email notifications',
-				answer:
-					'Check your spam folder and ensure notifications are enabled in Settings. Add our email domain to your safe senders list.',
-			},
-			{
-				question: 'My balances don\'t look correct',
-				answer:
-					'Review your recent expenses and payments in the activity log. If you find discrepancies, check if any expenses were edited or deleted recently.',
-			},
-			{
-				question: 'I forgot my password',
-				answer:
-					'Click "Forgot Password" on the login page and enter your email. You\'ll receive a reset link to create a new password.',
-			},
-		],
-	},
+    {
+        id: 'getting-started',
+        title: 'Getting Started',
+        icon: Book,
+        questions: [
+            {
+                question: 'How do I create my first expense group?',
+                answer:
+                    'To create a group, go to the Groups page and click "Create Group". Enter a name, then you can invite members by email. You can start adding expenses once your group is set up.',
+            },
+            {
+                question: 'How do I add an expense?',
+                answer:
+                    'Click the "Add Expense" button from the dashboard or within a group. Fill in the expense details, choose the type (Personal or Group), and if it\'s a group expense, select how to split it.',
+            },
+            {
+                question: 'How do I invite friends to join my group?',
+                answer:
+                    'From your group page, click "Add Member" and enter their email addresses. They\'ll receive an invitation to join your group.',
+            },
+            {
+                question: 'Can I use the app without creating groups?',
+                answer:
+                    'Yes! You can track personal expenses by selecting "Personal" when adding an expense. These will appear on your dashboard under your spending summary.',
+            },
+        ],
+    },
+    {
+        id: 'expenses-splitting',
+        title: 'Expenses & Splitting',
+        icon: Calculator,
+        questions: [
+            {
+                question: 'Can I split expenses unequally?',
+                answer:
+                    'Yes! When adding a group expense, you can switch the split method to "Unequal Division" and manually specify exactly how much each person owes.',
+            },
+            {
+                question: 'Can I edit an expense after adding it?',
+                answer:
+                    'Yes, you can edit expenses from the dashboard. Click on the pencil icon next to an expense to update its details, amount, or date.',
+            },
+            {
+                question: 'How do I delete an expense I added by mistake?',
+                answer:
+                    'Click the trash icon on the expense card in your dashboard. This will permanently remove the expense and recalculate totals.',
+            },
+            {
+                question: 'Can I add expenses from the past?',
+                answer:
+                    'Yes! When adding an expense, you can use the date picker to select any past date. This is useful for backlogging transactions.',
+            },
+        ],
+    },
+    {
+        id: 'groups-management',
+        title: 'Groups & Management',
+        icon: MessageCircle,
+        questions: [
+            {
+                question: 'How do I settle up with someone?',
+                answer:
+                    'Go to your group page and switch to the "Balances" tab. You will see a "Settlements" section. If you owe money, click "Settle Up" to record a payment.',
+            },
+            {
+                question: 'What\'s the maximum number of people in a group?',
+                answer:
+                    'While there is no strict software limit, the app is optimized for small to medium-sized groups (friends, roommates, trips) for the best experience.',
+            },
+            {
+                question: 'Can I delete a group?',
+                answer:
+                     'Yes, if you are the group creator, you can delete the group using the delete icon on the Groups page. This will remove all associated data.',
+            }
+        ],
+    },
+    {
+        id: 'payments-settlements',
+        title: 'Payments & Settlements',
+        icon: CreditCard,
+        questions: [
+            {
+                question: 'Does the app handle actual money transfers?',
+                answer:
+                    'No, our app only tracks who owes what. You need to settle payments outside the app using cash, UPI, bank transfers, or other payment apps.',
+            },
+            {
+                question: 'How do I mark a payment as received?',
+                answer:
+                    'Settlements are typically recorded by the person who paid (the debtor). Once they click "Settle Up" and confirm the amount, the balances for both parties update automatically.',
+            },
+            {
+                question: 'Can I see payment history?',
+                answer:
+                    'Yes, settlements are recorded as transactions. You can see them listed in the group details or expense history.',
+            },
+        ],
+    },
+    {
+        id: 'account-settings',
+        title: 'Account & Settings',
+        icon: Settings,
+        questions: [
+            {
+                question: 'How do I change my profile information?',
+                answer:
+                    'Click on your avatar in the top right corner (or "Profile" in the mobile menu) to access your Profile page. There you can update your name, email, phone number, and profile picture.',
+            },
+            {
+                question: 'How do I change my password?',
+                answer:
+                    'Go to your Profile page. In the "Security" section, click the "Change" button next to "Password" to update your credentials.',
+            },
+             {
+                question: 'Where can I see where I am logged in?',
+                answer:
+                    'On your Profile page, check the "Active Sessions" section under Security. You can view and manage all devices currently logged into your account.',
+            },
+            {
+                question: 'Can I export my expense data?',
+                answer:
+                    'Yes! Go to Settings > App Management > Export Data. You can select a date range and download your expense history as a CSV file.',
+            },
+            {
+                question: 'How do I delete my account?',
+                answer:
+                    'Go to Settings > App Management > Delete Account. Please note that this action is irreversible and will remove all your data.',
+            },
+        ],
+    },
+    {
+        id: 'troubleshooting',
+        title: 'Troubleshooting',
+        icon: HelpCircle,
+        questions: [
+            {
+                question: 'The app is running slowly or crashing',
+                answer:
+                    'Try refreshing the page or clearing your browser cache. If the issue persists, please use the contact form to report it.',
+            },
+            {
+                question: 'My balances don\'t look correct',
+                answer:
+                    'Review your recent expenses in the group. Ensure that splits were entered correctly. If you find an error, you can edit the specific expense to fix the balance.',
+            },
+            {
+                question: 'I forgot my password',
+                answer:
+                    'Click "Forgot Password" on the login page and enter your email. You\'ll receive a secure link to reset your password.',
+            },
+        ],
+    },
 ];
 
 export function Support() {
@@ -272,7 +252,7 @@ export function Support() {
                         </div>
                         
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                            Click on any email to copy it to your clipboard
+                            Click on the email to copy it to your clipboard
                         </p>
 
                         <div className="space-y-3">
@@ -297,28 +277,6 @@ export function Support() {
                                     )}
                                 </div>
                             </div>
-
-                            <div 
-                                onClick={() => copyToClipboard('technical@smartexpense.com')}
-                                className="w-full text-left p-5 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-purple-400 dark:hover:border-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all cursor-pointer group"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                                            <Mail className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">Technical Issues</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">technical@smartexpense.com</p>
-                                        </div>
-                                    </div>
-                                    {copiedEmail === 'technical@smartexpense.com' ? (
-                                        <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
-                                    ) : (
-                                        <Copy className="h-5 w-5 text-gray-400 group-hover:text-purple-600 flex-shrink-0" />
-                                    )}
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -326,73 +284,73 @@ export function Support() {
 
             {/* FAQ search */}
             <div className="relative mb-4 max-w-2xl mx-auto">
-				<Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-				<Input
-					placeholder="Search FAQ..."
-					value={query}
-					onChange={e => setQuery(e.target.value)}
-					className="pl-10"
-				/>
-			</div>
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Search FAQ..."
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    className="pl-10"
+                />
+            </div>
 
-			{/* FAQs */}
-			{filteredFaqs.length === 0 ? (
-				<Card>
-					<CardContent className="text-center py-12">
-						<Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-						<h3 className="text-lg font-medium mb-2">No results found</h3>
-						<p className="text-muted-foreground">
-							Try searching with different keywords or browse our categories below.
-						</p>
-					</CardContent>
-				</Card>
-			) : (
-				<div className="space-y-6">
-					{filteredFaqs.map(cat => {
-						const Icon = cat.icon;
-						return (
-							<Card key={cat.id}>
-								<CardHeader>
-									<CardTitle className="flex items-center gap-2">
-										<Icon className="h-5 w-5" />
-										{cat.title}
-										<Badge variant="outline">{cat.questions.length}</Badge>
-									</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<Accordion type="single" collapsible className="w-full">
-										{cat.questions.map((q, idx) => (
-											<AccordionItem key={idx} value={`${cat.id}-${idx}`}>
-												<AccordionTrigger className="text-left">
-													{q.question}
-												</AccordionTrigger>
-												<AccordionContent className="text-muted-foreground">
-													{q.answer}
-												</AccordionContent>
-											</AccordionItem>
-										))}
-									</Accordion>
-								</CardContent>
-							</Card>
-						);
-					})}
-				</div>
-			)}
+            {/* FAQs */}
+            {filteredFaqs.length === 0 ? (
+                <Card>
+                    <CardContent className="text-center py-12">
+                        <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                        <h3 className="text-lg font-medium mb-2">No results found</h3>
+                        <p className="text-muted-foreground">
+                            Try searching with different keywords or browse our categories below.
+                        </p>
+                    </CardContent>
+                </Card>
+            ) : (
+                <div className="space-y-6">
+                    {filteredFaqs.map(cat => {
+                        const Icon = cat.icon;
+                        return (
+                            <Card key={cat.id}>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Icon className="h-5 w-5" />
+                                        {cat.title}
+                                        <Badge variant="outline">{cat.questions.length}</Badge>
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <Accordion type="single" collapsible className="w-full">
+                                        {cat.questions.map((q, idx) => (
+                                            <AccordionItem key={idx} value={`${cat.id}-${idx}`}>
+                                                <AccordionTrigger className="text-left">
+                                                    {q.question}
+                                                </AccordionTrigger>
+                                                <AccordionContent className="text-muted-foreground">
+                                                    {q.answer}
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        ))}
+                                    </Accordion>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
+                </div>
+            )}
 
-			{/* Response Times */}
-			<Card className="mt-6">
-				<CardContent className="p-4">
-					<div className="flex items-center gap-3">
-						<Clock className="h-5 w-5 text-blue-600" />
-						<div>
-							<h4 className="font-medium">Response Times</h4>
-							<p className="text-sm text-muted-foreground">
-								We typically respond within 24 hours for most inquiries.
-							</p>
-						</div>
-					</div>
-				</CardContent>
-			</Card>
-		</div>
-	);
+            {/* Response Times */}
+            <Card className="mt-6">
+                <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                        <Clock className="h-5 w-5 text-blue-600" />
+                        <div>
+                            <h4 className="font-medium">Response Times</h4>
+                            <p className="text-sm text-muted-foreground">
+                                We typically respond within 24 hours for most inquiries.
+                            </p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
 }
