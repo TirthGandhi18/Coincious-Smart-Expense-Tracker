@@ -20,3 +20,7 @@ venv/
 bin/
 /lib/
 __pycache__/
+
+# Coverage Reports
+coverage/
+Coverage/

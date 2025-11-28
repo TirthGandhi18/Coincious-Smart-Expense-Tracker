@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, useEffect } from 'react';
+import React, { useState, createContext, useContext, useEffect, useMemo, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
@@ -23,7 +23,8 @@ import { SettingsProvider } from './components/ui/SettingContext';
 import { PasswordResetPage } from './components/pages/PasswordResetPage';
 import { AuthVerify } from './components/pages/AuthVerify';
 
-function PublicRoute({ children }: { children: React.ReactNode }) {
+// Fix S6759: Mark props as readonly
+function PublicRoute({ children }: { readonly children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -34,7 +35,8 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (user && user.aud === 'authenticated') {
+  // Fix S6582: Use optional chaining
+  if (user?.aud === 'authenticated') {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -42,7 +44,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 }
 
 // Simple Protected Route Component
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children }: { readonly children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -53,7 +55,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user || user.aud !== 'authenticated') {
+  // Fix S6582: Use optional chaining (implicitly handles null/undefined checks)
+  if (user?.aud !== 'authenticated') {
     return <Navigate to="/login" replace />;
   }
 
@@ -168,14 +171,15 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Auth Provider
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { readonly children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const logout = async () => {
+  // Wrap functions in useCallback for referential stability (part of fixing S6481)
+  const logout = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
-  };
+  }, []);
 
   // Initial Session Load & Realtime Listener
   useEffect(() => {
@@ -228,17 +232,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     checkSession();
     const handleFocus = () => checkSession();
-    window.addEventListener('focus', handleFocus);
+    // Fix S7764: Use globalThis instead of window
+    globalThis.addEventListener('focus', handleFocus);
     const intervalId = setInterval(checkSession, 2 * 60 * 1000);
 
     return () => {
-      window.removeEventListener('focus', handleFocus);
+      globalThis.removeEventListener('focus', handleFocus);
       clearInterval(intervalId);
     };
-  }, [user]);
+  }, [user, logout]);
 
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -248,11 +253,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
       throw error;
     }
-  };
+  }, []);
 
- const register = async (email: string, password: string, name: string) => {
+  const register = useCallback(async (email: string, password: string, name: string) => {
     setIsLoading(true);
     
+    // Fix S2737: Removed redundant catch block. Finally will run, error will bubble up.
     try {
       const { data: emailExists, error: rpcError } = await supabase.rpc('check_email_exists', { 
         email_check: email 
@@ -266,8 +272,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("User already registered. Please log in instead.");
       }
 
-      // 3. If email doesn't exist, proceed with standard sign up
-      const redirectTo = `${window.location.origin}/auth/verify`;
+      // Fix S7764: Use globalThis for location
+      const redirectTo = `${globalThis.location.origin}/auth/verify`;
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -281,41 +287,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
-    } catch (error) {
-      throw error;
     } finally {
       setIsLoading(false);
     }
-};
-  const signInWithProvider = async (provider: string) => {
+  }, []);
+
+  const signInWithProvider = useCallback(async (provider: string) => {
     setIsLoading(true);
-    const redirectTo = (import.meta.env.VITE_SUPABASE_REDIRECT_URL as string) || window.location.origin;
+    // Fix S7764: Use globalThis for location
+    const redirectTo = (import.meta.env.VITE_SUPABASE_REDIRECT_URL as string) || globalThis.location.origin;
     const { error } = await supabase.auth.signInWithOAuth({ provider: provider as any, options: { redirectTo } });
     if (error) {
       setIsLoading(false);
       throw error;
     }
-  };
+  }, []);
+
+  // Fix S6481: Wrap the context value in useMemo to prevent re-creation on every render
+  const authValue = useMemo(() => ({
+    user,
+    login,
+    register,
+    logout,
+    isLoading,
+    signInWithProvider,
+    supabase,
+    supabaseAdminEndpoint: (import.meta.env.VITE_SUPABASE_ADMIN_ENDPOINT as string) || undefined,
+  }), [user, login, register, logout, isLoading, signInWithProvider]);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        register,
-        logout,
-        isLoading,
-        signInWithProvider,
-        supabase,
-        supabaseAdminEndpoint: (import.meta.env.VITE_SUPABASE_ADMIN_ENDPOINT as string) || undefined,
-      }}
-    >
+    <AuthContext.Provider value={authValue}>
       {children}
     </AuthContext.Provider>
   );
 }
-
-
 
 // Custom hooks
 export function useAuth() {

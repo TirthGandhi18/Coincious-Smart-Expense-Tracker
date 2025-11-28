@@ -247,9 +247,11 @@ export function Settings() {
       {/* --- CUSTOM DELETE CONFIRMATION DIALOG --- */}
       {deleteConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4 animate-in fade-in duration-200">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+          {/* Backdrop with FIX for SonarLint S6819 */}
+          <button
+            type="button"
+            aria-label="Close modal"
+            className="fixed inset-0 w-full h-full bg-black/50 backdrop-blur-sm transition-opacity cursor-default border-0 p-0 focus:outline-none"
             onClick={() => !isDeleting && setDeleteConfirmOpen(false)}
           />
 
