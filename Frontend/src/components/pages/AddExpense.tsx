@@ -64,9 +64,10 @@ export function AddExpense() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  const expenseData = location.state?.expenseData;
-  const isEdit = location.state?.isEdit || false;
-
+  // Accept either location.state.expenseData (old) or location.state.expense (dashboard)
+  const passedExpense = (location.state && (location.state as any).expenseData) ?? (location.state && (location.state as any).expense) ?? null;
+  // allow explicit isEdit flag or infer from presence of passedExpense
+  const inferredIsEdit = Boolean((location.state && (location.state as any).isEdit) ?? passedExpense);
   const { user } = useAuth(); //custom hook
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
@@ -105,12 +106,12 @@ export function AddExpense() {
   const [expenseDate, setExpenseDate] = useState('');
 
   // Edit mode state
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState<boolean>(inferredIsEdit);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(passedExpense?.id?.toString?.() ?? null);
 
   useEffect(() => {
     const today = new Date();
-    const istOffset = 5.5 * 60; // IST is UTC+5:30
+    const istOffset = 5.5 * 60; // IST is UTC+5:30 in minutes
     const localOffset = today.getTimezoneOffset();
     const istTime = new Date(today.getTime() + (istOffset + localOffset) * 60000);
     const year = istTime.getFullYear();
@@ -119,37 +120,57 @@ export function AddExpense() {
     setExpenseDate(`${year}-${month}-${day}`);
   }, []);
 
+  // Prefill when passedExpense is available — robust mapping for many field names
   useEffect(() => {
-    if (isEdit && expenseData) {
+    if (passedExpense) {
       setIsEditMode(true);
-      setEditingExpenseId(expenseData.id?.toString() || null);
-      setTitle(expenseData.description || '');
-      setAmount(expenseData.amount?.toString() || '');
+      setEditingExpenseId(passedExpense.id?.toString?.() ?? null);
 
-      if (expenseData.category) {
-        if (!availableCategories.includes(expenseData.category)) {
-          setAvailableCategories(prev => [...prev, expenseData.category]);
-        }
-        setTimeout(() => setCategory(expenseData.category), 100);
+      // Title: prefer title -> description -> merchant -> vendor_name
+      const prefTitle = passedExpense.title ?? passedExpense.description ?? passedExpense.merchant ?? passedExpense.vendor_name ?? '';
+      setTitle(String(prefTitle));
+
+      // Amount: prefer amount -> total -> value
+      const amt = (passedExpense.amount ?? passedExpense.total ?? passedExpense.value ?? null);
+      if (amt != null) setAmount(String(amt));
+
+      // Category
+      const cat = passedExpense.category ?? passedExpense.category_name ?? passedExpense.category_guess ?? '';
+      if (cat) {
+        // ensure it's available in the select list
+        setAvailableCategories(prev => (prev.includes(cat) ? prev : [...prev, cat]));
+        setCategory(cat);
       }
 
-      setExpenseType(expenseData.type || 'personal');
+      // Type (if provided)
+      if (passedExpense.type) setExpenseType(passedExpense.type === 'group' ? 'group' : 'personal');
 
-      if (expenseData.date) {
+      // Date — accept various fields: date, created_at, issue_date
+      const d = passedExpense.date ?? passedExpense.created_at ?? passedExpense.issue_date ?? null;
+      if (d) {
         try {
-          const date = new Date(expenseData.date);
+          const date = new Date(d);
           if (!isNaN(date.getTime())) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             setExpenseDate(`${year}-${month}-${day}`);
+          } else if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}/.test(d)) {
+            // already yyyy-mm-dd-like
+            setExpenseDate(d.slice(0, 10));
           }
         } catch (err) {
-          console.error('Error parsing date:', err);
+          console.error('Error parsing passed expense date:', err);
         }
       }
+
+      // Description
+      const desc = passedExpense.long_description ?? passedExpense.notes ?? passedExpense.description ?? '';
+      if (desc) setDescription(String(desc));
     }
-  }, [isEdit, expenseData, availableCategories]);
+  // We intentionally do not include availableCategories in deps to avoid re-running too often.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [passedExpense]);
 
   // Fetch groups
   useEffect(() => {
@@ -271,16 +292,17 @@ export function AddExpense() {
         const uniqueCategories = [...new Set((data as string[]) || [])];
         setAvailableCategories(uniqueCategories);
 
-        if (isEdit && expenseData?.category) {
-          if (!uniqueCategories.includes(expenseData.category)) {
-            setAvailableCategories(prev => [...prev, expenseData.category]);
+        // if we are in edit and passedExpense has a category, ensure it's available
+        if (passedExpense?.category) {
+          if (!uniqueCategories.includes(passedExpense.category)) {
+            setAvailableCategories(prev => [...prev, passedExpense.category]);
           }
-          setCategory(expenseData.category);
+          setCategory(passedExpense.category);
         }
       }
     };
     fetchCategories();
-  }, [user, isEdit, expenseData?.category]);
+  }, [user, passedExpense?.category]);
 
   const handleRecurringExpenseChange = (value: string) => {
     setSelectedRecurringExpense(value);

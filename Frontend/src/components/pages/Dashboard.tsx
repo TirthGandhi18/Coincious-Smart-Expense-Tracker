@@ -1,3 +1,4 @@
+// Dashboard.tsx
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -20,7 +21,8 @@ import {
   ChevronDown,
   Calendar as CalendarIcon,
   Loader2,
-  Pencil as PencilIcon
+  Pencil as PencilIcon,
+  Trash2 as TrashIcon
 } from 'lucide-react';
 import {
   PieChart,
@@ -31,7 +33,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -91,6 +93,7 @@ function BudgetProgressRing({
 
 export function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // core states
   const [, setAnalyticsData] = useState<any>(null);
@@ -129,6 +132,52 @@ export function Dashboard() {
 
   const BUDGET_TABLE = 'budgets';
   const near80ShownRef = useRef(false);
+
+  // --- Helpers: refetch monthly expenses (used after delete)
+  const refetchMonthlyExpenses = async () => {
+    if (!user) return;
+    const start = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+    const end = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/expenses/range?start_date=${start}&end_date=${end}`,
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setMonthlyExpenses(data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching monthly expenses:", error);
+    }
+  };
+
+  // navigate to add-expense with expense in location.state (MATCH AddExpense expectation)
+  const editExpense = (expense: any) => {
+    // IMPORTANT: send under expenseData and set isEdit true so AddExpense prefill works
+    navigate('/add-expense', { state: { expenseData: expense, isEdit: true } });
+  };
+
+  // delete expense + refresh monthly & range view
+  const deleteExpense = async (expenseId: string | number) => {
+    if (!confirm('Delete this expense?')) return;
+    try {
+      const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
+      if (error) {
+        console.error('Delete error via supabase:', error);
+        toast.error('Failed to delete expense');
+        return;
+      }
+      toast.success('Expense deleted');
+      await refetchMonthlyExpenses();
+      if (dateRange.from) setDateRange({ ...dateRange }); // trigger refetch for sidebar range
+    } catch (err) {
+      console.error('Failed to delete expense', err);
+      toast.error('Failed to delete expense');
+    }
+  };
 
   // load budget + goal
   useEffect(() => {
@@ -468,7 +517,6 @@ export function Dashboard() {
   // Derived values
   const budgetValue = budget ?? null;
   const budgetUsed = currentMonthTotal || 0;
-  // Monthly savings computed as budget - expense (if budget exists)
   const monthlySavings = budgetValue !== null ? Math.max(0, budgetValue - budgetUsed) : 0;
 
   const parsedGoal = (() => {
@@ -655,16 +703,39 @@ export function Dashboard() {
                               <div className="flex justify-center py-10"><Loader2 className="animate-spin text-purple-500" /></div>
                             ) : sidebarExpenses.length > 0 ? (
                               sidebarExpenses.map((expense, index) => (
-                                <div key={index} className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-purple-200 transition-all">
+                                <div key={expense.id ?? index} className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-purple-200 transition-all">
                                   <div className="flex justify-between items-start">
-                                    <div>
+                                    <div className="pr-3 flex-1 min-w-0">
                                       <h5 className="font-semibold text-gray-900 dark:text-white text-sm truncate line-clamp-1">{expense.title}</h5>
                                       <div className="flex items-center gap-2 mt-1">
                                         <Badge variant="secondary" className="text-[10px] h-5 px-1">{expense.category}</Badge>
                                         <p className="text-xs text-gray-500">{format(new Date(expense.date), 'MMM dd')}</p>
                                       </div>
                                     </div>
-                                    <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap">₹{expense.amount.toFixed(2)}</span>
+
+                                    <div className="flex flex-col items-end ml-3">
+                                      <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap mb-2">₹{Number(expense.amount || 0).toFixed(2)}</span>
+
+                                      <div className="flex items-center gap-2">
+                                        {/* Edit button */}
+                                        <button
+                                          title="Edit"
+                                          onClick={() => editExpense(expense)}
+                                          className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                                        >
+                                          <PencilIcon className="h-4 w-4 text-purple-600" />
+                                        </button>
+
+                                        {/* Delete button */}
+                                        <button
+                                          title="Delete"
+                                          onClick={() => deleteExpense(expense.id)}
+                                          className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                                        >
+                                          <TrashIcon className="h-4 w-4 text-red-600" />
+                                        </button>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               ))
