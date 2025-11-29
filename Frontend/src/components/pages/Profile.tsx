@@ -166,7 +166,7 @@ export function Profile() {
     setErrors(validateAll(form));
   }, [form]);
 
-  
+
   const updateField = (field: keyof ProfileData, value: string) => {
     const v = sanitizeInput(value);
     setForm((s) => ({ ...s, [field]: v }));
@@ -196,7 +196,7 @@ export function Profile() {
         phone_number: form.phone.trim(),
       };
 
-      
+
       if (payload.email !== (user?.email || "")) {
         try {
           if (typeof supabase.auth.updateUser === "function") {
@@ -254,7 +254,7 @@ export function Profile() {
           }
         }
       } catch (refreshErr) {
-        
+
         console.debug("Could not refresh auth user:", refreshErr);
       }
     } catch (err: any) {
@@ -273,14 +273,14 @@ export function Profile() {
     setIsEditing(false);
   };
 
- 
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!user || !supabase) {
       toast.error("You must be logged in.");
       return;
     }
     const file = e.target.files?.[0];
-    if (e.target) e.target.value = ""; 
+    if (e.target) e.target.value = "";
     if (!file) return;
 
     const ALLOWED_TYPES = ["image/png", "image/jpeg"];
@@ -307,7 +307,7 @@ export function Profile() {
       });
       if (uploadError) throw uploadError;
 
-      
+
       const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(filePath);
       let url: string | undefined = (publicData as any)?.publicUrl || (publicData as any)?.publicURL;
       if (!url) {
@@ -319,7 +319,7 @@ export function Profile() {
 
       const finalUrl = `${url}?t=${Date.now()}`;
 
-      
+
       try {
         if (typeof supabase.auth.updateUser === "function") {
           await supabase.auth.updateUser({ data: { avatar_url: finalUrl } });
@@ -597,7 +597,7 @@ export function Profile() {
   );
 }
 
-function PasswordModal({
+export function PasswordModal({
   onClose,
   supabase,
   onSuccess,
@@ -696,31 +696,31 @@ function PasswordModal({
 
   const handleForgotLoggedIn = async () => {
     if (!supabase || !user?.email) {
-        toast.error("Account information missing. Please log out and back in.");
-        return;
+      toast.error("Account information missing. Please log out and back in.");
+      return;
     }
     setLoading(true);
     try {
-        const redirectTo = `${window.location.origin}/forgot-password`;
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(user.email, {redirectTo});
+      const redirectTo = `${window.location.origin}/forgot-password`;
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo });
 
-        if (resetError) throw resetError;
-        toast.success('Password reset link sent!', {
-            description: 'Check your inbox. You are being logged out now.'
-        });
-        onClose(); 
-        logout();
+      if (resetError) throw resetError;
+      toast.success('Password reset link sent!', {
+        description: 'Check your inbox. You are being logged out now.'
+      });
+      onClose();
+      logout();
     } catch (error: any) {
-        console.error('Error sending reset email:', error);
-        toast.error(error.message || 'Failed to send reset link.');
+      console.error('Error sending reset email:', error);
+      toast.error(error.message || 'Failed to send reset link.');
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
-  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={() => !loading && onClose()} />
+      <div className="absolute inset-0 bg-black/40" onClick={() => !loading && onClose()} data-testid="password-modal-backdrop" />
       <div className="relative z-10 w-full max-w-md p-6 bg-card rounded-lg shadow-lg">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Change Password</h3>
@@ -753,7 +753,7 @@ function PasswordModal({
               )}
             </div>
 
-           <div>
+            <div>
               <Label>Confirm Password</Label>
               <div className="relative">
                 <Input
@@ -785,7 +785,7 @@ function PasswordModal({
                 <button
                   type="button"
                   className="text-sm text-muted-foreground underline"
-                  onClick={handleForgotLoggedIn} 
+                  onClick={handleForgotLoggedIn}
                 >
                   Forgot password?
                 </button>
@@ -806,7 +806,7 @@ function PasswordModal({
   );
 }
 
-function SessionsModal({
+export function SessionsModal({
   onClose,
   sessions,
   loading,
@@ -825,7 +825,7 @@ function SessionsModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={() => onClose()} />
+      <div className="absolute inset-0 bg-black/40" onClick={() => onClose()} data-testid="sessions-modal-backdrop" />
       <div className="relative z-10 w-full max-w-3xl p-6 bg-card rounded-lg shadow-lg">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Your Sessions</h3>
