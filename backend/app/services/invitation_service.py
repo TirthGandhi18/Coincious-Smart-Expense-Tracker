@@ -33,14 +33,43 @@ def respond_to_invitation(user, invitation_id, action):
         status_payload = {}
 
         if action == 'accept':
-            member_payload = {
-                'group_id': invitation['group_id'],
-                'user_id': user.id
-            }
-            member_result = supabase.table('group_members').upsert(member_payload).execute()
+            # Check if user is already a member
+            existing_member = supabase.table('group_members') \
+                .select('user_id') \
+                .eq('group_id', invitation['group_id']) \
+                .eq('user_id', user.id) \
+                .maybe_single() \
+                .execute()
             
-            if (hasattr(member_result, 'error') and member_result.error) and '23505' not in str(member_result.error):
-                raise Exception(f"Failed to add to group_members: {getattr(member_result, 'error', 'Unknown')}")
+            # Only add as member if not already present
+            if not existing_member or not hasattr(existing_member, 'data') or not existing_member.data:
+                member_payload = {
+                    'group_id': invitation['group_id'],
+                    'user_id': user.id
+                }
+                member_result = supabase.table('group_members').insert(member_payload).execute()
+                
+                if hasattr(member_result, 'error') and member_result.error:
+                    raise Exception(f"Failed to add to group_members: {getattr(member_result, 'error', 'Unknown')}")
+            
+            # Check for existing accepted invitations and clean them up
+            existing_accepted = supabase.table('group_invitations') \
+                .select('id') \
+                .eq('group_id', invitation['group_id']) \
+                .eq('invited_user_id', user.id) \
+                .eq('status', 'accepted') \
+                .execute()
+            
+            if existing_accepted and existing_accepted.data:
+                print(f"Found {len(existing_accepted.data)} existing accepted invitations, cleaning up...")
+                # Delete existing accepted invitations to prevent constraint violation
+                supabase.table('group_invitations') \
+                    .delete() \
+                    .eq('group_id', invitation['group_id']) \
+                    .eq('invited_user_id', user.id) \
+                    .eq('status', 'accepted') \
+                    .execute()
+            
             status_payload = {'status': 'accepted', 'updated_at': datetime.now().isoformat()}
             notification_payload = {
                 'user_id': invitation['invited_by_id'],
