@@ -1,3 +1,4 @@
+// Dashboard.tsx
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -11,7 +12,7 @@ import {
   DropdownMenuTrigger
 } from '../ui/dropdown-menu';
 import {
-  IndianRupee,
+  DollarSign,
   TrendingUp,
   Plus,
   ArrowUpRight,
@@ -44,6 +45,38 @@ const DEFAULT_COLORS = [
   '#675C83',
   '#483B63'
 ];
+
+// helper to detect group expense robustly
+function detectIsGroupExpense(expense: any): boolean {
+  if (!expense) return false;
+  try {
+    // common property
+    const gId = expense.group_id ?? expense.groupId ?? expense.group;
+
+    // if group_id exists and is a meaningful value
+    if (gId !== undefined && gId !== null && gId !== '' && String(gId).toLowerCase() !== 'null') return true;
+
+    // sometimes backend returns group object
+    if (expense.group && (expense.group.id || expense.group.name)) return true;
+
+    // explicit type field
+    if (expense.type && String(expense.type).toLowerCase() === 'group') return true;
+
+    // boolean flag
+    if (typeof expense.is_group === 'boolean') return expense.is_group;
+    if (typeof expense.isGroup === 'boolean') return expense.isGroup;
+
+    // splits / share data often present for group items
+    if (expense.splits && Array.isArray(expense.splits) && expense.splits.length > 0) return true;
+    if (Array.isArray(expense.split_data) && expense.split_data.length > 0) return true;
+
+    // metadata hints
+    if (expense.metadata && (expense.metadata.is_group === true || expense.metadata.group === true)) return true;
+  } catch (e) {
+    // ignore any parsing issues, fallback to false
+  }
+  return false;
+}
 
 function BudgetProgressRing({
   percent,
@@ -146,24 +179,40 @@ export function Dashboard() {
       );
       if (response.ok) {
         const data = await response.json();
-        setMonthlyExpenses(data || []);
+        // annotate is_group flag
+        const mapped = (data || []).map((e: any) => ({ ...e, is_group: detectIsGroupExpense(e) }));
+        setMonthlyExpenses(mapped || []);
       }
     } catch (error) {
       console.error("Error fetching monthly expenses:", error);
     }
   };
 
-  // navigate to add-expense with expense in location.state (MATCH AddExpense expectation)
+  // navigate to add-expense with expense in location.state
+  // NOTE: only navigate for PERSONAL expenses (group expenses shouldn't be editable from dashboard)
   const editExpense = (expense: any) => {
-    // IMPORTANT: send under expenseData and set isEdit true so AddExpense prefill works
-    navigate('/add-expense', { state: { expenseData: expense, isEdit: true } });
+    // prefer annotated flag
+    const isGroup = expense?.is_group ?? detectIsGroupExpense(expense);
+    if (isGroup) {
+      toast.info('Group expenses cannot be edited from here.');
+      return;
+    }
+    navigate('/add-expense', { state: { expense: expense, isEdit: true } });
   };
 
   // delete expense + refresh monthly & range view
-  const deleteExpense = async (expenseId: string | number) => {
+  const deleteExpense = async (expense: any) => {
+    // prefer annotated flag
+    const isGroup = expense?.is_group ?? detectIsGroupExpense(expense);
+    // disallow deleting group expense from here
+    if (isGroup) {
+      toast.error('Group expenses cannot be deleted from the dashboard.');
+      return;
+    }
+
     if (!confirm('Delete this expense?')) return;
     try {
-      const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
+      const { error } = await supabase.from('expenses').delete().eq('id', expense.id);
       if (error) {
         console.error('Delete error via supabase:', error);
         toast.error('Failed to delete expense');
@@ -349,7 +398,7 @@ export function Dashboard() {
         const reqBody = { period: categoryPeriod };
         const res = await fetch(`${import.meta.env.VITE_API_URL}/api/expense_monthly_donut`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+          headers: { Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
           body: JSON.stringify(reqBody)
         });
         if (!res.ok) {
@@ -389,7 +438,9 @@ export function Dashboard() {
         );
         if (response.ok) {
           const data = await response.json();
-          setMonthlyExpenses(data || []);
+          // ensure monthly expenses are annotated with is_group flag
+          const mapped = (data || []).map((e: any) => ({ ...e, is_group: detectIsGroupExpense(e) }));
+          setMonthlyExpenses(mapped || []);
         }
       } catch (error) {
         console.error("Error fetching monthly expenses:", error);
@@ -421,8 +472,10 @@ export function Dashboard() {
         );
         if (response.ok) {
           const data = await response.json();
-          setSidebarExpenses(data || []);
-          const total = (data || []).reduce((sum: number, item: any) => sum + item.amount, 0);
+          // annotate each expense with is_group flag so UI can rely on it
+          const annotated = (data || []).map((item: any) => ({ ...item, is_group: detectIsGroupExpense(item) }));
+          setSidebarExpenses(annotated || []);
+          const total = (annotated || []).reduce((sum: number, item: any) => sum + (Number(item.amount) || 0), 0);
           setSidebarTotal(total);
           setFilteredExpenses(total);
         }
@@ -476,9 +529,10 @@ export function Dashboard() {
       const isCurrentMonth = currentDate.getMonth() === month;
       const isFuture = currentDate > today;
       const dateStr = format(currentDate, 'yyyy-MM-dd');
+      // monthlyExpenses are annotated already
       const dayExpenses = monthlyExpenses.filter(exp => exp.date && String(exp.date).startsWith(dateStr));
       const hasExpenses = dayExpenses.length > 0;
-      const dailyTotal = dayExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+      const dailyTotal = dayExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
 
       const isStartDate = dateRange.from && format(currentDate, 'yyyy-MM-dd') === format(dateRange.from, 'yyyy-MM-dd');
       const isEndDate = dateRange.to && format(currentDate, 'yyyy-MM-dd') === format(dateRange.to, 'yyyy-MM-dd');
@@ -488,18 +542,12 @@ export function Dashboard() {
       let buttonClasses = `
         aspect-square p-1 text-sm font-medium rounded-xl transition-all duration-200 relative border-2 select-none flex flex-col items-center justify-start pt-2 gap-0.5
         ${!isCurrentMonth ? 'text-gray-300 dark:text-gray-700 opacity-50' : 'text-gray-700 dark:text-gray-200'}
-        ${isFuture ? 'cursor-not-allowed opacity-30 bg-gray-50 dark:bg-gray-900/50' : 'cursor-pointer'}
+        ${isFuture ? 'cursor-not-allowed opacity-30 bg-gray-50 dark:bg-gray-900/50' : 'cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20'}
       `;
-
-      if (!isFuture && !isSelected) {
-        buttonClasses += ' hover:bg-purple-50 dark:hover:bg-purple-900/20';
-      }
-
       if (!isSelected && !isInRange && !isFuture && currentDate.getTime() === today.getTime()) buttonClasses += ' border-blue-400 text-blue-600 font-bold';
       else buttonClasses += ' border-transparent';
-      
-      if (isStartDate) buttonClasses += ' bg-purple-600 text-white shadow-md scale-105 z-10 hover:bg-purple-700';
-      if (isEndDate) buttonClasses += ' bg-pink-600 text-white shadow-md scale-105 z-10 hover:bg-pink-700';
+      if (isStartDate) buttonClasses += ' bg-purple-600 text-white shadow-md scale-105 z-10';
+      if (isEndDate) buttonClasses += ' bg-pink-600 text-white shadow-md scale-105 z-10';
       if (isInRange) buttonClasses += ' bg-purple-100 dark:bg-purple-900/40 text-purple-900 dark:text-purple-100 rounded-none mx-[-2px] border-y border-purple-200';
 
       days.push(
@@ -569,6 +617,8 @@ export function Dashboard() {
 
   const applyPreset = async (value: number) => {
     await persistBudgetAndMaybeGoal(value, goalValue ?? null);
+    setBudgetInput(String(value));
+    setIsEditingBudget(false);
     toast.success(`Budget set to ₹${value}`);
   };
 
@@ -651,6 +701,7 @@ export function Dashboard() {
                 <CalendarIcon className="h-4 w-4 text-purple-600" />
               </button>
 
+              {/* Date range modal */}
               {showDatePicker && (
                 <>
                   <div className="fixed inset-0 bg-black/50 z-[9998] animate-in fade-in duration-300" onClick={() => setShowDatePicker(false)} />
@@ -689,8 +740,8 @@ export function Dashboard() {
                           <div className="grid grid-cols-7 gap-2">{renderCalendarDays()}</div>
                         </div>
 
-                        <div className="border-l border-gray-200 dark:border-gray-700 pl-6 flex flex-col h-full bg-gray-50 dark:bg-gray-900/30 overflow-hidden">
-                          <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                        <div className="border-l border-gray-200 dark:border-gray-700 pl-6 flex flex-col h-full bg-gray-50 dark:bg-gray-900/30">
+                          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                             <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1 flex items-center justify-between">
                               <span>{dateRange.from ? 'Expenses in Range' : 'Select dates'}</span>
                               {dateRange.from && sidebarTotal > 0 && (
@@ -702,47 +753,57 @@ export function Dashboard() {
                             )}
                           </div>
 
-                          <div className="space-y-3 flex-1 overflow-y-auto p-4 min-h-0">
+                          <div className="space-y-3 flex-1 overflow-y-auto p-4">
                             {isCalendarLoading ? (
                               <div className="flex justify-center py-10"><Loader2 className="animate-spin text-purple-500" /></div>
                             ) : sidebarExpenses.length > 0 ? (
-                              sidebarExpenses.map((expense, index) => (
-                                <div key={expense.id ?? index} className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-purple-200 transition-all">
-                                  <div className="flex justify-between items-start">
-                                    <div className="pr-3 flex-1 min-w-0">
-                                      <h5 className="font-semibold text-gray-900 dark:text-white text-sm break-words whitespace-normal">{expense.title}</h5>
-                                      <div className="flex items-center gap-2 mt-1">
-                                        <Badge variant="secondary" className="text-[10px] h-5 px-1">{expense.category}</Badge>
-                                        <p className="text-xs text-gray-500">{format(new Date(expense.date), 'MMM dd')}</p>
+                              // updated sidebar list: hide edit/delete for group expenses
+                              sidebarExpenses.map((expense, index) => {
+                                const isGroup = expense?.is_group ?? detectIsGroupExpense(expense);
+                                return (
+                                  <div key={expense.id ?? index} className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-purple-200 transition-all">
+                                    <div className="flex justify-between items-start">
+                                      <div className="pr-3 flex-1 min-w-0">
+                                        <h5 className="font-semibold text-gray-900 dark:text-white text-sm truncate line-clamp-1">{expense.title ?? expense.description ?? 'Untitled'}</h5>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Badge variant="secondary" className="text-[10px] h-5 px-1">{expense.category}</Badge>
+                                          <p className="text-xs text-gray-500">{format(new Date(expense.date), 'MMM dd')}</p>
+                                        </div>
                                       </div>
-                                    </div>
 
-                                    <div className="flex flex-col items-end ml-3">
-                                      <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap mb-2">₹{Number(expense.amount || 0).toFixed(2)}</span>
+                                      <div className="flex flex-col items-end ml-3">
+                                        <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap mb-2">₹{Number(expense.amount || 0).toFixed(2)}</span>
 
-                                      <div className="flex items-center gap-2">
-                                        {/* Edit button */}
-                                        <button
-                                          title="Edit"
-                                          onClick={() => editExpense(expense)}
-                                          className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                                        >
-                                          <PencilIcon className="h-4 w-4 text-purple-600" />
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                          {!isGroup ? (
+                                            // show edit + delete only for non-group expenses
+                                            <>
+                                              <button
+                                                title="Edit"
+                                                onClick={() => editExpense(expense)}
+                                                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                                              >
+                                                <PencilIcon className="h-4 w-4 text-purple-600" />
+                                              </button>
 
-                                        {/* Delete button */}
-                                        <button
-                                          title="Delete"
-                                          onClick={() => deleteExpense(expense.id)}
-                                          className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                                        >
-                                          <TrashIcon className="h-4 w-4 text-red-600" />
-                                        </button>
+                                              <button
+                                                title="Delete"
+                                                onClick={() => deleteExpense(expense)}
+                                                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                                              >
+                                                <TrashIcon className="h-4 w-4 text-red-600" />
+                                              </button>
+                                            </>
+                                          ) : (
+                                            // visual indicator for group items
+                                            <Badge variant="outline">Group</Badge>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
-                                </div>
-                              ))
+                                );
+                              })
                             ) : (
                               <div className="text-center py-8 text-gray-500">
                                 <p className="text-sm font-medium">No expenses found</p>
@@ -751,7 +812,7 @@ export function Dashboard() {
                             )}
                           </div>
 
-                          <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
                             <div className="flex gap-3">
                               <button onClick={() => { setDateRange({ from: undefined, to: undefined }); setSidebarExpenses([]); }} className="flex-1 py-2 border rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Clear</button>
                               <button onClick={() => setShowDatePicker(false)} disabled={!dateRange.from} className="flex-1 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50">Apply</button>
@@ -842,14 +903,7 @@ export function Dashboard() {
                 )}
               </div>
               {goalValue !== null && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={clearGoal}
-                  className="!bg-red-600 hover:!bg-red-700 !text-white dark:!bg-red-800 dark:hover:!bg-red-900"
-                >
-                  Clear Goal
-                </Button>
+                <Button size="sm" variant="outline" onClick={clearGoal}>Clear Goal</Button>
               )}
             </div>
           </CardContent>
@@ -926,7 +980,7 @@ export function Dashboard() {
           <Card className="md:col-span-2 flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 w-full">
               <div className="flex items-center gap-2">
-                <IndianRupee className="h-4 w-4 text-muted-foreground" />
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
                 <CardTitle className="text-sm font-medium">Monthly Budget</CardTitle>
               </div>
               <div className="flex items-center gap-2">
@@ -974,6 +1028,7 @@ export function Dashboard() {
                       const parsed = parseFloat(budgetInput.replace(/[^0-9.]/g, ''));
                       if (Number.isNaN(parsed) || parsed <= 0) { alert('Enter a valid budget greater than 0'); return; }
                       await persistBudgetAndMaybeGoal(parsed, goalValue ?? null);
+                      setBudgetInput(String(parsed)); // <-- update input to new value
                       setIsEditingBudget(false);
                       toast.success(`Budget saved ₹${parsed}`);
                     }} disabled={budgetSaving}>{budgetSaving ? 'Saving...' : 'Save'}</Button>
@@ -1000,20 +1055,7 @@ export function Dashboard() {
                       <stop offset="100%" stopColor="#A78BFA" stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
-                  <Tooltip
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="rounded-lg border bg-background p-2 shadow-sm">
-                            <span className="text-sm font-bold text-foreground">
-                              {label}
-                            </span>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
+                  <Tooltip formatter={(v: number) => `₹${v.toFixed(2)}`} labelFormatter={(l) => l} />
                   <Area type="monotone" dataKey="value" stroke="#A78BFA" strokeWidth={2} fill="url(#dailySpendGradient)" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -1036,10 +1078,10 @@ export function Dashboard() {
 
               <div className="mt-4">
                 <div className="flex gap-2">
-                  <div className="flex items-center px-3 rounded-md border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700">
-                    <span className="text-sm text-gray-500 dark:text-gray-200">₹</span>
+                  <div className="flex items-center px-3 rounded-md border border-gray-200 bg-white">
+                    <span className="text-sm">₹</span>
                   </div>
-                  <input value={goalInput} onChange={(e) => setGoalInput(e.target.value)} placeholder="e.g. 2000" className="flex-1 px-3 py-2 rounded-md border border-gray-200 bg-white text-sm focus:outline-none dark:bg-gray-800 dark:text-gray-100" />
+                  <input value={goalInput} onChange={(e) => setGoalInput(e.target.value)} placeholder="e.g. 2000" className="flex-1 px-3 py-2 rounded-md border border-gray-200 bg-white text-sm focus:outline-none" />
                 </div>
 
                 <div className="flex gap-2 mt-3">
