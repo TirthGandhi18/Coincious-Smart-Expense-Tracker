@@ -1,37 +1,45 @@
-import React, { useState, createContext, useContext, useEffect } from 'react';
+import React, { useState, createContext, useContext, useEffect, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner';
 import { supabase } from "./utils/supabase/client";
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 
-import { Landing } from './components/pages/Landing';
-import { Login } from './components/pages/Login';
-import { Register } from './components/pages/Register';
-import { Dashboard } from './components/pages/Dashboard';
-import { AddExpense } from './components/pages/AddExpense';
 import { Layout } from './components/Layout';
-import { Profile } from './components/pages/Profile';
-import { Groups } from './components/pages/Groups';
-import { GroupDetail } from './components/pages/GroupDetail';
-import { Support } from './components/pages/Support';
-import { Notifications } from './components/pages/Notifications';
-import { Chatbot } from './components/pages/Chatbot';
-import { Settings } from './components/pages/Settings';
 import { ThemeProvider } from './components/ui/ThemeContext';
 import { SettingsProvider } from './components/ui/SettingContext';
-import { PasswordResetPage } from './components/pages/PasswordResetPage';
-import { AuthVerify } from './components/pages/AuthVerify';
+
+// --- LAZY LOADED PAGES ---
+
+const Landing = React.lazy(() => import('./components/pages/Landing').then(module => ({ default: module.Landing })));
+const Login = React.lazy(() => import('./components/pages/Login').then(module => ({ default: module.Login })));
+const Register = React.lazy(() => import('./components/pages/Register').then(module => ({ default: module.Register })));
+const Dashboard = React.lazy(() => import('./components/pages/Dashboard').then(module => ({ default: module.Dashboard })));
+const AddExpense = React.lazy(() => import('./components/pages/AddExpense').then(module => ({ default: module.AddExpense })));
+const Profile = React.lazy(() => import('./components/pages/Profile').then(module => ({ default: module.Profile })));
+const Groups = React.lazy(() => import('./components/pages/Groups').then(module => ({ default: module.Groups })));
+const GroupDetail = React.lazy(() => import('./components/pages/GroupDetail').then(module => ({ default: module.GroupDetail })));
+const Support = React.lazy(() => import('./components/pages/Support').then(module => ({ default: module.Support })));
+const Notifications = React.lazy(() => import('./components/pages/Notifications').then(module => ({ default: module.Notifications })));
+const Chatbot = React.lazy(() => import('./components/pages/Chatbot').then(module => ({ default: module.Chatbot })));
+const Settings = React.lazy(() => import('./components/pages/Settings').then(module => ({ default: module.Settings })));
+const PasswordResetPage = React.lazy(() => import('./components/pages/PasswordResetPage').then(module => ({ default: module.PasswordResetPage })));
+const AuthVerify = React.lazy(() => import('./components/pages/AuthVerify').then(module => ({ default: module.AuthVerify })));
+
+// --- REUSABLE LOADING COMPONENT ---
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+    </div>
+  );
+}
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (user && user.aud === 'authenticated') {
@@ -46,11 +54,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (!user || user.aud !== 'authenticated') {
@@ -60,84 +64,85 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-
 // Main App Component
 function AppRoutes() {
   return (
     <Router>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-        <Route path="/auth/verify" element={<PublicRoute><AuthVerify /></PublicRoute>} />
+      {/* Suspense handles the loading state while lazy components are fetched */}
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/auth/verify" element={<PublicRoute><AuthVerify /></PublicRoute>} />
 
-        <Route
-          path="/forgot-password"
-          element={
+          <Route
+            path="/forgot-password"
+            element={
+              <ProtectedRoute>
+                <PasswordResetPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected routes */}
+          <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+          <Route path="/add-expense" element={<ProtectedRoute><Layout><AddExpense /></Layout></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
+
+          <Route path="/groups" element={
             <ProtectedRoute>
-              <PasswordResetPage />
+              <Layout>
+                <Groups />
+              </Layout>
             </ProtectedRoute>
-          }
-        />
+          } />
+          <Route path="/groups/:id" element={
+            <ProtectedRoute>
+              <Layout>
+                <GroupDetail />
+              </Layout>
+            </ProtectedRoute>
+          } />
 
-        {/* Protected routes */}
-        <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
-        <Route path="/add-expense" element={<ProtectedRoute><Layout><AddExpense /></Layout></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
+          {/* Placeholder routes for other pages */}
+          <Route path="/parental" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Parental Controls</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
 
-        <Route path="/groups" element={
-          <ProtectedRoute>
-            <Layout>
-              <Groups />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        <Route path="/groups/:id" element={
-          <ProtectedRoute>
-            <Layout>
-              <GroupDetail />
-            </Layout>
-          </ProtectedRoute>
-        } />
+          <Route path="/support" element={
+            <ProtectedRoute>
+              <Layout>
+                <Support />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/chatbot" element={
+            <ProtectedRoute>
+              <Layout>
+                <Chatbot />
+              </Layout>
+            </ProtectedRoute>
+          } />
 
-        {/* Placeholder routes for other pages */}
-        <Route path="/parental" element={<ProtectedRoute><Layout><div className="p-6"><h1 className="text-2xl font-bold">Parental Controls</h1><p>Coming soon...</p></div></Layout></ProtectedRoute>} />
+          <Route path="/notifications" element={
+            <ProtectedRoute>
+              <Layout>
+                <Notifications />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <Layout>
+                <Settings />
+              </Layout>
+            </ProtectedRoute>
+          } />
 
-
-        <Route path="/support" element={
-          <ProtectedRoute>
-            <Layout>
-              <Support />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        <Route path="/chatbot" element={
-          <ProtectedRoute>
-            <Layout>
-              <Chatbot />
-            </Layout>
-          </ProtectedRoute>
-        } />
-
-        <Route path="/notifications" element={
-          <ProtectedRoute>
-            <Layout>
-              <Notifications />
-            </Layout>
-          </ProtectedRoute>
-        } />
-        <Route path="/settings" element={
-          <ProtectedRoute>
-            <Layout>
-              <Settings />
-            </Layout>
-          </ProtectedRoute>
-        } />
-
-        {/* Catch all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Catch all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
       <Toaster />
     </Router>
   );
@@ -314,8 +319,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
-
 
 // Custom hooks
 export function useAuth() {

@@ -31,17 +31,6 @@ export function Settings() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [notifications] = useState({
-    email: true,
-    expense: true,
-    group: true,
-    payment: true
-  });
-
-  const [preferences] = useState({
-    currency: 'USD',
-    timezone: 'UTC'
-  });
 
   // Triggered when the initial "Delete Account" button is clicked
   const handleDeleteClick = () => {
