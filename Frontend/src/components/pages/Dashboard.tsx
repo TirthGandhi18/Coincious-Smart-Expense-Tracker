@@ -567,7 +567,6 @@ export function Dashboard() {
     return days;
   };
 
-  // Derived values
   const budgetValue = budget ?? null;
   const budgetUsed = currentMonthTotal || 0;
   const monthlySavings = budgetValue !== null ? Math.max(0, budgetValue - budgetUsed) : 0;
@@ -582,7 +581,6 @@ export function Dashboard() {
   const overBudgetAmount = budgetValue !== null && budgetUsed > budgetValue ? budgetUsed - budgetValue : 0;
   const budgetRemaining = budgetValue !== null && budgetUsed <= budgetValue ? Math.max(0, budgetValue - budgetUsed) : 0;
 
-  // sparkline / trend for month
   const dailySparkline = useMemo(() => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
@@ -597,7 +595,6 @@ export function Dashboard() {
     return days.map(d => ({ date: format(d, 'dd MMM'), value: map[format(d, 'yyyy-MM-dd')] || 0 }));
   }, [monthlyExpenses, currentMonth]);
 
-  // 80% toast (red text) once per session
   useEffect(() => {
     if (!near80ShownRef.current && budgetValue && budgetValue > 0) {
       const percent = (budgetUsed / budgetValue) * 100;
@@ -740,8 +737,9 @@ export function Dashboard() {
                           <div className="grid grid-cols-7 gap-2">{renderCalendarDays()}</div>
                         </div>
 
-                        <div className="border-l border-gray-200 dark:border-gray-700 pl-6 flex flex-col h-full bg-gray-50 dark:bg-gray-900/30">
-                          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                        {/* Sidebar List Container - FIXED SCROLLING AND TEXT WRAPPING */}
+                        <div className="border-l border-gray-200 dark:border-gray-700 pl-6 flex flex-col h-full bg-gray-50 dark:bg-gray-900/30 overflow-hidden">
+                          <div className="p-6 border-b border-gray-200 dark:border-gray-700 shrink-0">
                             <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1 flex items-center justify-between">
                               <span>{dateRange.from ? 'Expenses in Range' : 'Select dates'}</span>
                               {dateRange.from && sidebarTotal > 0 && (
@@ -757,26 +755,28 @@ export function Dashboard() {
                             {isCalendarLoading ? (
                               <div className="flex justify-center py-10"><Loader2 className="animate-spin text-purple-500" /></div>
                             ) : sidebarExpenses.length > 0 ? (
-                              // updated sidebar list: hide edit/delete for group expenses
+                              // updated sidebar list: fixed text wrapping & overflow
                               sidebarExpenses.map((expense, index) => {
                                 const isGroup = expense?.is_group ?? detectIsGroupExpense(expense);
                                 return (
                                   <div key={expense.id ?? index} className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-purple-200 transition-all">
                                     <div className="flex justify-between items-start">
                                       <div className="pr-3 flex-1 min-w-0">
-                                        <h5 className="font-semibold text-gray-900 dark:text-white text-sm truncate line-clamp-1">{expense.title ?? expense.description ?? 'Untitled'}</h5>
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <Badge variant="secondary" className="text-[10px] h-5 px-1">{expense.category}</Badge>
-                                          <p className="text-xs text-gray-500">{format(new Date(expense.date), 'MMM dd')}</p>
+                                        {/* Change 1: Added break-words and whitespace-normal to allow wrapping */}
+                                        <h5 className="font-semibold text-gray-900 dark:text-white text-sm break-words whitespace-normal">
+                                          {expense.title ?? expense.description ?? 'Untitled'}
+                                        </h5>
+                                        <div className="flex items-center flex-wrap gap-2 mt-1">
+                                          <Badge variant="secondary" className="text-[10px] h-5 px-1 shrink-0">{expense.category}</Badge>
+                                          <p className="text-xs text-gray-500 shrink-0">{format(new Date(expense.date), 'MMM dd')}</p>
                                         </div>
                                       </div>
 
-                                      <div className="flex flex-col items-end ml-3">
+                                      <div className="flex flex-col items-end ml-3 shrink-0">
                                         <span className="text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap mb-2">₹{Number(expense.amount || 0).toFixed(2)}</span>
 
                                         <div className="flex items-center gap-2">
                                           {!isGroup ? (
-                                            // show edit + delete only for non-group expenses
                                             <>
                                               <button
                                                 title="Edit"
@@ -795,7 +795,6 @@ export function Dashboard() {
                                               </button>
                                             </>
                                           ) : (
-                                            // visual indicator for group items
                                             <Badge variant="outline">Group</Badge>
                                           )}
                                         </div>
@@ -812,7 +811,7 @@ export function Dashboard() {
                             )}
                           </div>
 
-                          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                          <div className="p-4 border-t border-gray-200 dark:border-gray-700 shrink-0">
                             <div className="flex gap-3">
                               <button onClick={() => { setDateRange({ from: undefined, to: undefined }); setSidebarExpenses([]); }} className="flex-1 py-2 border rounded-lg text-sm hover:bg-gray-100 dark:hover:bg-gray-800">Clear</button>
                               <button onClick={() => setShowDatePicker(false)} disabled={!dateRange.from} className="flex-1 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50">Apply</button>
