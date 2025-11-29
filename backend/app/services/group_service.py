@@ -524,4 +524,103 @@ def settle_group_balance(group_id, user_id, data):
         error_trace = traceback.format_exc()
         print(f"Error in settle_group_balance: {str(e)}\n{error_trace}")
         return {'error': 'Internal server error', 'details': str(e), 'trace': error_trace}, 500
+
+def remove_group_member(group_id, requesting_user_id, member_to_remove_id):
+    try:
+        print(f"User {requesting_user_id} attempting to remove member {member_to_remove_id} from group {group_id}")
+        
+        # 1. Check if requesting user is a member of the group
+        requester_member_check = supabase.table('group_members') \
+            .select('user_id') \
+            .eq('group_id', group_id) \
+            .eq('user_id', requesting_user_id) \
+            .maybe_single() \
+            .execute()
+        
+        if not requester_member_check or not hasattr(requester_member_check, 'data') or not requester_member_check.data:
+            return {'error': 'You are not a member of this group'}, 403
+        
+        # 2. Check if member to remove exists in the group
+        member_to_remove_check = supabase.table('group_members') \
+            .select('user_id') \
+            .eq('group_id', group_id) \
+            .eq('user_id', member_to_remove_id) \
+            .maybe_single() \
+            .execute()
+        
+        if not member_to_remove_check or not hasattr(member_to_remove_check, 'data') or not member_to_remove_check.data:
+            return {'error': 'User is not a member of this group'}, 404
+        
+        # 3. Check if group has more than 1 member (prevent empty groups)
+        all_members_count = supabase.table('group_members') \
+            .select('user_id', count='exact', head=True) \
+            .eq('group_id', group_id) \
+            .execute()
+        
+        if all_members_count.count <= 1:
+            return {'error': 'Cannot remove the last member of a group'}, 400
+        
+        # 4. Get group and user details for notifications
+        group_result = supabase.table('groups') \
+            .select('name, created_by') \
+            .eq('id', group_id) \
+            .maybe_single() \
+            .execute()
+        
+        if not group_result or not hasattr(group_result, 'data') or not group_result.data:
+            return {'error': 'Group not found'}, 404
+        
+        group_data = group_result.data
+        
+        # Get requesting user name
+        requesting_user_result = supabase.table('users') \
+            .select('name') \
+            .eq('id', requesting_user_id) \
+            .maybe_single() \
+            .execute()
+        
+        requesting_user_name = requesting_user_result.data.get('name', 'Someone') if requesting_user_result.data else 'Someone'
+        
+        # 5. Remove the member
+        print(f"Attempting to remove member {member_to_remove_id} from group {group_id}")
+        
+        delete_result = supabase.table('group_members') \
+            .delete() \
+            .eq('group_id', group_id) \
+            .eq('user_id', member_to_remove_id) \
+            .execute()
+        
+        print(f"Delete result: {delete_result}")
+        
+        if not delete_result or not hasattr(delete_result, 'data') or not delete_result.data:
+            print(f"Delete failed: {getattr(delete_result, 'error', 'Unknown')}")
+            return {'error': 'Failed to remove member from group'}, 500
+        
+        print(f"Successfully deleted {len(delete_result.data)} records")
+        
+        # 6. Create notification for the removed member
+        notification_payload = {
+            'user_id': member_to_remove_id,
+            'actor_id': requesting_user_id,
+            'type': 'group_member_removed',
+            'actionable': False,
+            'message': f"You were removed from \"{group_data['name']}\" by {requesting_user_name}",
+            'data': {
+                'group_id': group_id,
+                'group_name': group_data['name'],
+                'removed_by_name': requesting_user_name
+            }
+        }
+        
+        notification_result = supabase.table('notifications').insert(notification_payload).execute()
+        if not notification_result or not hasattr(notification_result, 'data') or not notification_result.data:
+            print("Warning: Failed to create notification for removed member")
+        
+        print(f"Successfully removed member {member_to_remove_id} from group {group_id}")
+        return {'message': 'Member removed successfully'}, 200
+        
+    except Exception as e:
+        error_trace = traceback.format_exc()
+        print(f"Error in remove_group_member: {str(e)}\n{error_trace}")
+        return {'error': 'Internal server error', 'details': str(e), 'trace': error_trace}, 500
     

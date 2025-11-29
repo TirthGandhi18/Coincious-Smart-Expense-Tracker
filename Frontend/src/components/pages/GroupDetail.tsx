@@ -4,6 +4,16 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 import { useAuth } from '../../App';
 import {
   ArrowLeft,
@@ -15,7 +25,8 @@ import {
   Clock,
   Loader2,
   RefreshCw,
-  Check
+  Check,
+  Trash2
 } from 'lucide-react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../utils/supabase/client';
@@ -93,6 +104,10 @@ export function GroupDetail() {
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [isSettleDialogOpen, setIsSettleDialogOpen] = useState(false);
   const [selectedSettlement, setSelectedSettlement] = useState<Settlement | null>(null);
+
+  // --- STATE FOR MEMBER REMOVAL ---
+  const [isDeleteMemberDialogOpen, setIsDeleteMemberDialogOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
 
 
   const fetchGroupData = async () => {
@@ -186,10 +201,41 @@ export function GroupDetail() {
       try {
         if (balancesResponse.ok) {
           balancesData = await balancesResponse.json();
-          setBalances(balancesData.balances || []);
-          setSettlements(balancesData.settlements || []);
+
+          if (balancesData.balances && balancesData.balances.length > 0) {
+            const mappedBalances = balancesData.balances.map((balance: any) => ({
+              id: balance.user_id,
+              email: balance.email,
+              name: balance.name,
+              avatar: balance.avatar,
+              balance: balance.balance || 0
+            }));
+            setBalances(mappedBalances);
+            setSettlements(balancesData.settlements || []);
+          } else {
+            // Use members data as fallback for balances display
+            const mappedMembers = (membersData.members || []).map((member: any) => ({
+              id: member.id || member.user_id,
+              email: member.email,
+              name: member.name,
+              avatar: member.avatar,
+              balance: 0
+            }));
+            setBalances(mappedMembers);
+            setSettlements([]);
+          }
         } else {
-          console.warn('Failed to fetch balances, continuing without them.');
+          console.warn('Failed to fetch balances, using members data as fallback');
+          // Use members data as fallback for balances display
+          const mappedMembers = (membersData.members || []).map((member: any) => ({
+            id: member.id || member.user_id,
+            email: member.email,
+            name: member.name,
+            avatar: member.avatar,
+            balance: 0
+          }));
+          setBalances(mappedMembers);
+          setSettlements([]);
         }
       } catch (balanceError) {
         console.warn('Error processing balances:', balanceError);
@@ -200,13 +246,22 @@ export function GroupDetail() {
         ...prevData,
         ...groupDetailsResponse.group,
         totalExpenses: groupDetailsResponse.total_expenses || 0,
-        members: ((balancesData?.balances || []).length > 0 ? balancesData.balances : membersData.members).map((m: any) => ({
-          id: m.id || m.user_id,
-          name: m.name,
-          email: m.email,
-          avatar: m.avatar,
-          balance: m.balance || 0
-        })),
+        members: ((balancesData?.balances || []).length > 0 ?
+          (balancesData.balances || []).map((m: any) => ({
+            id: m.user_id || m.id,
+            name: m.name,
+            email: m.email,
+            avatar: m.avatar,
+            balance: m.balance || 0
+          })) :
+          (membersData.members || []).map((m: any) => ({
+            id: m.id || m.user_id,
+            name: m.name,
+            email: m.email,
+            avatar: m.avatar,
+            balance: m.balance || 0
+          }))
+        ),
       }));
 
     } catch (error) {
@@ -241,6 +296,50 @@ export function GroupDetail() {
   const handleConfirmSettlement = (settlement: Settlement) => {
     console.log('Settlement confirmed:', settlement);
     fetchGroupData();
+  };
+
+  const handleDeleteMember = (member: Member) => {
+    setMemberToDelete(member);
+    setIsDeleteMemberDialogOpen(true);
+  };
+
+  const handleConfirmDeleteMember = async () => {
+    if (!memberToDelete || !id) return;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No active session');
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/groups/${id}/members/${memberToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to remove member');
+      }
+
+      const result = await response.json();
+      toast.success(result.message || 'Member removed successfully');
+      setIsDeleteMemberDialogOpen(false);
+      setMemberToDelete(null);
+      fetchGroupData();
+    } catch (error) {
+      console.error('Error removing member:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to remove member';
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleCancelDeleteMember = () => {
+    setIsDeleteMemberDialogOpen(false);
+    setMemberToDelete(null);
   };
 
 
@@ -524,13 +623,25 @@ export function GroupDetail() {
                       <div className="text-sm text-muted-foreground">{member.email}</div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className={`font-medium ${getBalanceColor(member.balance)}`}>
-                      {getBalanceText(member.balance)}
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <div className={`font-medium ${getBalanceColor(member.balance)}`}>
+                        {getBalanceText(member.balance)}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {member.balance > 0 ? 'is owed' : member.balance < 0 ? 'owes' : 'settled'}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {member.balance > 0 ? 'is owed' : member.balance < 0 ? 'owes' : 'settled'}
-                    </div>
+                    {user?.id !== member.id && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDeleteMember(member)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -551,6 +662,30 @@ export function GroupDetail() {
         onConfirm={handleConfirmSettlement}
         groupId={id || ''}
       />
+
+      {/* Delete Member Confirmation Dialog */}
+      <AlertDialog open={isDeleteMemberDialogOpen} onOpenChange={setIsDeleteMemberDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove <strong>{memberToDelete?.name}</strong> from this group?
+              This action cannot be undone, and the member will lose access to all group expenses and balances.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDeleteMember}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteMember}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Remove Member
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

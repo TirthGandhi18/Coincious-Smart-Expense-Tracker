@@ -62,3 +62,10 @@ def settle_up(group_id):
     data = request.get_json()
     response, status_code = group_service.settle_group_balance(group_id, user_id, data)
     return jsonify(response), status_code
+
+@group_bp.route('/<group_id>/members/<member_id>', methods=['DELETE'])
+@auth_required
+def remove_group_member(group_id, member_id):
+    user_id = g.user.id
+    response, status_code = group_service.remove_group_member(group_id, user_id, member_id)
+    return jsonify(response), status_code
