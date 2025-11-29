@@ -299,6 +299,12 @@ export function GroupDetail() {
   };
 
   const handleDeleteMember = (member: Member) => {
+    // Check if member has outstanding balances
+    if (member.balance !== 0) {
+      toast.error(`Cannot remove ${member.name} - they have outstanding balances (${member.balance > 0 ? 'are owed' : 'owe'} ₹${Math.abs(member.balance).toFixed(2)})`);
+      return;
+    }
+    
     setMemberToDelete(member);
     setIsDeleteMemberDialogOpen(true);
   };

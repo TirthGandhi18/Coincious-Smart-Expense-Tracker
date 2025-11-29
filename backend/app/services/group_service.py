@@ -560,6 +560,18 @@ def remove_group_member(group_id, requesting_user_id, member_to_remove_id):
         if all_members_count.count <= 1:
             return {'error': 'Cannot remove the last member of a group'}, 400
         
+        # 4. Check if member has outstanding balances
+        balances_response = supabase.table('balances') \
+            .select('amount') \
+            .eq('group_id', group_id) \
+            .eq('user_id', member_to_remove_id) \
+            .execute()
+        
+        if balances_response and balances_response.data:
+            total_balance = sum(float(balance.get('amount', 0)) for balance in balances_response.data)
+            if abs(total_balance) > 0.01:  # Allow for small floating point differences
+                return {'error': f'Cannot remove member with outstanding balance of {total_balance:.2f}'}, 400
+        
         # 4. Get group and user details for notifications
         group_result = supabase.table('groups') \
             .select('name, created_by') \
@@ -623,4 +635,3 @@ def remove_group_member(group_id, requesting_user_id, member_to_remove_id):
         error_trace = traceback.format_exc()
         print(f"Error in remove_group_member: {str(e)}\n{error_trace}")
         return {'error': 'Internal server error', 'details': str(e), 'trace': error_trace}, 500
-    
